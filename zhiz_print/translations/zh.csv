@@ -107,19 +107,19 @@ Export Excel,导出Excel
 Paper Settings,纸张设置
 Please allow pop-up windows,请允许弹出窗口
 Try the new Print Format Builder,试用新版打印格式生成器
-When enabled, the print page displays a custom print template selector on the left. Create print templates in Super Print Design first,启用后打印页面左侧将显示自定义打印模板选择器。请先在高级打印设计中创建打印模板
+"When enabled, the print page displays a custom print template selector on the left. Create print templates in Super Print Design first",启用后打印页面左侧将显示自定义打印模板选择器。请先在高级打印设计中创建打印模板
 Enable for All: all DocTypes use Super Print; Enable for Specific: only DocTypes listed below use Super Print,全部启用：所有单据类型使用超级打印；指定启用：仅下方列出的单据类型使用超级打印
 Select the conversion engine for PDF export,选择PDF导出的转换引擎
 Add DocTypes for Super Print. Only these DocTypes will use the Super Print page,添加需要使用超级打印的单据类型。只有这些单据类型会使用超级打印页面
-eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). E.g.: doc.status=='Submitted',eval表达式，留空表示始终启用。可用变量：doc（目标单据）、user（当前用户名）。例如：doc.status=='Submitted'
-Python code, assign query result to variable 'result',Python代码，将查询结果赋值给变量result
-One parameter per line, format: key=value,每行一个参数，格式：key=value
+"eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). E.g.: doc.status=='Submitted'",eval表达式，留空表示始终启用。可用变量：doc（目标单据）、user（当前用户名）。例如：doc.status=='Submitted'
+"Python code, assign query result to variable 'result'",Python代码，将查询结果赋值给变量result
+"One parameter per line, format: key=value",每行一个参数，格式：key=value
 Available placeholders: {page} {pages} {now_date} {now_time} {date_time},可用占位符：{page} {pages} {now_date} {now_time} {date_time}
 Field name bound to query result,绑定到查询结果的字段名
 Empty or Normal Row is default; Repeat Title Row repeats on every page; Data-Driven Row auto-expands based on data,空或普通行为默认；重复标题行在每页重复；数据驱动行根据数据自动扩展
 Empty or Auto Wrap is default (text wraps row height grows); Fixed Height locks height and hides overflow; Auto Shrink Font scales font to fit,空或自动换行为默认（文字换行，行高增长）；固定行高锁定高度并隐藏溢出；自动缩小字体缩放字体以适应
-For Select type, enter options (one per line); for Link type, enter the target DocType name,Select类型请输入选项（每行一个）；Link类型请输入目标单据类型名称
-When checked, the query result list will drive automatic row duplication in the template,勾选后查询结果列表将驱动模板中的自动行复制
+"For Select type, enter options (one per line); for Link type, enter the target DocType name",Select类型请输入选项（每行一个）；Link类型请输入目标单据类型名称
+"When checked, the query result list will drive automatic row duplication in the template",勾选后查询结果列表将驱动模板中的自动行复制
 Assign the query result to variable 'result',将查询结果赋值给变量result
 Static Text,静态文本
 Data Query,数据查询
