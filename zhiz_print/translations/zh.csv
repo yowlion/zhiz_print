@@ -107,3 +107,113 @@ Export Excel,导出Excel
 Paper Settings,纸张设置
 Please allow pop-up windows,请允许弹出窗口
 Try the new Print Format Builder,试用新版打印格式生成器
+When enabled, the print page displays a custom print template selector on the left. Create print templates in Super Print Design first,启用后打印页面左侧将显示自定义打印模板选择器。请先在高级打印设计中创建打印模板
+Enable for All: all DocTypes use Super Print; Enable for Specific: only DocTypes listed below use Super Print,全部启用：所有单据类型使用超级打印；指定启用：仅下方列出的单据类型使用超级打印
+Select the conversion engine for PDF export,选择PDF导出的转换引擎
+Add DocTypes for Super Print. Only these DocTypes will use the Super Print page,添加需要使用超级打印的单据类型。只有这些单据类型会使用超级打印页面
+eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). E.g.: doc.status=='Submitted',eval表达式，留空表示始终启用。可用变量：doc（目标单据）、user（当前用户名）。例如：doc.status=='Submitted'
+Python code, assign query result to variable 'result',Python代码，将查询结果赋值给变量result
+One parameter per line, format: key=value,每行一个参数，格式：key=value
+Available placeholders: {page} {pages} {now_date} {now_time} {date_time},可用占位符：{page} {pages} {now_date} {now_time} {date_time}
+Field name bound to query result,绑定到查询结果的字段名
+Empty or Normal Row is default; Repeat Title Row repeats on every page; Data-Driven Row auto-expands based on data,空或普通行为默认；重复标题行在每页重复；数据驱动行根据数据自动扩展
+Empty or Auto Wrap is default (text wraps row height grows); Fixed Height locks height and hides overflow; Auto Shrink Font scales font to fit,空或自动换行为默认（文字换行，行高增长）；固定行高锁定高度并隐藏溢出；自动缩小字体缩放字体以适应
+For Select type, enter options (one per line); for Link type, enter the target DocType name,Select类型请输入选项（每行一个）；Link类型请输入目标单据类型名称
+When checked, the query result list will drive automatic row duplication in the template,勾选后查询结果列表将驱动模板中的自动行复制
+Assign the query result to variable 'result',将查询结果赋值给变量result
+Static Text,静态文本
+Data Query,数据查询
+Barcode,条形码
+QR Code,二维码
+Image,图片
+Print Templates,打印模板
+Printed,已打印
+times,次
+Loading...,加载中...
+Please select a print template from the left,请从左侧选择打印模板
+No print templates available,暂无打印模板
+Loading failed,加载失败
+New Print Design,新建打印设计
+Print Parameters,打印参数
+Rendering preview...,正在渲染预览...
+No print records,暂无打印记录
+Excel exported,Excel已导出
+Excel export failed,Excel导出失败
+Please select a print template first,请先选择打印模板
+Cancel,取消
+Rows,行
+Cols,列
+Apply,应用
+Title Row,标题行
+Data Row,数据行
+Query Definition,查询定义
+Clear,清空
+Save,保存
+Cell Properties,单元格属性
+Header Area,页眉区域
+Footer Area,页脚区域
+Row Style Settings,行样式设置
+Row Dimensions,行尺寸
+Row Height,行高
+Text Alignment,文本对齐
+Vertical Align,垂直对齐
+Top,顶部
+Center,居中
+Bottom,底部
+Column Style Settings,列样式设置
+Column Dimensions,列尺寸
+Column Width,列宽
+Horizontal Align,水平对齐
+Left,左
+Right,右
+Type,类型
+Value,值
+Data Key,数据键
+Width (px),宽度(px)
+Height (px),高度(px)
+QR code auto-fits cell dimensions (1:1),二维码自动适应单元格尺寸(1:1)
+Rowspan,跨行数
+Colspan,跨列数
+Font (px),字号(px)
+Padding,内边距
+Quick,快捷
+Default,默认
+Border,边框
+Thin,细
+Medium,中
+Thick,粗
+None,无
+All,全部
+Background Color,背景色
+Text Color,文字颜色
+Colspan exceeds grid range,跨列数超出网格范围
+Target area contains merged cells cannot expand,目标区域包含合并单元格，无法扩展
+Rowspan exceeds grid range,跨行数超出网格范围
+Row {0} set to: {1},第 {0} 行设置为: {1}
+All borders set to {0},所有边框设置为 {0}
+All borders removed,所有边框已移除
+{0} border set to {1}px,{0}边框设置为{1}px
+{0} border removed,{0}边框已移除
+Default style restored,默认样式已恢复
+Cleared {0} property,已清除{0}属性
+Main Query,主查询
+Design saved {0} cells,设计已保存，{0}个单元格
+Are you sure you want to clear all designs? This action cannot be undone.,确定要清空所有设计吗？此操作不可撤销。
+Design cleared,设计已清空
+Grid updated to {0}x{1},网格已更新为 {0}x{1}
+Python Query Code,Python查询代码
+Assign query result to variable result,将查询结果赋值给变量result
+Query definition updated (save document to take effect),查询定义已更新（保存文档后生效）
+No parameter definitions,暂无参数定义
+Parameter Management,参数管理
+Name,名称
+Edit,编辑
+Delete,删除
+Close,关闭
+Are you sure you want to delete this parameter?,确定要删除此参数吗？
+Edit Parameter,编辑参数
+Add Parameter,添加参数
+Parameter Id,参数ID
+Update,更新
+Add,添加
+Please select a target DocType first,请先选择目标单据类型

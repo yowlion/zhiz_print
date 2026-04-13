@@ -86,15 +86,15 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				<div class="super-print-sidebar" id="super-print-sidebar">
 					<div class="sp-sidebar-top">
 						<div class="sp-sidebar-header">
-							<i class="fa fa-print"></i> Print Templates
+							<i class="fa fa-print"></i> ${__('Print Templates')}
 						</div>
 						<div class="sp-sidebar-body" id="sp-template-list">
-							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__('Loading...')}</div>
 						</div>
 					</div>
 					<div class="sp-sidebar-bottom">
 						<div class="sp-sidebar-header" id="sp-log-header">
-							<i class="fa fa-history"></i> Printed <span id="sp-log-count">0</span> times
+							<i class="fa fa-history"></i> ${__('Printed')} <span id="sp-log-count">0</span> ${__('times')}
 						</div>
 						<div class="sp-sidebar-body sp-log-list" id="sp-log-list">
 							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i></div>
@@ -105,7 +105,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					<div class="sp-preview-area" id="sp-preview-area">
 						<div class="sp-no-preview">
 							<i class="fa fa-print" style="font-size:48px;color:#ccc"></i>
-							<p class="text-muted">Please select a print template from the left</p>
+							<p class="text-muted">${__('Please select a print template from the left')}</p>
 						</div>
 					</div>
 				</div>
@@ -153,7 +153,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			if (paper) {
 				frappe.set_route('Form', 'Super Print Paper', paper);
 			} else {
-				frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
+				frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			}
 		});
 
@@ -162,7 +162,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			if (this.current_design) {
 				frappe.set_route('Form', 'Super Print Design', this.current_design);
 			} else {
-				frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
+				frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			}
 		});
 	}
@@ -181,7 +181,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			if (designs.length === 0) {
 				listEl.innerHTML = `
 					<div class="sp-empty">
-						<p>No print templates available</p>
+						<p>${__('No print templates available')}</p>
 					</div>`;
 				this._append_new_design_btn(listEl);
 				return;
@@ -212,14 +212,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		} catch (e) {
 			console.error('Failed to load print templates:', e);
-			listEl.innerHTML = `<div class="sp-error"><i class="fa fa-exclamation-circle"></i> Loading failed</div>`;
+			listEl.innerHTML = `<div class="sp-error"><i class="fa fa-exclamation-circle"></i> ${__('Loading failed')}</div>`;
 		}
 	}
 
 	_append_new_design_btn(listEl) {
 		const btn = document.createElement('div');
 		btn.className = 'sp-new-design-btn';
-		btn.innerHTML = '<i class="fa fa-plus"></i> New Print Design';
+		btn.innerHTML = '<i class="fa fa-plus"></i> ' + __('New Print Design');
 		btn.addEventListener('click', () => {
 			const hash = Math.random().toString(36).substring(2, 12);
 			frappe.route_options = { target_doctype: this.frm.doctype };
@@ -262,7 +262,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			}));
 
 			const dialog = new frappe.ui.Dialog({
-				title: `Print Parameters - ${design.design_name}`,
+				title: __('Print Parameters') + ' - ' + design.design_name,
 				fields: fields,
 				primary_action_label: 'OK',
 				primary_action: (values) => {
@@ -273,7 +273,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			});
 
 			dialog.get_secondary_btn().show();
-			dialog.set_secondary_action_label('Cancel');
+			dialog.set_secondary_action_label(__('Cancel'));
 			dialog.set_secondary_action(() => {
 				dialog.hide();
 			});
@@ -292,7 +292,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		const area = document.getElementById('sp-preview-area');
 
-		area.innerHTML = '<div class="sp-loading"><i class="fa fa-spinner fa-spin fa-2x" style="color:#2196f3"></i><p class="text-muted" style="margin-top:10px">Rendering preview...</p></div>';
+		area.innerHTML = '<div class="sp-loading"><i class="fa fa-spinner fa-spin fa-2x" style="color:#2196f3"></i><p class="text-muted" style="margin-top:10px">' + __('Rendering preview...') + '</p></div>';
 
 		try {
 			const result = await frappe.call({
@@ -449,7 +449,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			if (!listEl) return;
 
 			if (logs.length === 0) {
-				listEl.innerHTML = '<div class="sp-empty-log">No print records</div>';
+				listEl.innerHTML = '<div class="sp-empty-log">' + __('No print records') + '</div>';
 				return;
 			}
 
@@ -511,7 +511,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	async super_printit() {
 		if (!this.current_preview_html) {
-			frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
+			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			return;
 		}
 
@@ -558,7 +558,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	async generate_super_pdf() {
 		if (!this.current_design) {
-			frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
+			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			return;
 		}
 
@@ -590,7 +590,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	async export_super_excel() {
 		if (!this.current_design) {
-			frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
+			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			return;
 		}
 
@@ -618,14 +618,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				a.download = result.message.filename || `${this.frm.docname}.xlsx`;
 				a.click();
 				setTimeout(() => URL.revokeObjectURL(url), 60000);
-				frappe.show_alert({ message: 'Excel exported', indicator: 'green' });
+				frappe.show_alert({ message: __('Excel exported'), indicator: 'green' });
 
 				// Record Excel export log
 				this.record_export_log('Export Excel');
 			}
 		} catch (e) {
 			console.error('Excel export failed:', e);
-			frappe.show_alert({ message: `Excel export failed: ${e.message || String(e)}`, indicator: 'red' });
+			frappe.show_alert({ message: __('Excel export failed') + ': ' + (e.message || String(e)), indicator: 'red' });
 		}
 	}
 

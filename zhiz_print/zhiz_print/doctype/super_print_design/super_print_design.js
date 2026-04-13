@@ -42,11 +42,11 @@ class SuperPrintDesigner {
         ];
 
         this.cellTypes = [
-            { value: 'static', label: 'Static Text', icon: 'fa-font' },
-            { value: 'data_query', label: 'Data Query', icon: 'fa-search' },
-            { value: 'barcode', label: 'Barcode', icon: 'fa-barcode' },
-            { value: 'qrcode', label: 'QR Code', icon: 'fa-qrcode' },
-            { value: 'image', label: 'Image', icon: 'fa-image' }
+            { value: 'static', label: __('Static Text'), icon: 'fa-font' },
+            { value: 'data_query', label: __('Data Query'), icon: 'fa-search' },
+            { value: 'barcode', label: __('Barcode'), icon: 'fa-barcode' },
+            { value: 'qrcode', label: __('QR Code'), icon: 'fa-qrcode' },
+            { value: 'image', label: __('Image'), icon: 'fa-image' }
         ];
 
         this.barcodeFormats = [
@@ -223,27 +223,27 @@ class SuperPrintDesigner {
         // Toolbar
         html += '<div class="spd-toolbar">' +
             '<div class="spd-controls">' +
-                '<label>Rows:</label><input type="number" id="spd-rows" class="form-control" min="1" max="100" value="' + this.rows + '" style="width:70px">' +
-                '<label>Cols:</label><input type="number" id="spd-cols" class="form-control" min="1" max="26" value="' + this.cols + '" style="width:70px">' +
-                '<button class="btn btn-default btn-sm" id="spd-apply-grid"><i class="fa fa-refresh"></i> Apply</button>' +
+                '<label>' + __('Rows') + ':</label><input type="number" id="spd-rows" class="form-control" min="1" max="100" value="' + this.rows + '" style="width:70px">' +
+                '<label>' + __('Cols') + ':</label><input type="number" id="spd-cols" class="form-control" min="1" max="26" value="' + this.cols + '" style="width:70px">' +
+                '<button class="btn btn-default btn-sm" id="spd-apply-grid"><i class="fa fa-refresh"></i> ' + __('Apply') + '</button>' +
             '</div>' +
             '<div class="spd-controls">' +
-                '<label>Font:</label>' +
+                '<label>' + __('Font') + ':</label>' +
                 '<select id="spd-font" class="form-control" style="width:100px">';
         this.fontFamilies.forEach(f => {
             html += '<option value="' + f.value + '" ' + (this.fontFamily === f.value ? 'selected' : '') + '>' + f.label + '</option>';
         });
         html += '</select></div>' +
             '<div class="spd-controls spd-row-type-controls" style="display:none">' +
-                '<button class="btn btn-default btn-sm" id="spd-repeat-title-btn" title="Set Repeat Title Row"><i class="fa fa-repeat" style="color:#ff9800"></i> <small style="font-size:9px;color:#ff9800">Title Row</small></button>' +
-                '<button class="btn btn-default btn-sm" id="spd-data-driven-btn" title="Set Data-Driven Row"><i class="fa fa-database" style="color:#2196f3"></i> <small style="font-size:9px;color:#2196f3">Data Row</small></button>' +
-                '<button class="btn btn-default btn-sm" id="spd-normal-row-btn" title="Restore to Normal Row"><i class="fa fa-minus"></i> <small style="font-size:9px">Normal Row</small></button>' +
+                '<button class="btn btn-default btn-sm" id="spd-repeat-title-btn" title="' + __('Set Repeat Title Row') + '"><i class="fa fa-repeat" style="color:#ff9800"></i> <small style="font-size:9px;color:#ff9800">' + __('Title Row') + '</small></button>' +
+                '<button class="btn btn-default btn-sm" id="spd-data-driven-btn" title="' + __('Set Data-Driven Row') + '"><i class="fa fa-database" style="color:#2196f3"></i> <small style="font-size:9px;color:#2196f3">' + __('Data Row') + '</small></button>' +
+                '<button class="btn btn-default btn-sm" id="spd-normal-row-btn" title="' + __('Restore to Normal Row') + '"><i class="fa fa-minus"></i> <small style="font-size:9px">' + __('Normal Row') + '</small></button>' +
             '</div>' +
             '<div class="spd-actions">' +
-                '<button class="btn btn-info btn-sm" id="spd-query-btn"><i class="fa fa-database"></i> Query Definition</button>' +
-                '<button class="btn btn-info btn-sm" id="spd-params-btn"><i class="fa fa-sliders"></i> Parameters</button>' +
-                '<button class="btn btn-warning btn-sm" id="spd-clear-btn"><i class="fa fa-trash"></i> Clear</button>' +
-                '<button class="btn btn-primary btn-sm" id="spd-save-btn"><i class="fa fa-save"></i> Save</button>' +
+                '<button class="btn btn-info btn-sm" id="spd-query-btn"><i class="fa fa-database"></i> ' + __('Query Definition') + '</button>' +
+                '<button class="btn btn-info btn-sm" id="spd-params-btn"><i class="fa fa-sliders"></i> ' + __('Parameters') + '</button>' +
+                '<button class="btn btn-warning btn-sm" id="spd-clear-btn"><i class="fa fa-trash"></i> ' + __('Clear') + '</button>' +
+                '<button class="btn btn-primary btn-sm" id="spd-save-btn"><i class="fa fa-save"></i> ' + __('Save') + '</button>' +
             '</div>' +
         '</div>';
 
@@ -278,7 +278,7 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="spd-props" id="spd-props">' +
-                '<h4><i class="fa fa-cog"></i> Cell Properties</h4>' +
+                '<h4><i class="fa fa-cog"></i> ' + __('Cell Properties') + '</h4>' +
                 '<div id="spd-prop-form"></div>' +
             '</div>' +
         '</div></div>';
@@ -293,7 +293,7 @@ class SuperPrintDesigner {
             const hc = this.pageHeaderCenter || '';
             const hr = this.pageHeaderRight || '';
             const hasContent = hl || hc || hr;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">Header Area</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">' + __('Header Area') + '</span>';
             html += '<div class="spd-header-area" id="spd-header-area" style="' +
                 'position:absolute;top:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mTop + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
@@ -310,7 +310,7 @@ class SuperPrintDesigner {
             const fc = this.pageFooterCenter || '';
             const fr_ = this.pageFooterRight || '';
             const hasContent = fl || fc || fr_;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">Footer Area</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">' + __('Footer Area') + '</span>';
             html += '<div class="spd-footer-area" id="spd-footer-area" style="' +
                 'position:absolute;bottom:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mBottom + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
@@ -354,10 +354,10 @@ class SuperPrintDesigner {
             let typeIndicator = '';
             let typeClass = '';
             if (rowType === 'Repeat Title Row') {
-                typeIndicator = '<span class="row-type-badge badge-repeat" title="Repeat Title Row">T</span>';
+                typeIndicator = '<span class="row-type-badge badge-repeat" title="' + __('Repeat Title Row') + '">T</span>';
                 typeClass = ' row-header-repeat-title';
             } else if (rowType === 'Data-Driven Row') {
-                typeIndicator = '<span class="row-type-badge badge-data" title="Data-Driven Row">D</span>';
+                typeIndicator = '<span class="row-type-badge badge-data" title="' + __('Data-Driven Row') + '">D</span>';
                 typeClass = ' row-header-data-driven';
             }
 
@@ -552,16 +552,16 @@ class SuperPrintDesigner {
 
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
-            titleElement.innerHTML = '<i class="fa fa-arrows-v"></i> Row Style Settings <small style="color:#6c757d;font-weight:normal">(Row ' + row + ')</small>';
+            titleElement.innerHTML = '<i class="fa fa-arrows-v"></i> ' + __('Row Style Settings') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Row') + ' ' + row + ')</small>';
         }
 
         let formHtml = '<form id="row-property-form" class="property-form">' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-expand"></i> Row Dimensions</div>' +
+                '<div class="property-section-header"><i class="fa fa-expand"></i> ' + __('Row Dimensions') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<div class="layout-controls">' +
                         '<div class="layout-control-group">' +
-                            '<label style="font-size:9px">Row Height:</label>' +
+                            '<label style="font-size:9px">' + __('Row Height') + ':</label>' +
                             '<div class="number-spinner number-spinner-sm">' +
                                 '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="row-height" data-step="5">-</button>' +
                                 '<input type="number" id="row-height" class="form-control spin-input" value="' + (rowStyle.height || '') + '" min="1" max="500" step="1" placeholder="20">' +
@@ -569,7 +569,7 @@ class SuperPrintDesigner {
                             '</div>' +
                         '</div>' +
                         '<div class="layout-control-group">' +
-                            '<label style="font-size:9px">Font:</label>' +
+                            '<label style="font-size:9px">' + __('Font') + ':</label>' +
                             '<div class="number-spinner number-spinner-sm">' +
                                 '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="row-font-size" data-step="1">-</button>' +
                                 '<input type="number" id="row-font-size" class="form-control spin-input" value="' + (rowStyle.font_size || '') + '" min="8" max="36" step="1" placeholder="12">' +
@@ -580,40 +580,40 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-bars"></i> Text Alignment</div>' +
+                '<div class="property-section-header"><i class="fa fa-bars"></i> ' + __('Text Alignment') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px;margin-bottom:4px">Vertical Align:</label>' +
+                    '<label style="font-size:9px;margin-bottom:4px">' + __('Vertical Align') + ':</label>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="top" title="Top Align"><i class="fa fa-arrow-up"></i> Top</button>' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="middle" title="Center"><i class="fa fa-arrows-v"></i> Center</button>' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="bottom" title="Bottom Align"><i class="fa fa-arrow-down"></i> Bottom</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="top" title="' + __('Top Align') + '"><i class="fa fa-arrow-up"></i> ' + __('Top') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="middle" title="' + __('Center') + '"><i class="fa fa-arrows-v"></i> ' + __('Center') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="bottom" title="' + __('Bottom Align') + '"><i class="fa fa-arrow-down"></i> ' + __('Bottom') + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-tag"></i> Row Type</div>' +
+                '<div class="property-section-header"><i class="fa fa-tag"></i> ' + __('Row Type') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<select id="row-type-select" class="form-control">' +
-                        '<option value="">Normal Row</option>' +
-                        '<option value="Repeat Title Row">Repeat Title Row</option>' +
-                        '<option value="Data-Driven Row">Data-Driven Row</option>' +
+                        '<option value="">' + __('Normal Row') + '</option>' +
+                        '<option value="Repeat Title Row">' + __('Repeat Title Row') + '</option>' +
+                        '<option value="Data-Driven Row">' + __('Data-Driven Row') + '</option>' +
                     '</select>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-text-height"></i> Row Display Effect</div>' +
+                '<div class="property-section-header"><i class="fa fa-text-height"></i> ' + __('Row Display Effect') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<select id="row-display-select" class="form-control">' +
-                        '<option value="">Auto Wrap</option>' +
-                        '<option value="Fixed Height">Fixed Height</option>' +
-                        '<option value="Auto Shrink Font">Auto Shrink Font</option>' +
+                        '<option value="">' + __('Auto Wrap') + '</option>' +
+                        '<option value="Fixed Height">' + __('Fixed Height') + '</option>' +
+                        '<option value="Auto Shrink Font">' + __('Auto Shrink Font') + '</option>' +
                     '</select>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> Row Style</div>' +
+                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> ' + __('Row Style') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px">CSS Style:</label>' +
+                    '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
                     '<textarea id="row-css-style" class="form-control css-editor" rows="2" placeholder="background-color: #f0f0f0;">' + cssPreview.trim() + '</textarea>' +
                 '</div>' +
             '</div>' +
@@ -678,7 +678,7 @@ class SuperPrintDesigner {
 
     setRowType(rowType) {
         if (this.selectionMode !== 'row' || !this.selectedRow) {
-            frappe.show_alert({ message: 'Please click a row number on the left to select an entire row', indicator: 'yellow' });
+            frappe.show_alert({ message: __('Please click a row number on the left to select an entire row'), indicator: 'yellow' });
             return;
         }
         this.setRowTypeForRow(this.selectedRow, rowType);
@@ -693,8 +693,8 @@ class SuperPrintDesigner {
         }
         this.refreshGrid();
         this.frm.dirty();
-        const typeLabel = rowType || 'Normal Row';
-        frappe.show_alert({ message: 'Row ' + row + ' set to: ' + typeLabel, indicator: 'green' });
+        const typeLabel = rowType || __('Normal Row');
+        frappe.show_alert({ message: __('Row') + ' ' + row + ' ' + __('set to') + ': ' + typeLabel, indicator: 'green' });
     }
 
     setRowDisplay(row, display) {
@@ -747,16 +747,16 @@ class SuperPrintDesigner {
 
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
-            titleElement.innerHTML = '<i class="fa fa-arrows-h"></i> Column Style Settings <small style="color:#6c757d;font-weight:normal">(Col ' + col + ')</small>';
+            titleElement.innerHTML = '<i class="fa fa-arrows-h"></i> ' + __('Column Style Settings') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Col') + ' ' + col + ')</small>';
         }
 
         let formHtml = '<form id="col-property-form" class="property-form">' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-expand"></i> Column Dimensions</div>' +
+                '<div class="property-section-header"><i class="fa fa-expand"></i> ' + __('Column Dimensions') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<div class="layout-controls">' +
                         '<div class="layout-control-group" style="flex:1">' +
-                            '<label style="font-size:9px">Column Width:</label>' +
+                            '<label style="font-size:9px">' + __('Column Width') + ':</label>' +
                             '<div class="number-spinner number-spinner-sm">' +
                                 '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="col-width" data-step="10">-</button>' +
                                 '<input type="number" id="col-width" class="form-control spin-input" value="' + (colStyle.width || '') + '" min="1" max="500" step="1" placeholder="60">' +
@@ -767,20 +767,20 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-align-center"></i> Text Alignment</div>' +
+                '<div class="property-section-header"><i class="fa fa-align-center"></i> ' + __('Text Alignment') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px;margin-bottom:4px">Horizontal Align:</label>' +
+                    '<label style="font-size:9px;margin-bottom:4px">' + __('Horizontal Align') + ':</label>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="left" title="Left Align"><i class="fa fa-align-left"></i> Left</button>' +
-                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="center" title="Center"><i class="fa fa-align-center"></i> Center</button>' +
-                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="right" title="Right Align"><i class="fa fa-align-right"></i> Right</button>' +
+                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="left" title="' + __('Left Align') + '"><i class="fa fa-align-left"></i> ' + __('Left') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="center" title="' + __('Center') + '"><i class="fa fa-align-center"></i> ' + __('Center') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="right" title="' + __('Right Align') + '"><i class="fa fa-align-right"></i> ' + __('Right') + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> Column Style</div>' +
+                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> ' + __('Column Style') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px">CSS Style:</label>' +
+                    '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
                     '<textarea id="col-css-style" class="form-control css-editor" rows="2" placeholder="text-align: center;">' + cssPreview.trim() + '</textarea>' +
                 '</div>' +
             '</div>' +
@@ -838,7 +838,7 @@ class SuperPrintDesigner {
 
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
-            titleElement.innerHTML = '<i class="fa fa-cog"></i> Cell Properties <small style="color:#6c757d;font-weight:normal">(' + cellId + ')</small>';
+            titleElement.innerHTML = '<i class="fa fa-cog"></i> ' + __('Cell Properties') + ' <small style="color:#6c757d;font-weight:normal">(' + cellId + ')</small>';
         }
 
         const typeOptions = this.cellTypes.map(t => '<option value="' + t.value + '">' + t.label + '</option>').join('');
@@ -850,35 +850,35 @@ class SuperPrintDesigner {
         const styleTabCls = activeTab === 'style' ? ' active' : '';
 
         let formHtml = '<div class="prop-tabs">' +
-            '<div class="prop-tab' + contentTabCls + '" data-tab="content"><i class="fa fa-edit"></i> Content</div>' +
-            '<div class="prop-tab' + styleTabCls + '" data-tab="style"><i class="fa fa-paint-brush"></i> Style</div>' +
+            '<div class="prop-tab' + contentTabCls + '" data-tab="content"><i class="fa fa-edit"></i> ' + __('Content') + '</div>' +
+            '<div class="prop-tab' + styleTabCls + '" data-tab="style"><i class="fa fa-paint-brush"></i> ' + __('Style') + '</div>' +
         '</div>' +
         '<div class="prop-tab-contents">' +
             '<div class="prop-tab-content' + contentTabCls + '" data-tab="content">' +
-                '<label>Type:</label>' +
+                '<label>' + __('Type') + ':</label>' +
                 '<select id="prop-cell-type" class="form-control">' + typeOptions + '</select>' +
-                '<label>Value:</label>' +
+                '<label>' + __('Value') + ':</label>' +
                 '<textarea id="prop-cell-value" class="form-control" rows="2"></textarea>' +
                 '<div id="query-group" style="display:none">' +
-                    '<label>Data Key:</label>' +
-                    '<input id="prop-data-key" class="form-control" placeholder="e.g. item_code">' +
+                    '<label>' + __('Data Key') + ':</label>' +
+                    '<input id="prop-data-key" class="form-control" placeholder="' + __('e.g. item_code') + '">' +
                 '</div>' +
                 '<div id="barcode-group" style="display:none">' +
-                    '<label>Barcode Format:</label>' +
+                    '<label>' + __('Barcode Format') + ':</label>' +
                     '<select id="prop-barcode-format" class="form-control">' + barcodeFormatOptions + '</select>' +
-                    '<label>Width (px):</label>' +
+                    '<label>' + __('Width (px)') + ':</label>' +
                     '<input type="number" id="prop-barcode-width" class="form-control" value="100">' +
-                    '<label>Height (px):</label>' +
+                    '<label>' + __('Height (px)') + ':</label>' +
                     '<input type="number" id="prop-barcode-height" class="form-control" value="40">' +
                 '</div>' +
                 '<div id="qrcode-group" style="display:none">' +
-                    '<p style="font-size:11px;color:#888;margin:4px 0;">QR code auto-fits cell dimensions (1:1)</p>' +
+                    '<p style="font-size:11px;color:#888;margin:4px 0;">' + __('QR code auto-fits cell dimensions (1:1)') + '</p>' +
                 '</div>' +
             '</div>' +
             '<div class="prop-tab-content' + styleTabCls + '" data-tab="style">' +
                 '<div class="layout-controls">' +
                     '<div class="layout-control-group">' +
-                        '<label>Rowspan:</label>' +
+                        '<label>' + __('Rowspan') + ':</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-rowspan" data-step="1">-</button>' +
                             '<input type="number" id="prop-rowspan" class="form-control spin-input" min="1" max="100" value="' + (cell.rowspan || 1) + '">' +
@@ -886,7 +886,7 @@ class SuperPrintDesigner {
                         '</div>' +
                     '</div>' +
                     '<div class="layout-control-group">' +
-                        '<label>Colspan:</label>' +
+                        '<label>' + __('Colspan') + ':</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-colspan" data-step="1">-</button>' +
                             '<input type="number" id="prop-colspan" class="form-control spin-input" min="1" max="26" value="' + (cell.colspan || 1) + '">' +
@@ -896,7 +896,7 @@ class SuperPrintDesigner {
                 '</div>' +
                 '<div class="layout-controls">' +
                     '<div class="layout-control-group">' +
-                        '<label>Font (px):</label>' +
+                        '<label>' + __('Font (px)') + ':</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-font-size" data-step="1">-</button>' +
                             '<input type="number" id="prop-font-size" class="form-control spin-input" value="' + this.extractFontSize(cell.css_style, row) + '" min="8" max="36">' +
@@ -904,7 +904,7 @@ class SuperPrintDesigner {
                         '</div>' +
                     '</div>' +
                     '<div class="layout-control-group">' +
-                        '<label>Padding:</label>' +
+                        '<label>' + __('Padding') + ':</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-padding" data-step="1">-</button>' +
                             '<input type="number" id="prop-padding" class="form-control spin-input" value="' + this.extractPadding(cell.css_style) + '" min="0" max="20">' +
@@ -913,40 +913,40 @@ class SuperPrintDesigner {
                     '</div>' +
                 '</div>' +
                 '<div class="css-quick-buttons css-quick-compact">' +
-                    '<label style="font-size:9px">Quick:</label>' +
+                    '<label style="font-size:9px">' + __('Quick') + ':</label>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:left" data-prop="text-align" title="Left Align"><i class="fa fa-align-left"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:center" data-prop="text-align" title="Center"><i class="fa fa-align-center"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:right" data-prop="text-align" title="Right Align"><i class="fa fa-align-right"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-weight:bold" data-prop="font-weight" title="Bold"><i class="fa fa-bold"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="Italic"><i class="fa fa-italic"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:left" data-prop="text-align" title="' + __('Left Align') + '"><i class="fa fa-align-left"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:center" data-prop="text-align" title="' + __('Center') + '"><i class="fa fa-align-center"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:right" data-prop="text-align" title="' + __('Right Align') + '"><i class="fa fa-align-right"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-weight:bold" data-prop="font-weight" title="' + __('Bold') + '"><i class="fa fa-bold"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="' + __('Italic') + '"><i class="fa fa-italic"></i></button>' +
                     '</div>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<div class="color-picker-wrapper" title="Background Color"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
-                        '<div class="color-picker-wrapper" title="Text Color"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
-                        '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="Default Style" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">Default</span></button>' +
-                        '<button type="button" class="btn btn-xs btn-danger css-quick-btn" data-action="clear-css" title="Clear CSS" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-eraser"></i> Clear</button>' +
+                        '<div class="color-picker-wrapper" title="' + __('Background Color') + '"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
+                        '<div class="color-picker-wrapper" title="' + __('Text Color') + '"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
+                        '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="' + __('Default Style') + '" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">' + __('Default') + '</span></button>' +
+                        '<button type="button" class="btn btn-xs btn-danger css-quick-btn" data-action="clear-css" title="' + __('Clear CSS') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-eraser"></i> ' + __('Clear') + '</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="border-settings" style="margin:6px 0;padding:6px;background:#f8f9fa;border-radius:4px;border:1px solid #e9ecef">' +
-                    '<label style="font-size:9px;margin-bottom:4px">Border:</label>' +
+                    '<label style="font-size:9px;margin-bottom:4px">' + __('Border') + ':</label>' +
                     '<div class="btn-group-wrap" style="margin-top:2px;gap:2px">' +
                         '<div class="border-width-selector" style="display:flex;align-items:center;gap:2px">' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn bw-active" data-width="1" style="width:24px;height:20px;padding:0;font-size:8px">Thin</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="2" style="width:24px;height:20px;padding:0;font-size:8px">Medium</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="3" style="width:24px;height:20px;padding:0;font-size:8px">Thick</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="0" style="width:24px;height:20px;padding:0;font-size:8px">None</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn bw-active" data-width="1" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thin') + '</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="2" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Medium') + '</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="3" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thick') + '</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="0" style="width:24px;height:20px;padding:0;font-size:8px">' + __('None') + '</button>' +
                         '</div>' +
                     '</div>' +
                     '<div class="btn-group-wrap" style="margin-top:4px;gap:2px">' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="top" style="width:24px;height:20px;padding:0;font-size:8px">Top</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="bottom" style="width:24px;height:20px;padding:0;font-size:8px">Bottom</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="left" style="width:24px;height:20px;padding:0;font-size:8px">Left</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="right" style="width:24px;height:20px;padding:0;font-size:8px">Right</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="none" style="width:24px;height:20px;padding:0;font-size:8px">All</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="top" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Top') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="bottom" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Bottom') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="left" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Left') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="right" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Right') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="none" style="width:24px;height:20px;padding:0;font-size:8px">' + __('All') + '</button>' +
                     '</div>' +
                 '</div>' +
-                '<label>CSS:</label>' +
+                '<label>' + __('CSS') + ':</label>' +
                 '<textarea id="prop-css-style" class="form-control css-editor" rows="3">' + (cell.css_style || '') + '</textarea>' +
             '</div>' +
         '</div>';
@@ -1073,16 +1073,16 @@ class SuperPrintDesigner {
             // Expand: check if new area cells are independent (non-merged)
             for (let c = startCol + oldColspan; c < startCol + newColspan; c++) {
                 if (c >= this.cols) {
-                    frappe.show_alert({ message: 'Colspan exceeds grid range', indicator: 'red' });
+                    frappe.show_alert({ message: __('Colspan exceeds grid range'), indicator: 'red' });
                     return;
                 }
                 const target = this.grid[startRow]?.[c];
                 if (target && !target._merged && (target.rowspan > 1 || target.colspan > 1)) {
-                    frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
+                    frappe.show_alert({ message: __('Target area contains merged cells, cannot expand'), indicator: 'red' });
                     return;
                 }
                 if (target?._merged) {
-                    frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
+                    frappe.show_alert({ message: __('Target area contains merged cells, cannot expand'), indicator: 'red' });
                     return;
                 }
             }
@@ -1122,17 +1122,17 @@ class SuperPrintDesigner {
             // Expand: check new area
             for (let r = startRow + oldRowspan; r < startRow + newRowspan; r++) {
                 if (r >= this.rows) {
-                    frappe.show_alert({ message: 'Rowspan exceeds grid range', indicator: 'red' });
+                    frappe.show_alert({ message: __('Rowspan exceeds grid range'), indicator: 'red' });
                     return;
                 }
                 for (let c = startCol; c < startCol + (cell.colspan || 1); c++) {
                     const target = this.grid[r]?.[c];
                     if (target && !target._merged && (target.rowspan > 1 || target.colspan > 1)) {
-                        frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
+                        frappe.show_alert({ message: __('Target area contains merged cells, cannot expand'), indicator: 'red' });
                         return;
                     }
                     if (target?._merged) {
-                        frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
+                        frappe.show_alert({ message: __('Target area contains merged cells, cannot expand'), indicator: 'red' });
                         return;
                     }
                 }
@@ -1313,7 +1313,7 @@ class SuperPrintDesigner {
             cssPairs['border-left'] = borderValue;
         }
 
-        const sideNames = { top: 'Top', bottom: 'Bottom', left: 'Left', right: 'Right', none: 'All' };
+        const sideNames = { top: __('Top'), bottom: __('Bottom'), left: __('Left'), right: __('Right'), none: __('All') };
         const allSides = ['top', 'right', 'bottom', 'left'];
         const borderVal = width > 0 ? width + 'px solid black' : '1px solid transparent';
 
@@ -1324,9 +1324,9 @@ class SuperPrintDesigner {
             cssEditor.value = newCss;
             cssEditor.dispatchEvent(new Event('change', { bubbles: true }));
             if (width > 0) {
-                frappe.show_alert({ message: 'All borders set to ' + width + 'px', indicator: 'green' });
+                frappe.show_alert({ message: __('All borders set to') + ' ' + width + 'px', indicator: 'green' });
             } else {
-                frappe.show_alert({ message: 'All borders removed', indicator: 'orange' });
+                frappe.show_alert({ message: __('All borders removed'), indicator: 'orange' });
             }
             return;
         }
@@ -1336,9 +1336,9 @@ class SuperPrintDesigner {
         cssEditor.value = newCss;
         cssEditor.dispatchEvent(new Event('change', { bubbles: true }));
         if (width > 0) {
-            frappe.show_alert({ message: sideNames[side] + ' border set to ' + width + 'px', indicator: 'green' });
+            frappe.show_alert({ message: sideNames[side] + ' ' + __('border set to') + ' ' + width + 'px', indicator: 'green' });
         } else {
-            frappe.show_alert({ message: sideNames[side] + ' border removed', indicator: 'orange' });
+            frappe.show_alert({ message: sideNames[side] + ' ' + __('border removed'), indicator: 'orange' });
         }
     }
 
@@ -1377,7 +1377,7 @@ class SuperPrintDesigner {
                     if (fontSizeInput) fontSizeInput.value = this.fontSize;
                     if (paddingInput) paddingInput.value = 0;
                     this.updateCellProperty('css_style', defaultCss);
-                    frappe.show_alert({ message: 'Default style restored', indicator: 'green' });
+                    frappe.show_alert({ message: __('Default style restored'), indicator: 'green' });
                 } else if (cssProp) {
                     this.toggleCssProperty(cssProp);
                 }
@@ -1409,13 +1409,13 @@ class SuperPrintDesigner {
             const newCss = Object.entries(cssPairs).map(([k, v]) => k + ':' + v).join('; ');
             cssEditor.value = newCss;
             cssEditor.dispatchEvent(new Event('change', { bubbles: true }));
-            frappe.show_alert({ message: 'Cleared ' + propName + ' property', indicator: 'orange' });
+            frappe.show_alert({ message: __('Cleared') + ' ' + propName + ' ' + __('property'), indicator: 'orange' });
         }
     }
 
     generateQueryOptions() {
         if (this.frm.doc.query_code) {
-            return '<option value="main">Main Query</option>';
+            return '<option value="main">' + __('Main Query') + '</option>';
         }
         return '';
     }
@@ -1459,7 +1459,7 @@ class SuperPrintDesigner {
         this.frm.set_value('font_family', this.fontFamily);
         this.frm.set_value('design_items', items);
         this.frm.save().then(() => {
-            frappe.show_alert({ message: 'Design saved, ' + items.length + ' cells', indicator: 'green' });
+            frappe.show_alert({ message: __('Design saved') + ', ' + items.length + ' ' + __('cells'), indicator: 'green' });
         });
     }
 
@@ -1478,7 +1478,7 @@ class SuperPrintDesigner {
     }
 
     clearDesign() {
-        if (!confirm('Are you sure you want to clear all designs? This action cannot be undone.')) return;
+        if (!confirm(__('Are you sure you want to clear all designs? This action cannot be undone.'))) return;
         this.initGrid();
         this.cellDataMap = {};
         this.rowStyles = {};
@@ -1494,7 +1494,7 @@ class SuperPrintDesigner {
         }
         this.refreshGrid();
         this.frm.dirty();
-        frappe.show_alert({ message: 'Design cleared', indicator: 'yellow' });
+        frappe.show_alert({ message: __('Design cleared'), indicator: 'yellow' });
     }
 
     applyGridSize() {
@@ -1509,7 +1509,7 @@ class SuperPrintDesigner {
         this.loadExistingDesign();
         this.refreshGrid();
         this.frm.dirty();
-        frappe.show_alert({ message: 'Grid updated to ' + newRows + 'x' + newCols, indicator: 'green' });
+        frappe.show_alert({ message: __('Grid updated to') + ' ' + newRows + 'x' + newCols, indicator: 'green' });
     }
 
     refreshGrid() {
@@ -1558,7 +1558,7 @@ class SuperPrintDesigner {
             const hc = this.pageHeaderCenter || '';
             const hr = this.pageHeaderRight || '';
             const hasH = hl || hc || hr;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">Header Area</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">' + __('Header Area') + '</span>';
             headerArea.innerHTML =
                 '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (hl || (hasH ? '' : placeholder)) + '</div>' +
                 '<div style="flex:1;text-align:center;">' + (hc || '') + '</div>' +
@@ -1569,7 +1569,7 @@ class SuperPrintDesigner {
             const fc = this.pageFooterCenter || '';
             const fr_ = this.pageFooterRight || '';
             const hasF = fl || fc || fr_;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">Footer Area</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">' + __('Footer Area') + '</span>';
             footerArea.innerHTML =
                 '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (fl || (hasF ? '' : placeholder)) + '</div>' +
                 '<div style="flex:1;text-align:center;">' + (fc || '') + '</div>' +
@@ -1605,21 +1605,21 @@ class SuperPrintDesigner {
     // Query definition dialog
     showQueryDialog() {
         const dialog = new frappe.ui.Dialog({
-            title: 'Query Definition',
+            title: __('Query Definition'),
             fields: [
-                { fieldname: 'query_code', label: 'Python Query Code', fieldtype: 'Code', options: 'Python',
+                { fieldname: 'query_code', label: __('Python Query Code'), fieldtype: 'Code', options: 'Python',
                   default: this.frm.doc.query_code || '',
-                  description: 'Assign query result to variable result' },
-                { fieldname: 'query_parameters', label: 'Query Parameters', fieldtype: 'Small Text',
+                  description: __('Assign query result to variable result') },
+                { fieldname: 'query_parameters', label: __('Query Parameters'), fieldtype: 'Small Text',
                   default: this.frm.doc.query_parameters || '',
-                  description: 'One parameter per line, format: key=value' }
+                  description: __('One parameter per line, format: key=value') }
             ],
-            primary_action_label: 'Save',
+            primary_action_label: __('Save'),
             primary_action: (values) => {
                 this.frm.set_value('query_code', values.query_code);
                 this.frm.set_value('query_parameters', values.query_parameters);
                 this.frm.dirty();
-                frappe.show_alert({ message: 'Query definition updated (save document to take effect)', indicator: 'green' });
+                frappe.show_alert({ message: __('Query definition updated (save document to take effect)'), indicator: 'green' });
                 dialog.hide();
             }
         });
@@ -1635,12 +1635,12 @@ class SuperPrintDesigner {
                 '<td><button class="btn btn-xs btn-default edit-p" data-idx="' + i + '"><i class="fa fa-edit"></i></button></td>' +
                 '<td><button class="btn btn-xs btn-danger del-p" data-idx="' + i + '"><i class="fa fa-trash"></i></button></td>' +
               '</tr>').join('')
-            : '<tr><td colspan="5" class="text-muted text-center">No parameter definitions</td></tr>';
+            : '<tr><td colspan="5" class="text-muted text-center">' + __('No parameter definitions') + '</td></tr>';
 
         const dialog = new frappe.ui.Dialog({
-            title: 'Parameter Management',
-            fields: [{ fieldtype: 'HTML', options: '<div><button class="btn btn-primary btn-sm add-p">Add Parameter</button><table class="table table-bordered mt-2"><thead><tr><th>Name</th><th>Type</th><th>Default</th><th>Edit</th><th>Delete</th></tr></thead><tbody>' + listHtml + '</tbody></table></div>' }],
-            primary_action_label: 'Close',
+            title: __('Parameter Management'),
+            fields: [{ fieldtype: 'HTML', options: '<div><button class="btn btn-primary btn-sm add-p">' + __('Add Parameter') + '</button><table class="table table-bordered mt-2"><thead><tr><th>' + __('Name') + '</th><th>' + __('Type') + '</th><th>' + __('Default') + '</th><th>' + __('Edit') + '</th><th>' + __('Delete') + '</th></tr></thead><tbody>' + listHtml + '</tbody></table></div>' }],
+            primary_action_label: __('Close'),
             primary_action: () => dialog.hide()
         });
         dialog.show();
@@ -1650,7 +1650,7 @@ class SuperPrintDesigner {
             dialog.$wrapper.find('.edit-p').on('click', (e) => this.showParamEditDialog(dialog, parseInt($(e.currentTarget).data('idx'))));
             dialog.$wrapper.find('.del-p').on('click', (e) => {
                 const idx = parseInt($(e.currentTarget).data('idx'));
-                frappe.confirm('Are you sure you want to delete this parameter?', () => {
+                frappe.confirm(__('Are you sure you want to delete this parameter?'), () => {
                     this.frm.doc.design_parameters.splice(idx, 1);
                     this.refreshParamsList(dialog);
                 });
@@ -1664,16 +1664,16 @@ class SuperPrintDesigner {
         const p = isEdit ? params[editIndex] : { param_name: '', param_label: '', param_type: 'Data', default_value: '', reqd: 0, options: '' };
 
         const editDialog = new frappe.ui.Dialog({
-            title: isEdit ? 'Edit Parameter' : 'Add Parameter',
+            title: isEdit ? __('Edit Parameter') : __('Add Parameter'),
             fields: [
-                { fieldname: 'param_name', label: 'Parameter Id', fieldtype: 'Data', reqd: 1, default: p.param_name },
-                { fieldname: 'param_label', label: 'Display Label', fieldtype: 'Data', default: p.param_label },
-                { fieldname: 'param_type', label: 'Type', fieldtype: 'Select', options: 'Data\nInt\nFloat\nDate\nLink\nSelect', default: p.param_type || 'Data' },
-                { fieldname: 'default_value', label: 'Default Value', fieldtype: 'Data', default: p.default_value },
-                { fieldname: 'reqd', label: 'Required', fieldtype: 'Check', default: p.reqd },
-                { fieldname: 'options', label: 'Options / Target DocType', fieldtype: 'Small Text', default: p.options }
+                { fieldname: 'param_name', label: __('Parameter Id'), fieldtype: 'Data', reqd: 1, default: p.param_name },
+                { fieldname: 'param_label', label: __('Display Label'), fieldtype: 'Data', default: p.param_label },
+                { fieldname: 'param_type', label: __('Type'), fieldtype: 'Select', options: 'Data\nInt\nFloat\nDate\nLink\nSelect', default: p.param_type || 'Data' },
+                { fieldname: 'default_value', label: __('Default Value'), fieldtype: 'Data', default: p.default_value },
+                { fieldname: 'reqd', label: __('Required'), fieldtype: 'Check', default: p.reqd },
+                { fieldname: 'options', label: __('Options / Target DocType'), fieldtype: 'Small Text', default: p.options }
             ],
-            primary_action_label: isEdit ? 'Update' : 'Add',
+            primary_action_label: isEdit ? __('Update') : __('Add'),
             primary_action: (values) => {
                 if (isEdit) params[editIndex] = values;
                 else {
@@ -1870,7 +1870,7 @@ frappe.ui.form.on('Super Print Design', {
             }, 100);
         } else {
             frm.set_df_property('design_html', 'options',
-                '<div class="alert alert-info" style="margin-top:15px"><h5>Please select a target DocType first</h5></div>');
+                '<div class="alert alert-info" style="margin-top:15px"><h5>' + __('Please select a target DocType first') + '</h5></div>');
             refresh_field('design_html');
         }
     },
