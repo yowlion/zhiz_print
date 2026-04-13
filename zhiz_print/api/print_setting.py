@@ -14,8 +14,17 @@ def get_boot_settings(bootinfo):
         bootinfo["zhiz_print"] = {"print_designer": {"enabled": False}}
         return
 
+    # Get license info (auto-creates trial if needed)
+    license_info = {}
+    try:
+        from zhiz_print.api.license import get_license_info_for_boot
+        license_info = get_license_info_for_boot()
+    except Exception:
+        pass
+
     bootinfo["zhiz_print"] = {
         "print_designer": _get_print_designer_boot_settings(setting),
+        "license": license_info,
     }
 
 
@@ -25,7 +34,18 @@ def refresh_boot_cache():
     frappe.only_for("System Manager")
     frappe.clear_cache()
     setting = frappe.get_single("Zprint Setting")
-    return _get_print_designer_boot_settings(setting)
+
+    license_info = {}
+    try:
+        from zhiz_print.api.license import get_license_info_for_boot
+        license_info = get_license_info_for_boot()
+    except Exception:
+        pass
+
+    return {
+        "print_designer": _get_print_designer_boot_settings(setting),
+        "license": license_info,
+    }
 
 
 def _get_print_designer_boot_settings(setting):
@@ -57,6 +77,18 @@ def _get_print_designer_boot_settings(setting):
             # Export settings
             result["allow_export_pdf"] = bool(frappe.utils.cint(setting.get("allow_export_pdf")))
             result["allow_export_excel"] = bool(frappe.utils.cint(setting.get("allow_export_excel")))
+
+            # PDF engine mode (avoid frontend DB call)
+            result["pdf_engine_mode"] = setting.get("pdf_engine_mode") or "wkhtmltopdf"
+
+            # License expired flag
+            try:
+                from zhiz_print.api.license import check_license_valid
+                valid, info = check_license_valid()
+                result["expired"] = info.get("expired", False)
+                result["license_message"] = info.get("message", "")
+            except Exception:
+                pass
 
         return result
     except Exception:

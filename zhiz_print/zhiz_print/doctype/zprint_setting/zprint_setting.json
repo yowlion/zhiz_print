@@ -15,7 +15,10 @@
     "section_break_export",
     "allow_export_pdf",
     "column_break_export",
-    "allow_export_excel"
+    "allow_export_excel",
+    "section_break_license",
+    "license_info",
+    "license_key_input"
   ],
   "fields": [
     {
@@ -89,6 +92,22 @@
       "fieldname": "allow_export_excel",
       "fieldtype": "Check",
       "label": "Allow Export Excel"
+    },
+    {
+      "fieldname": "section_break_license",
+      "fieldtype": "Section Break",
+      "label": "Subscription"
+    },
+    {
+      "fieldname": "license_info",
+      "fieldtype": "HTML",
+      "label": "License Info",
+      "options": "<div id=\"license-info-container\"></div>"
+    },
+    {
+      "fieldname": "license_key_input",
+      "fieldtype": "Data",
+      "label": "License Key"
     }
   ],
   "issingle": 1,

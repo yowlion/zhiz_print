@@ -229,6 +229,17 @@ def _pdf_response(pdf_bytes, filename):
 
 @frappe.whitelist()
 def generate_print_pdf(doctype, docname, design_name, params=None):
+	"""Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting."""
+	engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
+	if engine_mode == "WeasyPrint":
+		return _generate_print_pdf_weasyprint(doctype, docname, design_name, params)
+	elif engine_mode == "Chromium":
+		return _generate_print_pdf_chromium(doctype, docname, design_name, params)
+	else:
+		return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params)
+
+
+def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None):
 	"""Generate PDF using WeasyPrint, browser inline preview"""
 	from weasyprint import HTML as WeasyHTML
 
@@ -354,8 +365,7 @@ def _prepare_html_for_wkhtmltopdf(html):
 	return html
 
 
-@frappe.whitelist()
-def generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
+def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
 	"""Generate PDF using wkhtmltopdf, browser inline preview"""
 	import pdfkit
 
@@ -389,8 +399,7 @@ def generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
 		frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
-@frappe.whitelist()
-def generate_print_pdf_chromium(doctype, docname, design_name, params=None):
+def _generate_print_pdf_chromium(doctype, docname, design_name, params=None):
 	"""Generate PDF using Chromium headless, browser inline preview"""
 	import os
 	import subprocess

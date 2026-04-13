@@ -72,6 +72,20 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 // ==================== Super Print Mode ====================
 
 	async setup_super_print_page() {
+		// Check license expiry
+		const lic = frappe.boot.zhiz_print?.print_designer;
+		if (lic && lic.expired) {
+			this.page.main.html(`
+				<div class="sp-expired-notice" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 120px);color:#e74c3c;">
+					<i class="fa fa-lock" style="font-size:48px;margin-bottom:20px"></i>
+					<h3>${__('Subscription Expired')}</h3>
+					<p class="text-muted" style="margin-top:10px;max-width:400px;text-align:center">${lic.license_message || __('Your subscription has expired. Please renew to continue using Super Print.')}</p>
+					<a href="/app/zprint-setting" class="btn btn-primary" style="margin-top:20px">${__('Go to Settings')}</a>
+				</div>
+			`);
+			return;
+		}
+
 		// Hide sidebar, clear main area
 		if (this.page.sidebar) this.page.sidebar.hide();
 		this.page.main.empty();
@@ -567,21 +581,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
-		// Select PDF engine based on Zprint Setting pdf_engine_mode
-		const engine_mode = await frappe.db.get_single_value('Zprint Setting', 'pdf_engine_mode') || 'wkhtmltopdf';
-		const engine_map = {
-			'WeasyPrint': 'generate_print_pdf',
-			'wkhtmltopdf': 'generate_print_pdf_wkhtmltopdf',
-			'Chromium': 'generate_print_pdf_chromium',
-		};
-		const method = engine_map[engine_mode] || 'generate_print_pdf_wkhtmltopdf';
+		// Use unified PDF endpoint (backend auto-selects engine)
 		const params = new URLSearchParams({
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
 			design_name: this.current_design,
 			params: JSON.stringify(this.current_params || {})
 		});
-		const url = '/api/method/zhiz_print.api.print_designer.' + method + '?' + params;
+		const url = '/api/method/zhiz_print.api.print_designer.generate_print_pdf?' + params;
 		const w = window.open(url, '_blank');
 		if (!w) {
 			frappe.msgprint(__('Please allow pop-up windows'));

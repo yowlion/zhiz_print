@@ -224,3 +224,37 @@ Refresh Boot Cache,刷新启动缓存
 Refreshing cache...,正在刷新缓存...
 Boot cache refreshed,启动缓存已刷新
 Tools,工具
+Zprint License,打印许可证
+License Key,许可证密钥
+Plan,计划
+Status,状态
+Activated At,激活时间
+Expires At,过期时间
+Last Validated At,上次验证时间
+Customer,客户信息
+Company Name,公司名称
+Contact Name,联系人
+Contact Email,联系邮箱
+Contact Phone,联系电话
+Machine Binding,机器绑定
+Machine ID,机器指纹
+Site Name,站点名称
+Features,功能特性
+Subscription,订阅管理
+License Info,许可证信息
+Activate License,激活许可证
+Activating license...,正在激活许可证...
+Please enter a license key first,请先输入许可证密钥
+Subscription Expired,订阅已过期
+Your subscription has expired. Please renew to continue using Super Print.,您的订阅已过期，请续费后继续使用超级打印功能。
+Go to Settings,前往设置
+Trial,试用
+Standard,标准版
+Professional,专业版
+Active,有效
+Expired,已过期
+Revoked,已吊销
+No License,无许可证
+License expired or not activated,许可证已过期或未激活
+Expires,过期时间
+Cannot create new print design,无法创建新的打印设计

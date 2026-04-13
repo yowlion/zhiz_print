@@ -1,0 +1,159 @@
+{
+  "actions": [],
+  "autoname": "ZPL-.YYYY.-.#####",
+  "creation": "2026-04-13 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "license_key",
+    "plan",
+    "status",
+    "column_break_info",
+    "activated_at",
+    "expires_at",
+    "last_validated_at",
+    "section_break_customer",
+    "company_name",
+    "column_break_contact",
+    "contact_name",
+    "contact_email",
+    "contact_phone",
+    "section_break_binding",
+    "machine_id",
+    "column_break_site",
+    "site_name",
+    "section_break_features",
+    "features"
+  ],
+  "fields": [
+    {
+      "fieldname": "license_key",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "License Key",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "default": "Trial",
+      "fieldname": "plan",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Plan",
+      "options": "Trial\nStandard\nProfessional"
+    },
+    {
+      "default": "Active",
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Status",
+      "options": "Active\nExpired\nRevoked"
+    },
+    {
+      "fieldname": "column_break_info",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "activated_at",
+      "fieldtype": "Datetime",
+      "label": "Activated At"
+    },
+    {
+      "fieldname": "expires_at",
+      "fieldtype": "Datetime",
+      "in_list_view": 1,
+      "label": "Expires At"
+    },
+    {
+      "fieldname": "last_validated_at",
+      "fieldtype": "Datetime",
+      "label": "Last Validated At"
+    },
+    {
+      "fieldname": "section_break_customer",
+      "fieldtype": "Section Break",
+      "label": "Customer"
+    },
+    {
+      "fieldname": "company_name",
+      "fieldtype": "Data",
+      "label": "Company Name"
+    },
+    {
+      "fieldname": "column_break_contact",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "contact_name",
+      "fieldtype": "Data",
+      "label": "Contact Name"
+    },
+    {
+      "fieldname": "contact_email",
+      "fieldtype": "Data",
+      "label": "Contact Email",
+      "options": "Email"
+    },
+    {
+      "fieldname": "contact_phone",
+      "fieldtype": "Data",
+      "label": "Contact Phone"
+    },
+    {
+      "fieldname": "section_break_binding",
+      "fieldtype": "Section Break",
+      "label": "Machine Binding"
+    },
+    {
+      "fieldname": "machine_id",
+      "fieldtype": "Data",
+      "label": "Machine ID"
+    },
+    {
+      "fieldname": "column_break_site",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "site_name",
+      "fieldtype": "Data",
+      "label": "Site Name"
+    },
+    {
+      "fieldname": "section_break_features",
+      "fieldtype": "Section Break",
+      "label": "Features"
+    },
+    {
+      "fieldname": "features",
+      "fieldtype": "Code",
+      "label": "Features",
+      "options": "JSON"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-13 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zhiz Print",
+  "name": "Zprint License",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "license_key"
+}

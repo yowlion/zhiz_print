@@ -24,6 +24,15 @@ PX_PER_MM = 4
 
 class SuperPrintDesign(frappe.model.document.Document):
 
+    def before_insert(self):
+        """Check license before allowing new design creation."""
+        from zhiz_print.api.license import check_license_valid
+        valid, info = check_license_valid()
+        if not valid:
+            frappe.throw(_("Cannot create new print design: {0}").format(
+                info.get("message", "License expired")
+            ))
+
     def validate(self):
         self.ensure_full_coverage()
         self.validate_cells()
