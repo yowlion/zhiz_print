@@ -1,0 +1,126 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "field:paper_name",
+  "creation": "2026-04-03 10:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "paper_name",
+    "column_break_basic",
+    "enabled",
+    "section_break_dimensions",
+    "width",
+    "column_break_dims",
+    "height",
+    "section_break_margins",
+    "margin_top",
+    "margin_left",
+    "column_break_margin",
+    "margin_bottom",
+    "margin_right"
+  ],
+  "fields": [
+    {
+      "fieldname": "paper_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "纸张名称",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "column_break_basic",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "1",
+      "fieldname": "enabled",
+      "fieldtype": "Check",
+      "in_list_view": 1,
+      "label": "启用"
+    },
+    {
+      "fieldname": "section_break_dimensions",
+      "fieldtype": "Section Break",
+      "label": "尺寸"
+    },
+    {
+      "fieldname": "width",
+      "fieldtype": "Float",
+      "in_list_view": 1,
+      "label": "宽度(mm)",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_dims",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "height",
+      "fieldtype": "Float",
+      "in_list_view": 1,
+      "label": "高度(mm)",
+      "reqd": 1
+    },
+    {
+      "fieldname": "section_break_margins",
+      "fieldtype": "Section Break",
+      "label": "页边距(mm)"
+    },
+    {
+      "default": "10",
+      "fieldname": "margin_top",
+      "fieldtype": "Int",
+      "label": "上边距"
+    },
+    {
+      "default": "15",
+      "fieldname": "margin_left",
+      "fieldtype": "Int",
+      "label": "左边距"
+    },
+    {
+      "fieldname": "column_break_margin",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "10",
+      "fieldname": "margin_bottom",
+      "fieldtype": "Int",
+      "label": "下边距"
+    },
+    {
+      "default": "15",
+      "fieldname": "margin_right",
+      "fieldtype": "Int",
+      "label": "右边距"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-08 10:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zhiz Print",
+  "name": "Super Print Paper",
+  "naming_rule": "By fieldname",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "paper_name"
+}

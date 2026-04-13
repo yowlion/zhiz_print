@@ -1,0 +1,72 @@
+{
+  "actions": [],
+  "creation": "2026-04-03 10:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "query_name",
+    "column_break_iter",
+    "is_iterable",
+    "section_break_code",
+    "query_code",
+    "section_break_params",
+    "parameters"
+  ],
+  "fields": [
+    {
+      "fieldname": "query_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "查询名称",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_iter",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "0",
+      "description": "勾选后，查询返回列表将驱动模板行自动复制",
+      "fieldname": "is_iterable",
+      "fieldtype": "Check",
+      "in_list_view": 1,
+      "label": "可迭代"
+    },
+    {
+      "fieldname": "section_break_code",
+      "fieldtype": "Section Break",
+      "label": "查询代码"
+    },
+    {
+      "fieldname": "query_code",
+      "fieldtype": "Code",
+      "label": "Python代码",
+      "options": "Python",
+      "description": "将查询结果赋给变量 result"
+    },
+    {
+      "fieldname": "section_break_params",
+      "fieldtype": "Section Break",
+      "label": "参数映射"
+    },
+    {
+      "fieldname": "parameters",
+      "fieldtype": "Text",
+      "label": "参数",
+      "description": "每行一个参数，格式: key=value"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "istable": 1,
+  "links": [],
+  "modified": "2026-04-03 10:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zhiz Print",
+  "name": "Super Print Design Query",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "states": []
+}

@@ -1,0 +1,87 @@
+{
+  "actions": [],
+  "autoname": "Zprint Setting",
+  "creation": "2026-04-13 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "enable_super_print_page",
+    "section_break_print_mode",
+    "print_enable_mode",
+    "column_break_print_engine",
+    "pdf_engine_mode",
+    "section_break_print_doctypes",
+    "print_enabled_doctypes"
+  ],
+  "fields": [
+    {
+      "default": "0",
+      "description": "启用后，打印页面左侧显示自定义打印模板选择器，需要先在 Super Print Design 中创建打印模板",
+      "fieldname": "enable_super_print_page",
+      "fieldtype": "Check",
+      "label": "启用超级打印页面"
+    },
+    {
+      "depends_on": "eval:doc.enable_super_print_page",
+      "fieldname": "section_break_print_mode",
+      "fieldtype": "Section Break"
+    },
+    {
+      "default": "全部单据启用",
+      "depends_on": "eval:doc.enable_super_print_page",
+      "description": "全部单据启用：所有文档类型都使用超级打印；指定单据启用：仅在下方配置的单据类型中使用超级打印",
+      "fieldname": "print_enable_mode",
+      "fieldtype": "Select",
+      "label": "启用方式",
+      "options": "全部单据启用\n指定单据启用"
+    },
+    {
+      "fieldname": "column_break_print_engine",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "wkhtmltopdf",
+      "depends_on": "eval:doc.enable_super_print_page",
+      "description": "选择点击导出PDF时使用的转换引擎",
+      "fieldname": "pdf_engine_mode",
+      "fieldtype": "Select",
+      "label": "PDF转换模式",
+      "options": "WeasyPrint\nwkhtmltopdf\nChromium"
+    },
+    {
+      "depends_on": "eval:doc.enable_super_print_page && doc.print_enable_mode==='指定单据启用'",
+      "fieldname": "section_break_print_doctypes",
+      "fieldtype": "Section Break",
+      "label": "启用单据类型"
+    },
+    {
+      "depends_on": "eval:doc.enable_super_print_page && doc.print_enable_mode==='指定单据启用'",
+      "description": "添加需要启用超级打印的文档类型，只有在列表中的单据类型点击打印时才会使用超级打印页面",
+      "fieldname": "print_enabled_doctypes",
+      "fieldtype": "Table",
+      "label": "启用单据类型",
+      "options": "Super Print Enabled Doctype"
+    }
+  ],
+  "issingle": 1,
+  "links": [],
+  "modified": "2026-04-13 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zhiz Print",
+  "name": "Zprint Setting",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ]
+}

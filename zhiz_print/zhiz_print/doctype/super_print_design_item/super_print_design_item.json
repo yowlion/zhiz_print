@@ -1,0 +1,202 @@
+{
+  "actions": [],
+  "creation": "2026-04-03 10:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "cell_id",
+    "row",
+    "col",
+    "column_break_pos",
+    "rowspan",
+    "colspan",
+    "section_break_type",
+    "cell_type",
+    "cell_value",
+    "column_break_type",
+    "data_key",
+    "query_name",
+    "section_break_barcode",
+    "barcode_format",
+    "column_break_bc",
+    "barcode_width",
+    "barcode_height",
+    "section_break_row_config",
+    "row_type",
+    "column_break_row_display",
+    "row_display",
+    "section_break_style",
+    "css_style",
+    "column_break_misc",
+    "cell_options",
+    "required"
+  ],
+  "fields": [
+    {
+      "fieldname": "cell_id",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "单元格ID",
+      "read_only": 1
+    },
+    {
+      "fieldname": "row",
+      "fieldtype": "Int",
+      "in_list_view": 1,
+      "label": "行",
+      "reqd": 1
+    },
+    {
+      "fieldname": "col",
+      "fieldtype": "Int",
+      "in_list_view": 1,
+      "label": "列",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_pos",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "1",
+      "fieldname": "rowspan",
+      "fieldtype": "Int",
+      "label": "跨行"
+    },
+    {
+      "default": "1",
+      "fieldname": "colspan",
+      "fieldtype": "Int",
+      "label": "跨列"
+    },
+    {
+      "fieldname": "section_break_type",
+      "fieldtype": "Section Break",
+      "label": "内容"
+    },
+    {
+      "fieldname": "cell_type",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "单元格类型",
+      "options": "static\ndata_query\nbarcode\nqrcode\nimage",
+      "default": "static"
+    },
+    {
+      "fieldname": "cell_value",
+      "fieldtype": "Small Text",
+      "in_list_view": 1,
+      "label": "单元格值"
+    },
+    {
+      "fieldname": "column_break_type",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "data_key",
+      "fieldtype": "Data",
+      "label": "数据键",
+      "description": "绑定查询结果的字段名"
+    },
+    {
+      "fieldname": "query_name",
+      "fieldtype": "Data",
+      "label": "绑定查询"
+    },
+    {
+      "fieldname": "section_break_barcode",
+      "fieldtype": "Section Break",
+      "label": "条码/二维码"
+    },
+    {
+      "default": "CODE128",
+      "fieldname": "barcode_format",
+      "fieldtype": "Select",
+      "label": "条码格式",
+      "options": "CODE128\nCODE39",
+      "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
+    },
+    {
+      "fieldname": "column_break_bc",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "100",
+      "fieldname": "barcode_width",
+      "fieldtype": "Int",
+      "label": "宽度(px)",
+      "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
+    },
+    {
+      "default": "40",
+      "fieldname": "barcode_height",
+      "fieldtype": "Int",
+      "label": "高度(px)",
+      "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
+    },
+    {
+      "fieldname": "section_break_row_config",
+      "fieldtype": "Section Break",
+      "label": "行配置"
+    },
+    {
+      "fieldname": "row_type",
+      "fieldtype": "Select",
+      "label": "行类型",
+      "options": "\n普通行\n重复标题行\n数据驱动行",
+      "default": "",
+      "description": "空或普通行为默认，重复标题行每页重复，数据驱动行按数据自动扩展"
+    },
+    {
+      "fieldname": "column_break_row_display",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "row_display",
+      "fieldtype": "Select",
+      "label": "行显示效果",
+      "options": "\n自动换行\n固定行高\n自动缩小字体",
+      "default": "",
+      "description": "空或自动换行为默认(文字换行行高自动增长)，固定行高为锁定高度溢出隐藏，自动缩小字体为自动缩字体适配"
+    },
+    {
+      "fieldname": "section_break_style",
+      "fieldtype": "Section Break",
+      "label": "样式"
+    },
+    {
+      "fieldname": "css_style",
+      "fieldtype": "Code",
+      "label": "CSS样式",
+      "options": "CSS"
+    },
+    {
+      "fieldname": "column_break_misc",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "cell_options",
+      "fieldtype": "Text",
+      "label": "选项"
+    },
+    {
+      "default": "0",
+      "fieldname": "required",
+      "fieldtype": "Check",
+      "label": "必填"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "istable": 1,
+  "links": [],
+  "modified": "2026-04-09 10:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zhiz Print",
+  "name": "Super Print Design Item",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "states": []
+}

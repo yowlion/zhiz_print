@@ -1,0 +1,145 @@
+{
+  "actions": [],
+  "autoname": "SPL-.YYYY.-.#####",
+  "creation": "2026-04-03 10:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "reference_doctype",
+    "reference_name",
+    "export_type",
+    "column_break_ref",
+    "print_design",
+    "print_time",
+    "parameters_used",
+    "section_break_detail",
+    "print_user",
+    "column_break_detail",
+    "print_count",
+    "section_break_preview",
+    "print_preview_html",
+    "preview_render"
+  ],
+  "fields": [
+    {
+      "fieldname": "reference_doctype",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "文档类型",
+      "options": "DocType",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "reference_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "文档名称",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_ref",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "print_design",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "打印设计",
+      "options": "Super Print Design",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "print_time",
+      "fieldtype": "Datetime",
+      "in_list_view": 1,
+      "label": "打印时间",
+      "read_only": 1
+    },
+    {
+      "fieldname": "export_type",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "操作类型",
+      "options": "\n打印\n导出PDF\n导出Excel",
+      "read_only": 1
+    },
+    {
+      "fieldname": "section_break_detail",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "print_user",
+      "fieldtype": "Link",
+      "label": "打印人",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "print_count",
+      "fieldtype": "Int",
+      "in_list_view": 1,
+      "label": "第几次打印",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_detail",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "parameters_used",
+      "fieldtype": "Code",
+      "label": "使用的参数",
+      "options": "JSON",
+      "read_only": 1
+    },
+    {
+      "fieldname": "section_break_preview",
+      "fieldtype": "Tab Break",
+      "label": "打印预览"
+    },
+    {
+      "fieldname": "print_preview_html",
+      "fieldtype": "Code",
+      "hidden": 1,
+      "label": "打印预览内容",
+      "read_only": 1
+    },
+    {
+      "fieldname": "preview_render",
+      "fieldtype": "HTML",
+      "label": "预览"
+    }
+  ],
+  "hide_toolbar": 1,
+  "in_create": 1,
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-10 10:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zhiz Print",
+  "name": "Super Print Log",
+  "naming_rule": "SPL-.YYYY.-.#####",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1
+    },
+    {
+      "read": 1,
+      "role": "All"
+    }
+  ],
+  "sort_field": "print_time",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "reference_name"
+}

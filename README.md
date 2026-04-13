@@ -1,39 +1,57 @@
-# zhiz_print
+# Zhiz Print - 高级打印设计器
 
-#### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+基于 Frappe/ERPNext 框架的自定义打印模板设计器，提供可视化表格设计、多引擎PDF导出、Excel导出等功能。
 
-#### 软件架构
-软件架构说明
+## 功能特性
 
+- **可视化打印设计器** — 表格式拖拽设计，支持单元格合并、样式编辑、数据绑定
+- **多数据源** — 支持静态文本、数据查询、条形码（CODE128/CODE39）、二维码、图片
+- **自动分页** — 根据纸张尺寸和行高自动分页，支持标题行重复
+- **页眉页脚** — 支持页码、日期时间等占位符
+- **PDF 导出** — 支持 WeasyPrint / wkhtmltopdf / Chromium 三种转换引擎
+- **Excel 导出** — CSS 样式转 Excel 格式，含条码/二维码图片
+- **打印日志** — 记录每次打印/导出操作，支持预览回溯
+- **参数化模板** — 支持自定义打印参数，打印前弹窗填写
 
-#### 安装教程
+## DocType 清单
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+| DocType | 类型 | 说明 |
+|---------|------|------|
+| Super Print Design | 主文档 | 打印模板设计 |
+| Super Print Design Item | 子表 | 单元格定义 |
+| Super Print Design Parameter | 子表 | 打印参数定义 |
+| Super Print Design Query | 子表 | 查询定义 |
+| Super Print Paper | 主文档 | 纸张尺寸管理 |
+| Super Print Log | 主文档 | 打印操作日志 |
+| Super Print Enabled Doctype | 子表 | 启用打印的单据类型 |
+| Zprint Setting | 单文档 | 打印设计器全局设置 |
 
-#### 使用说明
+## 安装
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```bash
+# 进入 bench 目录
+cd /home/frappe/frappe-bench
 
-#### 参与贡献
+# 获取 app
+bench get-app zhiz_print <仓库地址>
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+# 安装到站点
+bench --site <site-name> install-app zhiz_print
+```
 
+## 依赖
 
-#### 特技
+- frappe >= 15.0.0
+- weasyprint（可选，PDF 导出）
+- pdfkit（可选，wkhtmltopdf PDF 导出）
+- qrcode（二维码生成）
+- beautifulsoup4（PDF 边框修复）
+- cssutils（Excel CSS 解析）
+- openpyxl（Excel 生成）
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+## 使用
+
+1. 进入 **Zprint Setting** 单文档，启用超级打印页面
+2. 在 **Super Print Paper** 中定义纸张尺寸
+3. 在 **Super Print Design** 中设计打印模板
+4. 打开任意文档点击打印，左侧显示自定义模板选择器
