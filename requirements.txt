@@ -1,1 +1,9 @@
 frappe>=15.0.0
+qrcode
+beautifulsoup4
+openpyxl
+cssutils
+# PDF 引擎（按需安装一个即可）
+# weasyprint
+# pdfkit
+# cairosvg
