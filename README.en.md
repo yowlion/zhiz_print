@@ -36,13 +36,23 @@ bench --site <site-name> install-app zhiz_print
 
 ## Dependencies
 
+### Python Dependencies
+
 - frappe >= 15.0.0
-- weasyprint (optional, PDF export)
-- pdfkit (optional, wkhtmltopdf PDF export)
 - qrcode (QR code generation)
 - beautifulsoup4 (PDF border fixes)
 - cssutils (Excel CSS parsing)
 - openpyxl (Excel generation)
+
+### PDF Engines (choose one)
+
+| Engine | Description | Installation |
+|--------|-------------|-------------|
+| **wkhtmltopdf** (default) | Uses wkhtmltopdf binary via pdfkit | `sudo apt install wkhtmltopdf` + `pip install pdfkit` |
+| **WeasyPrint** | Pure Python PDF rendering, best CSS support | `pip install weasyprint`, requires system deps: `sudo apt install libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev libcairo2` |
+| **Chromium** | Headless browser PDF generation, most accurate rendering | Install Chromium/Chrome: `sudo apt install chromium-browser` or download Google Chrome |
+
+Select the engine in **Zprint Setting** under "PDF Engine Mode".
 
 ## Usage
 

@@ -41,13 +41,23 @@ bench --site <site-name> install-app zhiz_print
 
 ## 依赖
 
+### Python 依赖
+
 - frappe >= 15.0.0
-- weasyprint（可选，PDF 导出）
-- pdfkit（可选，wkhtmltopdf PDF 导出）
 - qrcode（二维码生成）
 - beautifulsoup4（PDF 边框修复）
 - cssutils（Excel CSS 解析）
 - openpyxl（Excel 生成）
+
+### PDF 引擎（三选一）
+
+| 引擎 | 说明 | 安装方式 |
+|------|------|---------|
+| **wkhtmltopdf**（默认） | 通过 pdfkit 调用 wkhtmltopdf 二进制 | `sudo apt install wkhtmltopdf` + `pip install pdfkit` |
+| **WeasyPrint** | 纯 Python PDF 渲染，CSS 支持最好 | `pip install weasyprint`，需安装系统依赖：`sudo apt install libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev libcairo2` |
+| **Chromium** | 通过无头浏览器生成 PDF，渲染最精确 | 安装 Chromium/Chrome：`sudo apt install chromium-browser` 或下载 Google Chrome |
+
+在 **Zprint Setting** 的「PDF转换模式」中选择要使用的引擎。
 
 ## 使用
 
