@@ -25,7 +25,7 @@
       "fieldname": "paper_name",
       "fieldtype": "Data",
       "in_list_view": 1,
-      "label": "纸张名称",
+      "label": "Paper Name",
       "reqd": 1,
       "unique": 1
     },
@@ -38,18 +38,18 @@
       "fieldname": "enabled",
       "fieldtype": "Check",
       "in_list_view": 1,
-      "label": "启用"
+      "label": "Enabled"
     },
     {
       "fieldname": "section_break_dimensions",
       "fieldtype": "Section Break",
-      "label": "尺寸"
+      "label": "Dimensions"
     },
     {
       "fieldname": "width",
       "fieldtype": "Float",
       "in_list_view": 1,
-      "label": "宽度(mm)",
+      "label": "Width (mm)",
       "reqd": 1
     },
     {
@@ -60,25 +60,25 @@
       "fieldname": "height",
       "fieldtype": "Float",
       "in_list_view": 1,
-      "label": "高度(mm)",
+      "label": "Height (mm)",
       "reqd": 1
     },
     {
       "fieldname": "section_break_margins",
       "fieldtype": "Section Break",
-      "label": "页边距(mm)"
+      "label": "Margins (mm)"
     },
     {
       "default": "10",
       "fieldname": "margin_top",
       "fieldtype": "Int",
-      "label": "上边距"
+      "label": "Top Margin"
     },
     {
       "default": "15",
       "fieldname": "margin_left",
       "fieldtype": "Int",
-      "label": "左边距"
+      "label": "Left Margin"
     },
     {
       "fieldname": "column_break_margin",
@@ -88,13 +88,13 @@
       "default": "10",
       "fieldname": "margin_bottom",
       "fieldtype": "Int",
-      "label": "下边距"
+      "label": "Bottom Margin"
     },
     {
       "default": "15",
       "fieldname": "margin_right",
       "fieldtype": "Int",
-      "label": "右边距"
+      "label": "Right Margin"
     }
   ],
   "index_web_pages_for_search": 0,

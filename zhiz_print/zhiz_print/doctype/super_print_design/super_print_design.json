@@ -55,45 +55,45 @@
     {
       "fieldname": "design_view_tab",
       "fieldtype": "Tab Break",
-      "label": "设计视图"
+      "label": "Design View"
     },
     {
       "fieldname": "design_html",
       "fieldtype": "HTML",
-      "label": "设计器",
+      "label": "Designer",
       "hidden": 0
     },
     {
       "fieldname": "settings_tab",
       "fieldtype": "Tab Break",
-      "label": "设置"
+      "label": "Settings"
     },
     {
       "fieldname": "section_enabled",
       "fieldtype": "Section Break",
-      "label": "启用状态"
+      "label": "Enabled Status"
     },
     {
       "default": "1",
       "fieldname": "enabled",
       "fieldtype": "Check",
-      "label": "启用"
+      "label": "Enabled"
     },
     {
       "fieldname": "section_basic",
       "fieldtype": "Section Break",
-      "label": "基本信息"
+      "label": "Basic Information"
     },
     {
       "fieldname": "design_name",
       "fieldtype": "Data",
-      "label": "设计名称",
+      "label": "Design Name",
       "reqd": 1
     },
     {
       "fieldname": "target_doctype",
       "fieldtype": "Link",
-      "label": "目标文档类型",
+      "label": "Target DocType",
       "options": "DocType",
       "reqd": 1
     },
@@ -105,7 +105,7 @@
     {
       "fieldname": "print_paper",
       "fieldtype": "Link",
-      "label": "纸张类型",
+      "label": "Paper Type",
       "options": "Super Print Paper",
       "reqd": 1
     },
@@ -116,21 +116,21 @@
     {
       "fieldname": "enable_condition",
       "fieldtype": "Data",
-      "label": "启用条件",
-      "description": "eval表达式，留空表示始终启用。可用变量: doc(目标文档), user(当前用户名)。如: doc.status=='Submitted'"
+      "label": "Enable Condition",
+      "description": "eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). E.g.: doc.status=='Submitted'"
     },
     {
       "fieldname": "section_grid",
       "fieldtype": "Section Break",
-      "label": "网格设置",
+      "label": "Grid Settings",
       "collapsible": 1
     },
     {
       "fieldname": "query_code",
       "fieldtype": "Code",
-      "label": "查询代码",
+      "label": "Query Code",
       "options": "Python",
-      "description": "Python代码，将查询结果赋给变量 result"
+      "description": "Python code, assign query result to variable 'result'"
     },
     {
       "fieldname": "column_break_query",
@@ -139,20 +139,20 @@
     {
       "fieldname": "query_parameters",
       "fieldtype": "Small Text",
-      "label": "查询参数",
-      "description": "每行一个参数，格式: key=value"
+      "label": "Query Parameters",
+      "description": "One parameter per line, format: key=value"
     },
     {
       "fieldname": "section_query",
       "fieldtype": "Section Break",
-      "label": "查询代码",
+      "label": "Query Code",
       "collapsible": 1
     },
     {
       "default": "20",
       "fieldname": "rows",
       "fieldtype": "Int",
-      "label": "行数"
+      "label": "Rows"
     },
     {
       "fieldname": "column_break_grid_a",
@@ -162,7 +162,7 @@
       "default": "15",
       "fieldname": "columns",
       "fieldtype": "Int",
-      "label": "列数"
+      "label": "Columns"
     },
     {
       "fieldname": "column_break_grid_b",
@@ -172,7 +172,7 @@
       "default": "Microsoft YaHei",
       "fieldname": "font_family",
       "fieldtype": "Select",
-      "label": "字体",
+      "label": "Font",
       "options": "Microsoft YaHei\nSimSun\nSimHei\nKaiTi\nFangSong"
     },
     {
@@ -183,45 +183,45 @@
       "default": "12",
       "fieldname": "font_size",
       "fieldtype": "Int",
-      "label": "默认字号(px)"
+      "label": "Default Font Size (px)"
     },
     {
       "fieldname": "table_css",
       "fieldtype": "Code",
       "hidden": 1,
-      "label": "表格样式",
+      "label": "Table Style",
       "options": "JSON"
     },
     {
       "fieldname": "row_styles",
       "fieldtype": "Code",
       "hidden": 1,
-      "label": "行样式",
+      "label": "Row Style",
       "options": "JSON"
     },
     {
       "fieldname": "col_styles",
       "fieldtype": "Code",
       "hidden": 1,
-      "label": "列样式",
+      "label": "Column Style",
       "options": "JSON"
     },
     {
       "fieldname": "section_header_footer",
       "fieldtype": "Section Break",
-      "label": "页眉页脚"
+      "label": "Header & Footer"
     },
     {
       "fieldname": "section_page_header",
       "fieldtype": "Section Break",
-      "label": "页眉"
+      "label": "Page Header"
     },
     {
       "fieldname": "page_header_left",
       "fieldtype": "Code",
-      "label": "页眉-左",
+      "label": "Header - Left",
       "options": "HTML",
-      "description": "可用占位符: {page} {pages} {now_date} {now_time} {date_time}"
+      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
     },
     {
       "fieldname": "column_break_header_center",
@@ -230,9 +230,9 @@
     {
       "fieldname": "page_header_center",
       "fieldtype": "Code",
-      "label": "页眉-中",
+      "label": "Header - Center",
       "options": "HTML",
-      "description": "可用占位符: {page} {pages} {now_date} {now_time} {date_time}"
+      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
     },
     {
       "fieldname": "column_break_header_right",
@@ -241,21 +241,21 @@
     {
       "fieldname": "page_header_right",
       "fieldtype": "Code",
-      "label": "页眉-右",
+      "label": "Header - Right",
       "options": "HTML",
-      "description": "可用占位符: {page} {pages} {now_date} {now_time} {date_time}"
+      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
     },
     {
       "fieldname": "section_page_footer",
       "fieldtype": "Section Break",
-      "label": "页脚"
+      "label": "Page Footer"
     },
     {
       "fieldname": "page_footer_left",
       "fieldtype": "Code",
-      "label": "页脚-左",
+      "label": "Footer - Left",
       "options": "HTML",
-      "description": "可用占位符: {page} {pages} {now_date} {now_time} {date_time}"
+      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
     },
     {
       "fieldname": "column_break_footer_center",
@@ -264,9 +264,9 @@
     {
       "fieldname": "page_footer_center",
       "fieldtype": "Code",
-      "label": "页脚-中",
+      "label": "Footer - Center",
       "options": "HTML",
-      "description": "可用占位符: {page} {pages} {now_date} {now_time} {date_time}"
+      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
     },
     {
       "fieldname": "column_break_footer_right",
@@ -275,33 +275,33 @@
     {
       "fieldname": "page_footer_right",
       "fieldtype": "Code",
-      "label": "页脚-右",
+      "label": "Footer - Right",
       "options": "HTML",
-      "description": "可用占位符: {page} {pages} {now_date} {now_time} {date_time}"
+      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
     },
     {
       "fieldname": "items_tab",
       "fieldtype": "Tab Break",
-      "label": "设计明细",
+      "label": "Design Items",
       "hidden": 1
     },
     {
       "fieldname": "design_items",
       "fieldtype": "Table",
-      "label": "设计明细",
+      "label": "Design Items",
       "options": "Super Print Design Item",
       "read_only": 1
     },
     {
       "fieldname": "params_tab",
       "fieldtype": "Tab Break",
-      "label": "参数定义",
+      "label": "Parameter Definitions",
       "hidden": 1
     },
     {
       "fieldname": "design_parameters",
       "fieldtype": "Table",
-      "label": "打印参数",
+      "label": "Print Parameters",
       "options": "Super Print Design Parameter"
     }
   ],

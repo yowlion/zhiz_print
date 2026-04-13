@@ -114,8 +114,6 @@ frappe.PrintFormatBuilder  class PrintFormatBuilder extends frappe.PrintFormatBu
 }
 
 $.extend(frappe._messages, {
-	"Set Properties": "设置属性",
-	"Edit Section": "编辑标题"
 })
 frappe.templates['print_format_builder_column_selector'] = `
 <p class="text-muted">{{ __("Check columns to select, drag to set order.") }} {{ __("Widths can be set in px or %.") }}</p> <p class="help-message alert alert-warning"> {{ __("Some columns might get cut off when printing to PDF. Try to keep number of columns under 10.") }} </p> <div class="row"> <div class="col-sm-6"><h4>{{ __("Column") }}</h4></div> <div class="col-sm-6 text-right"><h4>{{ __("Width") }}</h4></div> </div> <div class="column-selector-list"> {% for (i=0; i < fields.length; i++) { var f = fields[i]; %} {% var selected = in_list(column_names, f.fieldname) %} <div class="row column-selector-row"> <div class="col-sm-6"> <div class="checkbox"> <label> <input type="checkbox" data-fieldname="{{ f.fieldname }}" {{ selected ? "checked" : "" }}> {{ __(f.label) }} </label> </div> </div> <div class="col-sm-6 text-right"> <input class="form-control column-width input-sm text-right" value="{{ (widths[f.fieldname] || "") }}" data-fieldname="{{ f.fieldname }}" style="width: 100px; display: inline" {{ selected ? "" : "disabled" }}> </div> </div> {% } %} </div>

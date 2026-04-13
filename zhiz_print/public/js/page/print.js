@@ -1,24 +1,24 @@
-// Super Print Page - 超级打印页面
-// 启用时：左侧模板选择 + 中间预览
-// 未启用时：保持原有 Frappe 打印逻辑
+// Super Print Page - Enhanced Print View
+// When enabled: template selector on left + preview in center
+// When disabled: keep original Frappe print logic
 
 
 frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView {
 
-	// ==================== make() 拦截 ====================
-	// 在构造函数中 make() 最先执行，此时通过路由判断是否启用超级打印
-	// 如果启用则跳过原始 UI 创建，避免旧界面闪烁
+	// ==================== make() Override ====================
+	// In the constructor, make() runs first - check route to determine if Super Print is enabled
+	// If enabled, skip original UI creation to avoid old interface flickering
 
 	make() {
-		// 从路由获取当前 doctype
+		// Get current doctype from route
 		const route = frappe.get_route();
 		const doctype = route[1];
 		const pd = frappe.boot.zhiz_print?.print_designer;
 		let superPrintEnabled = false;
 		if (pd && pd.enabled && doctype) {
-			if (!pd.enable_mode || pd.enable_mode === '全部单据启用') {
+			if (!pd.enable_mode || pd.enable_mode === 'Enable for All') {
 				superPrintEnabled = true;
-			} else if (pd.enable_mode === '指定单据启用') {
+			} else if (pd.enable_mode === 'Enable for Specific') {
 				const list = pd.enabled_doctypes || [];
 				superPrintEnabled = list.includes(doctype);
 			}
@@ -26,13 +26,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		if (superPrintEnabled) {
 			this.is_super_print_mode = true;
-			// 仅做最小初始化，跳过原始 UI 创建
+			// Minimal init only, skip original UI creation
 			this.wrapper = $(this.wrapper || []);
 			this.print_settings = frappe.model.get_doc(":Print Settings", "Print Settings");
 			return;
 		}
 
-		// 非超级打印模式，走原始 make()
+		// Non-Super Print mode: use original make()
 		super.make();
 	}
 
@@ -46,7 +46,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
-		// 原有逻辑
+		// Original logic
 		this.is_super_print_mode = false;
 		this.page && this.page.sidebar && this.page.sidebar.empty();
 		this.setup_sidebar();
@@ -69,32 +69,32 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		return frappe.run_serially(tasks);
 	}
 
-// ==================== 超级打印模式 ====================
+// ==================== Super Print Mode ====================
 
 	async setup_super_print_page() {
-		// 隐藏 sidebar，清空主区域
+		// Hide sidebar, clear main area
 		if (this.page.sidebar) this.page.sidebar.hide();
 		this.page.main.empty();
 
-		// 重写工具栏和菜单
+		// Override toolbar and menu
 		this.setup_toolbar();
 		this.setup_menu();
 
-		// 整体布局
+		// Layout
 		this.page.main.html(`
 			<div class="super-print-layout">
 				<div class="super-print-sidebar" id="super-print-sidebar">
 					<div class="sp-sidebar-top">
 						<div class="sp-sidebar-header">
-							<i class="fa fa-print"></i> 打印模板
+							<i class="fa fa-print"></i> Print Templates
 						</div>
 						<div class="sp-sidebar-body" id="sp-template-list">
-							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</div>
+							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
 						</div>
 					</div>
 					<div class="sp-sidebar-bottom">
 						<div class="sp-sidebar-header" id="sp-log-header">
-							<i class="fa fa-history"></i> 已打印 <span id="sp-log-count">0</span> 次
+							<i class="fa fa-history"></i> Printed <span id="sp-log-count">0</span> times
 						</div>
 						<div class="sp-sidebar-body sp-log-list" id="sp-log-list">
 							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i></div>
@@ -105,18 +105,18 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					<div class="sp-preview-area" id="sp-preview-area">
 						<div class="sp-no-preview">
 							<i class="fa fa-print" style="font-size:48px;color:#ccc"></i>
-							<p class="text-muted">请从左侧选择打印模板</p>
+							<p class="text-muted">Please select a print template from the left</p>
 						</div>
 					</div>
 				</div>
 			</div>
 		`);
 
-		// 加载模板列表
+		// Load template list
 		await this.load_templates();
 	}
 
-	// ==================== 工具栏重写 ====================
+	// ==================== Toolbar Override ====================
 
 	setup_toolbar() {
 		if (!this.is_super_print_mode) {
@@ -124,20 +124,20 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
-		// 清除所有默认按钮
+		// Clear all default buttons
 		this.page.clear_primary_action();
 		this.page.clear_custom_actions();
 		this.page.clear_actions();
 		this.page.clear_icons();
 		$(this.page.inner_toolbar).find('.inner-page-message').remove();
 
-		// 仅保留：打印主按钮 + 导出按钮
+		// Keep only: Print primary button + Export buttons
 		this.page.set_primary_action(__('Print'), () => this.printit(), 'printer');
-		this.page.add_button(__('导出PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
-		this.page.add_button(__('导出Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
+		this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
+		this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
 	}
 
-	// ==================== 菜单重写 ====================
+	// ==================== Menu Override ====================
 
 	setup_menu() {
 		if (!this.is_super_print_mode) {
@@ -147,27 +147,27 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		this.page.clear_menu();
 
-		// 纸张设置 → 打开当前模板关联的纸张文档
-		this.page.add_menu_item(__('纸张设置'), () => {
+		// Paper Settings → Open the paper document linked to current template
+		this.page.add_menu_item(__('Paper Settings'), () => {
 			const paper = this.current_design_info?.print_paper;
 			if (paper) {
 				frappe.set_route('Form', 'Super Print Paper', paper);
 			} else {
-				frappe.show_alert({ message: '请先选择打印模板', indicator: 'yellow' });
+				frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
 			}
 		});
 
-		// 打印设计 → 打开当前选中的打印设计文档
-		this.page.add_menu_item(__('打印设计'), () => {
+		// Print Design → Open the currently selected print design document
+		this.page.add_menu_item(__('Print Design'), () => {
 			if (this.current_design) {
 				frappe.set_route('Form', 'Super Print Design', this.current_design);
 			} else {
-				frappe.show_alert({ message: '请先选择打印模板', indicator: 'yellow' });
+				frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
 			}
 		});
 	}
 
-	// ==================== 模板列表 ====================
+	// ==================== Template List ====================
 
 	async load_templates() {
 		const listEl = document.getElementById('sp-template-list');
@@ -181,7 +181,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			if (designs.length === 0) {
 				listEl.innerHTML = `
 					<div class="sp-empty">
-						<p>暂无打印模板</p>
+						<p>No print templates available</p>
 					</div>`;
 				this._append_new_design_btn(listEl);
 				return;
@@ -198,28 +198,28 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				listEl.appendChild(item);
 			});
 
-			// 有模板也在底部显示新建按钮
+			// Show new design button at bottom even when templates exist
 			this._append_new_design_btn(listEl);
 
-			// 加载打印日志
+			// Load print logs
 			this.load_print_logs();
 
-			// 自动选择第一个模板
+			// Auto-select first template
 			const firstItem = listEl.querySelector('.sp-template-item');
 			if (firstItem) {
 				this.on_template_click(designs[0], firstItem);
 			}
 
 		} catch (e) {
-			console.error('加载打印模板失败:', e);
-			listEl.innerHTML = `<div class="sp-error"><i class="fa fa-exclamation-circle"></i> 加载失败</div>`;
+			console.error('Failed to load print templates:', e);
+			listEl.innerHTML = `<div class="sp-error"><i class="fa fa-exclamation-circle"></i> Loading failed</div>`;
 		}
 	}
 
 	_append_new_design_btn(listEl) {
 		const btn = document.createElement('div');
 		btn.className = 'sp-new-design-btn';
-		btn.innerHTML = '<i class="fa fa-plus"></i> 新建打印设计';
+		btn.innerHTML = '<i class="fa fa-plus"></i> New Print Design';
 		btn.addEventListener('click', () => {
 			const hash = Math.random().toString(36).substring(2, 12);
 			frappe.route_options = { target_doctype: this.frm.doctype };
@@ -229,14 +229,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	}
 
 	async on_template_click(design, el) {
-		// 高亮选中
+		// Highlight selected
 		document.querySelectorAll('.sp-template-item').forEach(i => i.classList.remove('active'));
 		el.classList.add('active');
 
 		this.current_design = design.name;
 		this.current_design_info = design;
 
-		// 参数弹窗
+		// Parameter dialog
 		if (design.has_parameters && design.parameters?.length > 0) {
 			const params = await this.show_parameter_dialog(design);
 			if (params === null) return;
@@ -245,7 +245,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			this.current_params = {};
 		}
 
-		// 渲染预览
+		// Render preview
 		await this.render_preview();
 	}
 
@@ -262,9 +262,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			}));
 
 			const dialog = new frappe.ui.Dialog({
-				title: `打印参数 - ${design.design_name}`,
+				title: `Print Parameters - ${design.design_name}`,
 				fields: fields,
-				primary_action_label: '确定',
+				primary_action_label: 'OK',
 				primary_action: (values) => {
 					resolved = true;
 					dialog.hide();
@@ -273,7 +273,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			});
 
 			dialog.get_secondary_btn().show();
-			dialog.set_secondary_action_label('取消');
+			dialog.set_secondary_action_label('Cancel');
 			dialog.set_secondary_action(() => {
 				dialog.hide();
 			});
@@ -285,14 +285,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		});
 	}
 
-	// ==================== 预览渲染 ====================
+	// ==================== Preview Rendering ====================
 
 	async render_preview() {
 		if (!this.current_design) return;
 
 		const area = document.getElementById('sp-preview-area');
 
-		area.innerHTML = '<div class="sp-loading"><i class="fa fa-spinner fa-spin fa-2x" style="color:#2196f3"></i><p class="text-muted" style="margin-top:10px">正在渲染预览...</p></div>';
+		area.innerHTML = '<div class="sp-loading"><i class="fa fa-spinner fa-spin fa-2x" style="color:#2196f3"></i><p class="text-muted" style="margin-top:10px">Rendering preview...</p></div>';
 
 		try {
 			const result = await frappe.call({
@@ -319,7 +319,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				const containerWidth = area.offsetWidth - 40;
 				const scale = Math.min(1, containerWidth / previewW);
 
-				// 解析 HTML 中的 .print-page 元素，逐页渲染
+				// Parse .print-page elements in HTML and render page by page
 				const parser = new DOMParser();
 				const parsed = parser.parseFromString(html, 'text/html');
 				const printPages = parsed.querySelectorAll('.print-page');
@@ -329,11 +329,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				pagesContainer.className = 'sp-pages-container';
 				pagesContainer.style.cssText = 'transform:scale(' + scale + ');transform-origin:top center;display:flex;flex-direction:column;align-items:center;gap:20px;padding-bottom:20px;';
 
-				// 先构建所有页面结构，再统一挂载到 DOM，最后写入 iframe 内容
+				// Build all page structures first, mount to DOM, then write iframe content
 				const pageWrappers = [];
 
 				if (printPages.length > 0) {
-					// 多页模式：每页独立纸张容器
+					// Multi-page mode: each page gets its own paper container
 					printPages.forEach((pageEl, idx) => {
 						const pageWrapper = document.createElement('div');
 						pageWrapper.className = 'sp-paper-wrapper';
@@ -346,7 +346,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 							'overflow:hidden;' +
 							'flex-shrink:0;';
 
-						// 边距虚线
+						// Margin dashed line
 						const marginLine = document.createElement('div');
 						marginLine.className = 'sp-margin-line';
 						marginLine.style.cssText =
@@ -357,7 +357,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 							'pointer-events:none;z-index:10;';
 						pageWrapper.appendChild(marginLine);
 
-						// 页面内容 iframe
+						// Page content iframe
 						const iframe = document.createElement('iframe');
 						iframe.className = 'sp-iframe';
 						iframe.style.cssText = 'width:100%;height:100%;border:none;';
@@ -367,7 +367,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 						pageWrappers.push({ iframe, pageEl });
 					});
 				} else {
-					// 无分页标记，按单页处理
+					// No page-break markers, treat as single page
 					const pageWrapper = document.createElement('div');
 					pageWrapper.className = 'sp-paper-wrapper';
 					pageWrapper.style.cssText =
@@ -395,10 +395,10 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					pageWrappers.push({ iframe, pageEl: null });
 				}
 
-				// 先挂载到 DOM，iframe 才能访问 contentDocument
+				// Mount to DOM first so iframe can access contentDocument
 				area.appendChild(pagesContainer);
 
-				// 写入各页 iframe 内容
+				// Write content to each page iframe
 				pageWrappers.forEach(({ iframe, pageEl }) => {
 					const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 					iframeDoc.open();
@@ -409,13 +409,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				});
 			}
 		} catch (e) {
-			console.error('渲染预览失败:', e);
-			area.innerHTML = '<div class="alert alert-danger" style="margin:20px"><i class="fa fa-exclamation-circle"></i> 预览渲染失败: ' + this.escapeHtml(e.message || String(e)) + '</div>';
+			console.error('Preview render failed:', e);
+			area.innerHTML = '<div class="alert alert-danger" style="margin:20px"><i class="fa fa-exclamation-circle"></i> Preview render failed: ' + this.escapeHtml(e.message || String(e)) + '</div>';
 		}
 	}
 
 	_build_single_page_html(pageEl, fullDoc, previewW, previewH) {
-		// 提取原始 <style> 标签
+		// Extract original <style> tags
 		const styles = fullDoc.querySelectorAll('style');
 		let styleHtml = '';
 		styles.forEach(s => { styleHtml += s.outerHTML; });
@@ -427,7 +427,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			'</head>\n<body>\n' + pageEl.outerHTML + '\n</body>\n</html>';
 	}
 
-	// ==================== 打印日志 ====================
+	// ==================== Print Log ====================
 
 	async load_print_logs() {
 		try {
@@ -440,16 +440,16 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			const logs = data.logs || [];
 			const totalCount = data.total_count || 0;
 
-			// 更新计数
+			// Update count
 			const countEl = document.getElementById('sp-log-count');
 			if (countEl) countEl.textContent = totalCount;
 
-			// 更新日志列表
+			// Update log list
 			const listEl = document.getElementById('sp-log-list');
 			if (!listEl) return;
 
 			if (logs.length === 0) {
-				listEl.innerHTML = '<div class="sp-empty-log">暂无打印记录</div>';
+				listEl.innerHTML = '<div class="sp-empty-log">No print records</div>';
 				return;
 			}
 
@@ -462,14 +462,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				const userFullName = log.print_user ? log.print_user : '';
 				const userImg = log.print_user ? frappe.avatar(log.print_user) : '';
 
-				// 根据导出类型选择图标和颜色
-				const exportType = (log.export_type || '打印').trim();
+				// Select icon and color based on export type
+				const exportType = (log.export_type || 'Print').trim();
 				let typeIcon = 'fa-print';
 				let typeColor = '#2196f3';
-				if (exportType === '导出PDF') {
+				if (exportType === 'Export PDF') {
 					typeIcon = 'fa-file-pdf-o';
 					typeColor = '#e53935';
-				} else if (exportType === '导出Excel') {
+				} else if (exportType === 'Export Excel') {
 					typeIcon = 'fa-file-excel-o';
 					typeColor = '#43a047';
 				}
@@ -495,11 +495,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				listEl.appendChild(item);
 			});
 		} catch (e) {
-			console.error('加载打印日志失败:', e);
+			console.error('Failed to load print logs:', e);
 		}
 	}
 
-	// ==================== 打印/PDF/Excel ====================
+	// ==================== Print / PDF / Excel ====================
 
 	printit() {
 		if (this.is_super_print_mode) {
@@ -511,11 +511,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	async super_printit() {
 		if (!this.current_preview_html) {
-			frappe.show_alert({ message: '请先选择打印模板', indicator: 'yellow' });
+			frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
 			return;
 		}
 
-		// 记录打印日志（含预览HTML快照）
+		// Record print log (includes preview HTML snapshot)
 		try {
 			await frappe.call({
 				method: 'zhiz_print.api.print_designer.record_print_log',
@@ -525,14 +525,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					design_name: this.current_design,
 					params: this.current_params || {},
 					preview_html: this.current_preview_html,
-					export_type: '打印'
+					export_type: 'Print'
 				}
 			});
 		} catch (e) {
-			console.error('记录打印日志失败:', e);
+			console.error('Failed to record print log:', e);
 		}
 
-		// 使用隐藏 iframe 直接打印（不打开新窗口）
+		// Print via hidden iframe (no new window)
 		const printFrame = document.createElement('iframe');
 		printFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
 		document.body.appendChild(printFrame);
@@ -542,11 +542,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		frameDoc.write(this.current_preview_html);
 		frameDoc.close();
 
-		// 等待内容加载后调用打印
+		// Wait for content to load before calling print
 		printFrame.onload = () => {
 			setTimeout(() => {
 				printFrame.contentWindow.print();
-				// 打印对话框关闭后移除 iframe
+				// Remove iframe after print dialog closes
 				setTimeout(() => {
 					document.body.removeChild(printFrame);
 				}, 1000);
@@ -558,11 +558,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	async generate_super_pdf() {
 		if (!this.current_design) {
-			frappe.show_alert({ message: '请先选择打印模板', indicator: 'yellow' });
+			frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
 			return;
 		}
 
-		// 根据 Super Setting 中的 pdf_engine_mode 选择引擎
+		// Select PDF engine based on Zprint Setting pdf_engine_mode
 		const engine_mode = await frappe.db.get_single_value('Zprint Setting', 'pdf_engine_mode') || 'wkhtmltopdf';
 		const engine_map = {
 			'WeasyPrint': 'generate_print_pdf',
@@ -579,18 +579,18 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		const url = '/api/method/zhiz_print.api.print_designer.' + method + '?' + params;
 		const w = window.open(url, '_blank');
 		if (!w) {
-			frappe.msgprint(__('请允许弹出窗口'));
+			frappe.msgprint(__('Please allow pop-up windows'));
 			return;
 		}
 
-		// 记录导出PDF日志
-		this.record_export_log('导出PDF');
+		// Record PDF export log
+		this.record_export_log('Export PDF');
 	}
 
 
 	async export_super_excel() {
 		if (!this.current_design) {
-			frappe.show_alert({ message: '请先选择打印模板', indicator: 'yellow' });
+			frappe.show_alert({ message: 'Please select a print template first', indicator: 'yellow' });
 			return;
 		}
 
@@ -618,14 +618,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				a.download = result.message.filename || `${this.frm.docname}.xlsx`;
 				a.click();
 				setTimeout(() => URL.revokeObjectURL(url), 60000);
-				frappe.show_alert({ message: 'Excel 已导出', indicator: 'green' });
+				frappe.show_alert({ message: 'Excel exported', indicator: 'green' });
 
-				// 记录导出Excel日志
-				this.record_export_log('导出Excel');
+				// Record Excel export log
+				this.record_export_log('Export Excel');
 			}
 		} catch (e) {
-			console.error('Excel 导出失败:', e);
-			frappe.show_alert({ message: `Excel 导出失败: ${e.message || String(e)}`, indicator: 'red' });
+			console.error('Excel export failed:', e);
+			frappe.show_alert({ message: `Excel export failed: ${e.message || String(e)}`, indicator: 'red' });
 		}
 	}
 
@@ -644,7 +644,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			});
 			this.load_print_logs();
 		} catch (e) {
-			console.error('记录导出日志失败:', e);
+			console.error('Failed to record export log:', e);
 		}
 	}
 
@@ -662,7 +662,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		return String(text).replace(/[&<>"']/g, m => map[m]);
 	}
 
-	// 原有方法
+	// Original method
 	selected_format() {
 		if (this.is_super_print_mode) return 'Standard';
 		let current_print_format = this.print_format_selector?.val();
@@ -681,25 +681,25 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 
 
-// 注入超级打印页面 CSS（一次性）
+// Inject Super Print page CSS (one-time)
 (function injectSuperPrintCSS() {
 	if (document.getElementById('super-print-css')) return;
 	const style = document.createElement('style');
 	style.id = 'super-print-css';
 	style.innerHTML = `
-		/* 整体布局 */
+		/* Layout */
 		.super-print-layout { display:flex; height:calc(100vh - 120px); margin:-15px; }
 		.super-print-sidebar { width:200px; min-width:200px; background:#fff; border-right:1px solid #e0e0e0; display:flex; flex-direction:column; }
 		.super-print-main { flex:1; display:flex; flex-direction:column; overflow:hidden; background:#f5f5f5; }
 
-		/* 侧边栏上下两栏 */
+		/* Sidebar top/bottom sections */
 		.sp-sidebar-top { flex:1; display:flex; flex-direction:column; min-height:0; border-bottom:1px solid #e0e0e0; }
 		.sp-sidebar-bottom { flex:1; display:flex; flex-direction:column; min-height:0; }
 		.sp-sidebar-header { padding:10px 16px; font-size:12px; font-weight:600; color:#333; border-bottom:1px solid #eee; flex-shrink:0; }
 		.sp-sidebar-header i { color:#2196f3; margin-right:4px; }
 		.sp-sidebar-body { flex:1; overflow-y:auto; padding:4px 0; }
 
-		/* 模板列表项 */
+		/* Template list items */
 		.sp-template-item {
 			display:flex; align-items:center; gap:8px; padding:9px 16px;
 			cursor:pointer; font-size:12px; color:#555; transition:all .15s;
@@ -714,15 +714,15 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		.sp-template-item.active i { color:#2196f3; }
 		.sp-template-item span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-		/* 空状态 / 加载 / 错误 */
+		/* Empty / Loading / Error states */
 		.sp-loading, .sp-empty, .sp-error { text-align:center; padding:30px 16px; color:#999; font-size:12px; }
 		.sp-loading i { margin-bottom:8px; }
 		.sp-no-preview { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#ccc; }
 
-		/* 预览区 */
+		/* Preview area */
 		.sp-preview-area { flex:1; overflow:auto; padding:20px; display:flex; flex-direction:column; align-items:center; }
 
-		/* 日志列表 */
+		/* Log list */
 		.sp-log-item { padding:8px 16px; cursor:pointer; border-left:3px solid transparent; transition:all .15s; }
 		.sp-log-item:hover { background:#f0f7ff; }
 		.sp-log-line1 { display:flex; align-items:center; gap:5px; font-size:11px; color:#333; }

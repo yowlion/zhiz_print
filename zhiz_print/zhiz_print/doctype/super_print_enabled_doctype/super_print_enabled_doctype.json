@@ -14,7 +14,7 @@
       "fieldname": "doctype_name",
       "fieldtype": "Link",
       "in_list_view": 1,
-      "label": "文档类型",
+      "label": "DocType",
       "options": "DocType",
       "reqd": 1
     },
@@ -27,7 +27,7 @@
       "fieldname": "enabled",
       "fieldtype": "Check",
       "in_list_view": 1,
-      "label": "启用"
+      "label": "Enabled"
     }
   ],
   "index_web_pages_for_search": 0,

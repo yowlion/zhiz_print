@@ -37,21 +37,21 @@
       "fieldname": "cell_id",
       "fieldtype": "Data",
       "in_list_view": 1,
-      "label": "单元格ID",
+      "label": "Cell ID",
       "read_only": 1
     },
     {
       "fieldname": "row",
       "fieldtype": "Int",
       "in_list_view": 1,
-      "label": "行",
+      "label": "Row",
       "reqd": 1
     },
     {
       "fieldname": "col",
       "fieldtype": "Int",
       "in_list_view": 1,
-      "label": "列",
+      "label": "Column",
       "reqd": 1
     },
     {
@@ -62,24 +62,24 @@
       "default": "1",
       "fieldname": "rowspan",
       "fieldtype": "Int",
-      "label": "跨行"
+      "label": "Rowspan"
     },
     {
       "default": "1",
       "fieldname": "colspan",
       "fieldtype": "Int",
-      "label": "跨列"
+      "label": "Colspan"
     },
     {
       "fieldname": "section_break_type",
       "fieldtype": "Section Break",
-      "label": "内容"
+      "label": "Content"
     },
     {
       "fieldname": "cell_type",
       "fieldtype": "Select",
       "in_list_view": 1,
-      "label": "单元格类型",
+      "label": "Cell Type",
       "options": "static\ndata_query\nbarcode\nqrcode\nimage",
       "default": "static"
     },
@@ -87,7 +87,7 @@
       "fieldname": "cell_value",
       "fieldtype": "Small Text",
       "in_list_view": 1,
-      "label": "单元格值"
+      "label": "Cell Value"
     },
     {
       "fieldname": "column_break_type",
@@ -96,24 +96,24 @@
     {
       "fieldname": "data_key",
       "fieldtype": "Data",
-      "label": "数据键",
-      "description": "绑定查询结果的字段名"
+      "label": "Data Key",
+      "description": "Field name bound to query result"
     },
     {
       "fieldname": "query_name",
       "fieldtype": "Data",
-      "label": "绑定查询"
+      "label": "Bound Query"
     },
     {
       "fieldname": "section_break_barcode",
       "fieldtype": "Section Break",
-      "label": "条码/二维码"
+      "label": "Barcode / QR Code"
     },
     {
       "default": "CODE128",
       "fieldname": "barcode_format",
       "fieldtype": "Select",
-      "label": "条码格式",
+      "label": "Barcode Format",
       "options": "CODE128\nCODE39",
       "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
     },
@@ -125,28 +125,28 @@
       "default": "100",
       "fieldname": "barcode_width",
       "fieldtype": "Int",
-      "label": "宽度(px)",
+      "label": "Width (px)",
       "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
     },
     {
       "default": "40",
       "fieldname": "barcode_height",
       "fieldtype": "Int",
-      "label": "高度(px)",
+      "label": "Height (px)",
       "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
     },
     {
       "fieldname": "section_break_row_config",
       "fieldtype": "Section Break",
-      "label": "行配置"
+      "label": "Row Configuration"
     },
     {
       "fieldname": "row_type",
       "fieldtype": "Select",
-      "label": "行类型",
-      "options": "\n普通行\n重复标题行\n数据驱动行",
+      "label": "Row Type",
+      "options": "\nNormal Row\nRepeat Title Row\nData-Driven Row",
       "default": "",
-      "description": "空或普通行为默认，重复标题行每页重复，数据驱动行按数据自动扩展"
+      "description": "Empty or Normal Row is default; Repeat Title Row repeats on every page; Data-Driven Row auto-expands based on data"
     },
     {
       "fieldname": "column_break_row_display",
@@ -155,20 +155,20 @@
     {
       "fieldname": "row_display",
       "fieldtype": "Select",
-      "label": "行显示效果",
-      "options": "\n自动换行\n固定行高\n自动缩小字体",
+      "label": "Row Display Effect",
+      "options": "\nAuto Wrap\nFixed Height\nAuto Shrink Font",
       "default": "",
-      "description": "空或自动换行为默认(文字换行行高自动增长)，固定行高为锁定高度溢出隐藏，自动缩小字体为自动缩字体适配"
+      "description": "Empty or Auto Wrap is default (text wraps, row height grows); Fixed Height locks height and hides overflow; Auto Shrink Font scales font to fit"
     },
     {
       "fieldname": "section_break_style",
       "fieldtype": "Section Break",
-      "label": "样式"
+      "label": "Style"
     },
     {
       "fieldname": "css_style",
       "fieldtype": "Code",
-      "label": "CSS样式",
+      "label": "CSS Style",
       "options": "CSS"
     },
     {
@@ -178,13 +178,13 @@
     {
       "fieldname": "cell_options",
       "fieldtype": "Text",
-      "label": "选项"
+      "label": "Options"
     },
     {
       "default": "0",
       "fieldname": "required",
       "fieldtype": "Check",
-      "label": "必填"
+      "label": "Required"
     }
   ],
   "index_web_pages_for_search": 0,

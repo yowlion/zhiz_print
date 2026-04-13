@@ -19,14 +19,14 @@
       "fieldname": "param_name",
       "fieldtype": "Data",
       "in_list_view": 1,
-      "label": "参数标识",
+      "label": "Parameter ID",
       "reqd": 1
     },
     {
       "fieldname": "param_label",
       "fieldtype": "Data",
       "in_list_view": 1,
-      "label": "显示标签"
+      "label": "Display Label"
     },
     {
       "fieldname": "column_break_type",
@@ -36,7 +36,7 @@
       "fieldname": "param_type",
       "fieldtype": "Select",
       "in_list_view": 1,
-      "label": "参数类型",
+      "label": "Parameter Type",
       "options": "Data\nInt\nFloat\nDate\nLink\nSelect",
       "default": "Data"
     },
@@ -44,7 +44,7 @@
       "fieldname": "default_value",
       "fieldtype": "Data",
       "in_list_view": 1,
-      "label": "默认值"
+      "label": "Default Value"
     },
     {
       "fieldname": "section_break_options",
@@ -54,13 +54,13 @@
       "default": "0",
       "fieldname": "reqd",
       "fieldtype": "Check",
-      "label": "必填"
+      "label": "Required"
     },
     {
       "fieldname": "options",
       "fieldtype": "Small Text",
-      "label": "选项/目标DocType",
-      "description": "Select类型填选项(每行一个)，Link类型填目标DocType名称"
+      "label": "Options / Target DocType",
+      "description": "For Select type, enter options (one per line); for Link type, enter the target DocType name"
     }
   ],
   "index_web_pages_for_search": 0,

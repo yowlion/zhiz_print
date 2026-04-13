@@ -7,7 +7,7 @@ import frappe
 
 
 def get_boot_settings(bootinfo):
-    """boot_session hook: 注入 zhiz_print 设置到 frappe.boot.zhiz_print"""
+    """boot_session hook: inject zhiz_print settings into frappe.boot.zhiz_print"""
     try:
         setting = frappe.get_single("Zprint Setting")
     except Exception:
@@ -20,13 +20,13 @@ def get_boot_settings(bootinfo):
 
 
 def _get_print_designer_boot_settings(setting):
-    """获取打印设计器boot配置"""
+    """Get print designer boot configuration"""
     try:
         enabled = bool(frappe.utils.cint(setting.get("enable_super_print_page")))
         result = {"enabled": enabled}
 
         if enabled:
-            # 预加载纸张数据（含边距）
+            # Preload paper data (with margins)
             papers = frappe.get_all(
                 "Super Print Paper",
                 filters={"enabled": 1},
@@ -35,10 +35,10 @@ def _get_print_designer_boot_settings(setting):
             )
             result["papers"] = {p["name"]: p for p in papers}
 
-            # 启用方式和指定单据列表
-            mode = setting.get("print_enable_mode") or "全部单据启用"
+            # Enable mode and specific doctype list
+            mode = setting.get("print_enable_mode") or "Enable for All"
             result["enable_mode"] = mode
-            if mode == "指定单据启用":
+            if mode == "Enable for Specific":
                 doctypes = []
                 for item in setting.get("print_enabled_doctypes", []):
                     if item.enabled and item.doctype_name:

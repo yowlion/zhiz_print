@@ -12,7 +12,7 @@ MERGED_SUFFIX = "||"
 
 
 def execute_query_code(query_code, filters=None, format_result=True):
-	"""安全执行 Python 查询代码"""
+	"""Safely execute Python query code"""
 	from frappe.utils.safe_exec import safe_exec, get_safe_globals
 
 	_globals = get_safe_globals()
@@ -36,8 +36,8 @@ def execute_query_code(query_code, filters=None, format_result=True):
 	try:
 		safe_exec(query_code, _globals, _locals)
 	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), '打印查询执行失败')
-		frappe.throw(_('查询执行失败: {0}').format(str(e)))
+		frappe.log_error(frappe.get_traceback(), 'Print query execution failed')
+		frappe.throw(_('Query execution failed: {0}').format(str(e)))
 
 	result = _locals.get('result')
 	if format_result and result is not None:
@@ -46,7 +46,7 @@ def execute_query_code(query_code, filters=None, format_result=True):
 
 
 def format_query_result(result):
-	"""将查询结果格式化为统一格式"""
+	"""Format query result to unified format"""
 	if isinstance(result, (list, tuple)):
 		formatted = []
 		for item in result:
@@ -65,7 +65,7 @@ def format_query_result(result):
 
 
 def parse_parameters(parameters_str):
-	"""解析参数字符串为字典"""
+	"""Parse parameter string to dict"""
 	if not parameters_str:
 		return {}
 	params = {}
@@ -78,7 +78,7 @@ def parse_parameters(parameters_str):
 
 
 def replace_dynamic_params(params, doc_name, doc_type):
-	"""替换动态参数 {{doc.field}} 为实际值"""
+	"""Replace dynamic params {{doc.field}} with actual values"""
 	try:
 		doc = frappe.get_doc(doc_type, doc_name)
 	except Exception:
@@ -93,21 +93,21 @@ def replace_dynamic_params(params, doc_name, doc_type):
 
 
 def is_merged_cell(value):
-	"""检查是否为合并标记"""
+	"""Check if value is a merged cell marker"""
 	if not value:
 		return False
 	return isinstance(value, str) and value.startswith(MERGED_PREFIX) and value.endswith(MERGED_SUFFIX)
 
 
 def extract_master_id(value):
-	"""从合并标记中提取主单元格ID"""
+	"""Extract master cell ID from merged marker"""
 	if not is_merged_cell(value):
 		return None
 	return value[len(MERGED_PREFIX):-len(MERGED_SUFFIX)]
 
 
 def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=40):
-	"""生成条形码 SVG base64，纯 Python 实现，不依赖外部库"""
+	"""Generate barcode SVG base64, pure Python, no external library dependency"""
 	if not value:
 		return None
 	try:
@@ -120,11 +120,11 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 			import base64
 			return 'data:image/svg+xml;base64,' + base64.b64encode(svg.encode('utf-8')).decode('ascii')
 	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), '条形码生成失败')
+		frappe.log_error(frappe.get_traceback(), 'Barcode generation failed')
 	return None
 
 
-# Code128 编码表 (BSBSBS 模式，每个数字表示条/空宽度)
+# Code128 encoding table (BSBSBS pattern, each digit represents bar/space width)
 _CODE128_PATTERNS = [
 	"212222","222122","222221","121223","121322","131222","122213","122312","132212","221213",
 	"221312","231212","112232","122132","122231","113222","123122","123221","223211","221132",
@@ -140,7 +140,7 @@ _CODE128_PATTERNS = [
 	"2331112"  # Stop (index 106)
 ]
 
-# Code39 编码表
+# Code39 encoding table
 _CODE39_PATTERNS = {
 	'0':'NNNWWNWNN','1':'WNNWNNNNW','2':'NNWWNNNNW','3':'WNWWNNNNN',
 	'4':'NNNWWNNNW','5':'WNWWNNNNN','6':'NNWWWNNNN','7':'NNNWNWNNW',
@@ -158,7 +158,7 @@ _CODE39_PATTERNS = {
 
 
 def _generate_code128_svg(value, width=100, height=40):
-	"""纯 Python 生成 Code128B 条形码 SVG（含安静区）"""
+	"""Pure Python Code128B barcode SVG generation (with quiet zone)"""
 	# Start Code B = value 104
 	encoded = [104]
 	for ch in value:
@@ -168,7 +168,7 @@ def _generate_code128_svg(value, width=100, height=40):
 		else:
 			encoded.append(0)
 
-	# 校验位
+	# Checksum digit
 	checksum = encoded[0]
 	for i in range(1, len(encoded)):
 		checksum += i * encoded[i]
@@ -176,26 +176,26 @@ def _generate_code128_svg(value, width=100, height=40):
 	encoded.append(checksum)
 	encoded.append(106)  # Stop
 
-	# 构建条/空宽度序列（整数模块单位）
+	# Build bar/space width sequence (integer module units)
 	module_seq = []
 	for val in encoded:
 		pattern = _CODE128_PATTERNS[val]
 		for ch in pattern:
 			module_seq.append(int(ch))
 
-	# 计算总模块数 + 左右安静区各10模块
+	# Calculate total modules + 10 quiet modules on each side
 	quiet = 10
 	data_modules = sum(module_seq)
 	total_modules = data_modules + quiet * 2
 
-	# 使用整数像素，1模块 = N像素，确保扫描精确
+	# Use integer pixels, 1 module = N pixels, ensure scan accuracy
 	unit = max(1, int(width / total_modules))
 	actual_w = total_modules * unit
 
 	rects = []
-	x = quiet * unit  # 左安静区
+	x = quiet * unit  # Left quiet zone
 	for i, w in enumerate(module_seq):
-		if i % 2 == 0:  # 条（黑色）
+		if i % 2 == 0:  # Bar (black)
 			rects.append('<rect x="%d" y="0" width="%d" height="%d" fill="black"/>' % (x, w * unit, height))
 		x += w * unit
 
@@ -203,14 +203,14 @@ def _generate_code128_svg(value, width=100, height=40):
 
 
 def _generate_code39_svg(value, width=100, height=40):
-	"""纯 Python 生成 Code39 条形码 SVG"""
+	"""Pure Python Code39 barcode SVG generation"""
 	encoded = ['*']  # Start
 	for ch in value.upper():
 		if ch in _CODE39_PATTERNS:
 			encoded.append(ch)
 	encoded.append('*')  # Stop
 
-	# Code39: N=1单位, W=3单位, 字符间空=1单位
+	# Code39: N=1 unit, W=3 units, inter-character gap=1 unit
 	narrow = 1
 	wide = 3
 	gap = 1
@@ -220,9 +220,9 @@ def _generate_code39_svg(value, width=100, height=40):
 		pattern = _CODE39_PATTERNS.get(char_val, _CODE39_PATTERNS['*'])
 		for ch in pattern:
 			module_seq.append(wide if ch == 'W' else narrow)
-		module_seq.append(gap)  # 字符间隙
+		module_seq.append(gap)  # Inter-character gap
 
-	module_seq.pop()  # 移除最后一个间隙
+	module_seq.pop()  # Remove last gap
 
 	quiet = 10
 	data_modules = sum(module_seq)
@@ -233,7 +233,7 @@ def _generate_code39_svg(value, width=100, height=40):
 	rects = []
 	x = quiet * unit
 	for i, w in enumerate(module_seq):
-		if i % 2 == 0:  # 条
+		if i % 2 == 0:  # Bar
 			rects.append('<rect x="%d" y="0" width="%d" height="%d" fill="black"/>' % (x, w * unit, height))
 		x += w * unit
 
@@ -241,7 +241,7 @@ def _generate_code39_svg(value, width=100, height=40):
 
 
 def generate_qrcode_base64(value, width=100, height=100):
-	"""生成二维码 base64 PNG，缩放到指定尺寸"""
+	"""Generate QR code base64 PNG, scale to specified size"""
 	if not value:
 		return None
 	try:
@@ -254,7 +254,7 @@ def generate_qrcode_base64(value, width=100, height=100):
 		qr.make(fit=True)
 		img = qr.make_image(fill_color="black", back_color="white")
 
-		# 缩放到目标尺寸，确保图片固有尺寸与显示尺寸一致（WeasyPrint 兼容）
+		# Scale to target size, ensure image intrinsic size matches display size (WeasyPrint compatible)
 		target_w = int(width) if width else img.size[0]
 		target_h = int(height) if height else img.size[1]
 		if img.size[0] != target_w or img.size[1] != target_h:
@@ -265,5 +265,5 @@ def generate_qrcode_base64(value, width=100, height=100):
 		img_data = base64.b64encode(buffer.getvalue()).decode('ascii')
 		return f'data:image/png;base64,{img_data}'
 	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), '二维码生成失败')
+		frappe.log_error(frappe.get_traceback(), 'QR code generation failed')
 		return None

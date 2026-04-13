@@ -11,10 +11,10 @@ from frappe.model.document import Document
 class SuperPrintPaper(Document):
 	def validate(self):
 		if self.width and self.width <= 0:
-			frappe.throw(_("纸张宽度必须大于0"))
+			frappe.throw(_("Paper width must be greater than 0"))
 		if self.height and self.height <= 0:
-			frappe.throw(_("纸张高度必须大于0"))
+			frappe.throw(_("Paper height must be greater than 0"))
 		for field in ['margin_top', 'margin_bottom', 'margin_left', 'margin_right']:
 			val = getattr(self, field, None)
 			if val is not None and val < 0:
-				frappe.throw(_("页边距不能为负数"))
+				frappe.throw(_("Margins cannot be negative"))

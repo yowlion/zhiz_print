@@ -5,7 +5,105 @@ Super Print Design Query,打印设计查询
 Super Print Paper,打印纸张
 Super Print Log,打印日志
 Super Print Enabled Doctype,启用打印的单据类型
-Zprint Setting,打印设计设置
+Zprint Setting,高级打印设置
+Design View,设计视图
+Designer,设计器
+Settings,设置
+Enabled Status,启用状态
+Enabled,已启用
+Basic Information,基本信息
+Design Name,设计名称
+Target DocType,目标单据类型
+Paper Type,纸张类型
+Enable Condition,启用条件
+Grid Settings,网格设置
+Rows,行数
+Columns,列数
+Font,字体
+Default Font Size (px),默认字号(px)
+Table Style,表格样式
+Row Style,行样式
+Column Style,列样式
+Header & Footer,页眉页脚
+Page Header,页眉
+Header - Left,页眉 - 左
+Header - Center,页眉 - 中
+Header - Right,页眉 - 右
+Page Footer,页脚
+Footer - Left,页脚 - 左
+Footer - Center,页脚 - 中
+Footer - Right,页脚 - 右
+Design Items,设计项
+Parameter Definitions,参数定义
+Print Parameters,打印参数
+Query Code,查询代码
+Query Parameters,查询参数
+Cell ID,单元格ID
+Row,行
+Column,列
+Rowspan,跨行数
+Colspan,跨列数
+Content,内容
+Cell Type,单元格类型
+Cell Value,单元格值
+Data Key,数据键
+Bound Query,绑定查询
+Barcode / QR Code,条码/二维码
+Barcode Format,条码格式
+Width (px),宽度(px)
+Height (px),高度(px)
+Row Configuration,行配置
+Row Type,行类型
+Row Display Effect,行显示效果
+Style,样式
+CSS Style,CSS样式
+Options,选项
+Required,必填
+Parameter ID,参数ID
+Display Label,显示标签
+Parameter Type,参数类型
+Default Value,默认值
+Options / Target DocType,选项/目标单据类型
+Query Name,查询名称
+Iterable,可迭代
+Python Code,Python代码
+Parameter Mapping,参数映射
+Parameters,参数
+Paper Name,纸张名称
+Dimensions,尺寸
+Width (mm),宽度(mm)
+Height (mm),高度(mm)
+Margins (mm),边距(mm)
+Top Margin,上边距
+Left Margin,左边距
+Bottom Margin,下边距
+Right Margin,右边距
+DocType,单据类型
+Document Name,单据名称
+Print Design,打印设计
+Print Time,打印时间
+Operation Type,操作类型
+Print Count,打印次数
+Print User,打印用户
+Parameters Used,使用的参数
+Print Preview,打印预览
+Print Preview Content,预览内容
+Preview,预览
 Enable Super Print Page,启用超级打印页面
-Print Enable Mode,启用方式
-PDF Engine Mode,PDF转换模式
+Enable Mode,启用方式
+PDF Engine Mode,PDF引擎模式
+Enabled DocTypes,已启用的单据类型
+Enable for All,全部单据启用
+Enable for Specific,指定单据启用
+Normal Row,普通行
+Repeat Title Row,重复标题行
+Data-Driven Row,数据驱动行
+Auto Wrap,自动换行
+Fixed Height,固定行高
+Auto Shrink Font,自动缩小字体
+Print,打印
+Export PDF,导出PDF
+Export Excel,导出Excel
+Paper Settings,纸张设置
+Please allow pop-up windows,请允许弹出窗口
+Try the new Print Format Builder,试用新版打印格式生成器

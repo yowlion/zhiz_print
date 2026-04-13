@@ -1,6 +1,6 @@
-/* Super Print Designer - 打印设计器样式 */
+/* Super Print Designer - Print Designer Styles */
 
-/* ==================== 顶部工具栏 ==================== */
+/* ==================== Top Toolbar ==================== */
 .super-print-toolbar {
 	display: flex;
 	align-items: center;
@@ -33,7 +33,7 @@
 	font-weight: 500;
 }
 
-/* ==================== 打印页面侧边栏模板标签 ==================== */
+/* ==================== Print Page Sidebar Template Tabs ==================== */
 .super-print-sidebar-header h5 {
 	font-size: 14px;
 	color: #333;
@@ -113,7 +113,7 @@
 	color: #fff;
 }
 
-/* ==================== 打印预览区域 ==================== */
+/* ==================== Print Preview Area ==================== */
 .print-preview-wrapper {
 	display: flex;
 	justify-content: center;
@@ -156,7 +156,7 @@
 	margin: 0 auto 20px;
 }
 
-/* ==================== 打印日志信息 ==================== */
+/* ==================== Print Log Info ==================== */
 #super-print-log-info {
 	display: flex;
 	align-items: center;
@@ -168,7 +168,7 @@
 	color: #999;
 }
 
-/* ==================== 打印页面内 iframe ==================== */
+/* ==================== Print Page Inner iframe ==================== */
 .super-print-iframe {
 	width: 100%;
 	border: none;

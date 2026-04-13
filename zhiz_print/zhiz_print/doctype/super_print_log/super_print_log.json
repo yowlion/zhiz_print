@@ -25,7 +25,7 @@
       "fieldname": "reference_doctype",
       "fieldtype": "Link",
       "in_list_view": 1,
-      "label": "文档类型",
+      "label": "DocType",
       "options": "DocType",
       "reqd": 1,
       "read_only": 1
@@ -34,7 +34,7 @@
       "fieldname": "reference_name",
       "fieldtype": "Data",
       "in_list_view": 1,
-      "label": "文档名称",
+      "label": "Document Name",
       "reqd": 1,
       "read_only": 1
     },
@@ -46,7 +46,7 @@
       "fieldname": "print_design",
       "fieldtype": "Link",
       "in_list_view": 1,
-      "label": "打印设计",
+      "label": "Print Design",
       "options": "Super Print Design",
       "reqd": 1,
       "read_only": 1
@@ -55,15 +55,15 @@
       "fieldname": "print_time",
       "fieldtype": "Datetime",
       "in_list_view": 1,
-      "label": "打印时间",
+      "label": "Print Time",
       "read_only": 1
     },
     {
       "fieldname": "export_type",
       "fieldtype": "Select",
       "in_list_view": 1,
-      "label": "操作类型",
-      "options": "\n打印\n导出PDF\n导出Excel",
+      "label": "Operation Type",
+      "options": "\nPrint\nExport PDF\nExport Excel",
       "read_only": 1
     },
     {
@@ -73,7 +73,7 @@
     {
       "fieldname": "print_user",
       "fieldtype": "Link",
-      "label": "打印人",
+      "label": "Print User",
       "options": "User",
       "read_only": 1
     },
@@ -81,7 +81,7 @@
       "fieldname": "print_count",
       "fieldtype": "Int",
       "in_list_view": 1,
-      "label": "第几次打印",
+      "label": "Print Count",
       "read_only": 1
     },
     {
@@ -91,26 +91,26 @@
     {
       "fieldname": "parameters_used",
       "fieldtype": "Code",
-      "label": "使用的参数",
+      "label": "Parameters Used",
       "options": "JSON",
       "read_only": 1
     },
     {
       "fieldname": "section_break_preview",
       "fieldtype": "Tab Break",
-      "label": "打印预览"
+      "label": "Print Preview"
     },
     {
       "fieldname": "print_preview_html",
       "fieldtype": "Code",
       "hidden": 1,
-      "label": "打印预览内容",
+      "label": "Print Preview Content",
       "read_only": 1
     },
     {
       "fieldname": "preview_render",
       "fieldtype": "HTML",
-      "label": "预览"
+      "label": "Preview"
     }
   ],
   "hide_toolbar": 1,

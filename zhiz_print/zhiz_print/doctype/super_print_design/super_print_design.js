@@ -1,5 +1,5 @@
-// Super Print Designer - 前端设计器
-// 移植自 QmSheetDesigner 并扩展
+// Super Print Designer - Frontend Designer
+// Ported from QmSheetDesigner and extended
 
 class SuperPrintDesigner {
     constructor(frm) {
@@ -34,19 +34,19 @@ class SuperPrintDesigner {
         this.lastActiveTab = 'style';
 
         this.fontFamilies = [
-            { value: 'Microsoft YaHei', label: '微软雅黑' },
-            { value: 'SimSun', label: '宋体' },
-            { value: 'SimHei', label: '黑体' },
-            { value: 'KaiTi', label: '楷体' },
-            { value: 'FangSong', label: '仿宋' }
+            { value: 'Microsoft YaHei', label: 'Microsoft YaHei' },
+            { value: 'SimSun', label: 'SimSun' },
+            { value: 'SimHei', label: 'SimHei' },
+            { value: 'KaiTi', label: 'KaiTi' },
+            { value: 'FangSong', label: 'FangSong' }
         ];
 
         this.cellTypes = [
-            { value: 'static', label: '静态文本', icon: 'fa-font' },
-            { value: 'data_query', label: '数据查询', icon: 'fa-search' },
-            { value: 'barcode', label: '条形码', icon: 'fa-barcode' },
-            { value: 'qrcode', label: '二维码', icon: 'fa-qrcode' },
-            { value: 'image', label: '图片', icon: 'fa-image' }
+            { value: 'static', label: 'Static Text', icon: 'fa-font' },
+            { value: 'data_query', label: 'Data Query', icon: 'fa-search' },
+            { value: 'barcode', label: 'Barcode', icon: 'fa-barcode' },
+            { value: 'qrcode', label: 'QR Code', icon: 'fa-qrcode' },
+            { value: 'image', label: 'Image', icon: 'fa-image' }
         ];
 
         this.barcodeFormats = [
@@ -76,7 +76,7 @@ class SuperPrintDesigner {
                     this.marginRight = parseInt(r.message.margin_right) || 15;
                 }
             } catch (e) {
-                console.error('加载纸张尺寸失败:', e);
+                console.error('Failed to load paper size:', e);
             }
         }
         if (!this.paperWidth) this.paperWidth = 210;
@@ -168,7 +168,7 @@ class SuperPrintDesigner {
             });
         }
 
-        // 填充空单元格
+        // Fill empty cells
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 if (!this.grid[row][col]) {
@@ -204,7 +204,7 @@ class SuperPrintDesigner {
     }
 
     generateDesigner() {
-        // 1mm = 4px 严格比例
+        // 1mm = 4px strict ratio
         const PX_PER_MM = 4;
         let totalWidth = 0;
         for (let col = 1; col <= this.cols; col++) {
@@ -220,35 +220,35 @@ class SuperPrintDesigner {
         console.log('[SPD] generateDesigner paper:', this.paperWidth, 'x', this.paperHeight, 'mm =>', paperW, 'x', paperH, 'px, margins:', mTop, mRight, mBottom, mLeft, 'px');
 
         let html = '<div id="' + this.designContainerId + '" class="spd-container">';
-        // 工具栏
+        // Toolbar
         html += '<div class="spd-toolbar">' +
             '<div class="spd-controls">' +
-                '<label>行:</label><input type="number" id="spd-rows" class="form-control" min="1" max="100" value="' + this.rows + '" style="width:70px">' +
-                '<label>列:</label><input type="number" id="spd-cols" class="form-control" min="1" max="26" value="' + this.cols + '" style="width:70px">' +
-                '<button class="btn btn-default btn-sm" id="spd-apply-grid"><i class="fa fa-refresh"></i> 应用</button>' +
+                '<label>Rows:</label><input type="number" id="spd-rows" class="form-control" min="1" max="100" value="' + this.rows + '" style="width:70px">' +
+                '<label>Cols:</label><input type="number" id="spd-cols" class="form-control" min="1" max="26" value="' + this.cols + '" style="width:70px">' +
+                '<button class="btn btn-default btn-sm" id="spd-apply-grid"><i class="fa fa-refresh"></i> Apply</button>' +
             '</div>' +
             '<div class="spd-controls">' +
-                '<label>字体:</label>' +
+                '<label>Font:</label>' +
                 '<select id="spd-font" class="form-control" style="width:100px">';
         this.fontFamilies.forEach(f => {
             html += '<option value="' + f.value + '" ' + (this.fontFamily === f.value ? 'selected' : '') + '>' + f.label + '</option>';
         });
         html += '</select></div>' +
             '<div class="spd-controls spd-row-type-controls" style="display:none">' +
-                '<button class="btn btn-default btn-sm" id="spd-repeat-title-btn" title="设置重复标题行"><i class="fa fa-repeat" style="color:#ff9800"></i> <small style="font-size:9px;color:#ff9800">标题行</small></button>' +
-                '<button class="btn btn-default btn-sm" id="spd-data-driven-btn" title="设置数据驱动行"><i class="fa fa-database" style="color:#2196f3"></i> <small style="font-size:9px;color:#2196f3">数据行</small></button>' +
-                '<button class="btn btn-default btn-sm" id="spd-normal-row-btn" title="恢复为普通行"><i class="fa fa-minus"></i> <small style="font-size:9px">普通行</small></button>' +
+                '<button class="btn btn-default btn-sm" id="spd-repeat-title-btn" title="Set Repeat Title Row"><i class="fa fa-repeat" style="color:#ff9800"></i> <small style="font-size:9px;color:#ff9800">Title Row</small></button>' +
+                '<button class="btn btn-default btn-sm" id="spd-data-driven-btn" title="Set Data-Driven Row"><i class="fa fa-database" style="color:#2196f3"></i> <small style="font-size:9px;color:#2196f3">Data Row</small></button>' +
+                '<button class="btn btn-default btn-sm" id="spd-normal-row-btn" title="Restore to Normal Row"><i class="fa fa-minus"></i> <small style="font-size:9px">Normal Row</small></button>' +
             '</div>' +
             '<div class="spd-actions">' +
-                '<button class="btn btn-info btn-sm" id="spd-query-btn"><i class="fa fa-database"></i> 查询定义</button>' +
-                '<button class="btn btn-info btn-sm" id="spd-params-btn"><i class="fa fa-sliders"></i> 参数定义</button>' +
-                '<button class="btn btn-warning btn-sm" id="spd-clear-btn"><i class="fa fa-trash"></i> 清空</button>' +
-                '<button class="btn btn-primary btn-sm" id="spd-save-btn"><i class="fa fa-save"></i> 保存</button>' +
+                '<button class="btn btn-info btn-sm" id="spd-query-btn"><i class="fa fa-database"></i> Query Definition</button>' +
+                '<button class="btn btn-info btn-sm" id="spd-params-btn"><i class="fa fa-sliders"></i> Parameters</button>' +
+                '<button class="btn btn-warning btn-sm" id="spd-clear-btn"><i class="fa fa-trash"></i> Clear</button>' +
+                '<button class="btn btn-primary btn-sm" id="spd-save-btn"><i class="fa fa-save"></i> Save</button>' +
             '</div>' +
         '</div>';
 
-        // 主区域：网格 + 属性面板
-        // 结构: grid-wrapper > col-headers(纸张外上方) + grid-body > row-headers(纸张外左侧) + spd-paper > margin-line + table
+        // Main area: grid + property panel
+        // Structure: grid-wrapper > col-headers(above paper) + grid-body > row-headers(left of paper) + spd-paper > margin-line + table
         const rowHeaderWidth = 22;
         const contentAreaW = paperW - mLeft - mRight;
         const centeredOffset = Math.max(0, (contentAreaW - totalWidth) / 2);
@@ -278,7 +278,7 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="spd-props" id="spd-props">' +
-                '<h4><i class="fa fa-cog"></i> 单元格属性</h4>' +
+                '<h4><i class="fa fa-cog"></i> Cell Properties</h4>' +
                 '<div id="spd-prop-form"></div>' +
             '</div>' +
         '</div></div>';
@@ -287,13 +287,13 @@ class SuperPrintDesigner {
 
     generateHeaderFooterHtml(mTop, mBottom, mLeft, mRight) {
         let html = '';
-        // 页眉区域（左/中/右三栏）
+        // Header area (left/center/right columns)
         if (mTop > 0) {
             const hl = this.pageHeaderLeft || '';
             const hc = this.pageHeaderCenter || '';
             const hr = this.pageHeaderRight || '';
             const hasContent = hl || hc || hr;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">页眉区域</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">Header Area</span>';
             html += '<div class="spd-header-area" id="spd-header-area" style="' +
                 'position:absolute;top:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mTop + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
@@ -304,13 +304,13 @@ class SuperPrintDesigner {
             html += '<div style="flex:1;text-align:right;padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
             html += '</div>';
         }
-        // 页脚区域（左/中/右三栏）
+        // Footer area (left/center/right columns)
         if (mBottom > 0) {
             const fl = this.pageFooterLeft || '';
             const fc = this.pageFooterCenter || '';
             const fr_ = this.pageFooterRight || '';
             const hasContent = fl || fc || fr_;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">页脚区域</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">Footer Area</span>';
             html += '<div class="spd-footer-area" id="spd-footer-area" style="' +
                 'position:absolute;bottom:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mBottom + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
@@ -342,7 +342,7 @@ class SuperPrintDesigner {
             const rowHeight = rowStyle.height || 20;
             const selectedClass = this.selectedRow === row ? 'row-header-selected' : '';
 
-            // 行类型指示（扫描该行第一个非合并单元格）
+            // Row type indicator (scan first non-merged cell in row)
             let rowType = '';
             for (let c = 0; c < this.cols; c++) {
                 const cell = this.grid[row - 1]?.[c];
@@ -353,11 +353,11 @@ class SuperPrintDesigner {
             }
             let typeIndicator = '';
             let typeClass = '';
-            if (rowType === '\u91cd\u590d\u6807\u9898\u884c') {
-                typeIndicator = '<span class="row-type-badge badge-repeat" title="\u91cd\u590d\u6807\u9898\u884c">T</span>';
+            if (rowType === 'Repeat Title Row') {
+                typeIndicator = '<span class="row-type-badge badge-repeat" title="Repeat Title Row">T</span>';
                 typeClass = ' row-header-repeat-title';
-            } else if (rowType === '\u6570\u636e\u9a71\u52a8\u884c') {
-                typeIndicator = '<span class="row-type-badge badge-data" title="\u6570\u636e\u9a71\u52a8\u884c">D</span>';
+            } else if (rowType === 'Data-Driven Row') {
+                typeIndicator = '<span class="row-type-badge badge-data" title="Data-Driven Row">D</span>';
                 typeClass = ' row-header-data-driven';
             }
 
@@ -385,11 +385,11 @@ class SuperPrintDesigner {
             const rowStyle = this.rowStyles[row] || {};
             let rowStyleAttr = 'height:' + (rowStyle.height || 20) + 'px;';
             if (rowStyle.css_style) rowStyleAttr += rowStyle.css_style;
-            // 行显示效果
+            // Row display effect
             const firstCellInRow = this.grid[row - 1]?.[0];
             const rowDisplay = firstCellInRow?.row_display || '';
-            if (rowDisplay === '\u56fa\u5b9a\u884c\u9ad8') rowStyleAttr += 'overflow:hidden;white-space:nowrap;';
-            else if (rowDisplay === '\u81ea\u52a8\u7f29\u5c0f\u5b57\u4f53') rowStyleAttr += 'overflow:hidden;';
+            if (rowDisplay === 'Fixed Height') rowStyleAttr += 'overflow:hidden;white-space:nowrap;';
+            else if (rowDisplay === 'Auto Shrink Font') rowStyleAttr += 'overflow:hidden;';
             rowStyleAttr += 'line-height:1;';
             const rowSelectedClass = this.selectedRow === row ? ' row-selected' : '';
 
@@ -469,11 +469,11 @@ class SuperPrintDesigner {
         container.querySelector('#spd-save-btn')?.addEventListener('click', () => this.saveDesign());
         container.querySelector('#spd-query-btn')?.addEventListener('click', () => this.showQueryDialog());
         container.querySelector('#spd-params-btn')?.addEventListener('click', () => this.showParamsDialog());
-        container.querySelector('#spd-repeat-title-btn')?.addEventListener('click', () => this.setRowType('\u91cd\u590d\u6807\u9898\u884c'));
-        container.querySelector('#spd-data-driven-btn')?.addEventListener('click', () => this.setRowType('\u6570\u636e\u9a71\u52a8\u884c'));
+        container.querySelector('#spd-repeat-title-btn')?.addEventListener('click', () => this.setRowType('Repeat Title Row'));
+        container.querySelector('#spd-data-driven-btn')?.addEventListener('click', () => this.setRowType('Data-Driven Row'));
         container.querySelector('#spd-normal-row-btn')?.addEventListener('click', () => this.setRowType(''));
 
-        // 委托点击事件
+        // Delegated click events
         container.addEventListener('click', (e) => {
             const colHeader = e.target.closest('.col-header-cell');
             if (colHeader) {
@@ -538,7 +538,7 @@ class SuperPrintDesigner {
         this.refreshGrid();
     }
 
-    // ==================== 行属性面板 ====================
+    // ==================== Row Property Panel ====================
 
     renderRowProperties(row) {
         const container = document.getElementById(this.designContainerId);
@@ -552,16 +552,16 @@ class SuperPrintDesigner {
 
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
-            titleElement.innerHTML = '<i class="fa fa-arrows-v"></i> 行样式设置 <small style="color:#6c757d;font-weight:normal">(第' + row + '行)</small>';
+            titleElement.innerHTML = '<i class="fa fa-arrows-v"></i> Row Style Settings <small style="color:#6c757d;font-weight:normal">(Row ' + row + ')</small>';
         }
 
         let formHtml = '<form id="row-property-form" class="property-form">' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-expand"></i> 行尺寸</div>' +
+                '<div class="property-section-header"><i class="fa fa-expand"></i> Row Dimensions</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<div class="layout-controls">' +
                         '<div class="layout-control-group">' +
-                            '<label style="font-size:9px">行高:</label>' +
+                            '<label style="font-size:9px">Row Height:</label>' +
                             '<div class="number-spinner number-spinner-sm">' +
                                 '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="row-height" data-step="5">-</button>' +
                                 '<input type="number" id="row-height" class="form-control spin-input" value="' + (rowStyle.height || '') + '" min="1" max="500" step="1" placeholder="20">' +
@@ -569,7 +569,7 @@ class SuperPrintDesigner {
                             '</div>' +
                         '</div>' +
                         '<div class="layout-control-group">' +
-                            '<label style="font-size:9px">字体:</label>' +
+                            '<label style="font-size:9px">Font:</label>' +
                             '<div class="number-spinner number-spinner-sm">' +
                                 '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="row-font-size" data-step="1">-</button>' +
                                 '<input type="number" id="row-font-size" class="form-control spin-input" value="' + (rowStyle.font_size || '') + '" min="8" max="36" step="1" placeholder="12">' +
@@ -580,40 +580,40 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-bars"></i> 文字对齐</div>' +
+                '<div class="property-section-header"><i class="fa fa-bars"></i> Text Alignment</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px;margin-bottom:4px">垂直对齐:</label>' +
+                    '<label style="font-size:9px;margin-bottom:4px">Vertical Align:</label>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="top" title="上对齐"><i class="fa fa-arrow-up"></i> 上</button>' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="middle" title="居中"><i class="fa fa-arrows-v"></i> 中</button>' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="bottom" title="下对齐"><i class="fa fa-arrow-down"></i> 下</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="top" title="Top Align"><i class="fa fa-arrow-up"></i> Top</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="middle" title="Center"><i class="fa fa-arrows-v"></i> Center</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="bottom" title="Bottom Align"><i class="fa fa-arrow-down"></i> Bottom</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-tag"></i> 行类型</div>' +
+                '<div class="property-section-header"><i class="fa fa-tag"></i> Row Type</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<select id="row-type-select" class="form-control">' +
-                        '<option value="">普通行</option>' +
-                        '<option value="\u91cd\u590d\u6807\u9898\u884c">\u91cd\u590d\u6807\u9898\u884c</option>' +
-                        '<option value="\u6570\u636e\u9a71\u52a8\u884c">\u6570\u636e\u9a71\u52a8\u884c</option>' +
+                        '<option value="">Normal Row</option>' +
+                        '<option value="Repeat Title Row">Repeat Title Row</option>' +
+                        '<option value="Data-Driven Row">Data-Driven Row</option>' +
                     '</select>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-text-height"></i> 行显示效果</div>' +
+                '<div class="property-section-header"><i class="fa fa-text-height"></i> Row Display Effect</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<select id="row-display-select" class="form-control">' +
-                        '<option value="">\u81ea\u52a8\u6362\u884c</option>' +
-                        '<option value="\u56fa\u5b9a\u884c\u9ad8">\u56fa\u5b9a\u884c\u9ad8</option>' +
-                        '<option value="\u81ea\u52a8\u7f29\u5c0f\u5b57\u4f53">\u81ea\u52a8\u7f29\u5c0f\u5b57\u4f53</option>' +
+                        '<option value="">Auto Wrap</option>' +
+                        '<option value="Fixed Height">Fixed Height</option>' +
+                        '<option value="Auto Shrink Font">Auto Shrink Font</option>' +
                     '</select>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> 行样式</div>' +
+                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> Row Style</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px">CSS样式:</label>' +
+                    '<label style="font-size:9px">CSS Style:</label>' +
                     '<textarea id="row-css-style" class="form-control css-editor" rows="2" placeholder="background-color: #f0f0f0;">' + cssPreview.trim() + '</textarea>' +
                 '</div>' +
             '</div>' +
@@ -642,21 +642,21 @@ class SuperPrintDesigner {
             this.updateRowStyle(row, 'css_style', e.target.value);
         });
 
-        // 行类型选择
+        // Row type selection
         const rowTypeSelect = container.querySelector('#row-type-select');
         if (rowTypeSelect) {
             const firstNonMerged = this.getFirstNonMergedCell(row);
             rowTypeSelect.value = firstNonMerged?.row_type || '';
             rowTypeSelect.addEventListener('change', (e) => this.setRowTypeForRow(row, e.target.value));
         }
-        // 行显示效果选择
+        // Row display effect selection
         const rowDisplaySelect = container.querySelector('#row-display-select');
         if (rowDisplaySelect) {
             const firstNonMerged = this.getFirstNonMergedCell(row);
             rowDisplaySelect.value = firstNonMerged?.row_display || '';
             rowDisplaySelect.addEventListener('change', (e) => this.setRowDisplay(row, e.target.value));
         }
-        // 垂直对齐按钮
+        // Vertical alignment buttons
         container.querySelectorAll('.row-align-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -666,7 +666,7 @@ class SuperPrintDesigner {
         });
     }
 
-    // ==================== 行类型/行显示效果 ====================
+    // ==================== Row Type / Row Display Effect ====================
 
     getFirstNonMergedCell(row) {
         for (let c = 0; c < this.cols; c++) {
@@ -678,7 +678,7 @@ class SuperPrintDesigner {
 
     setRowType(rowType) {
         if (this.selectionMode !== 'row' || !this.selectedRow) {
-            frappe.show_alert({ message: '\u8bf7\u5148\u70b9\u51fb\u5de6\u4fa7\u884c\u53f7\u9009\u62e9\u4e00\u6574\u884c', indicator: 'yellow' });
+            frappe.show_alert({ message: 'Please click a row number on the left to select an entire row', indicator: 'yellow' });
             return;
         }
         this.setRowTypeForRow(this.selectedRow, rowType);
@@ -693,8 +693,8 @@ class SuperPrintDesigner {
         }
         this.refreshGrid();
         this.frm.dirty();
-        const typeLabel = rowType || '\u666e\u901a\u884c';
-        frappe.show_alert({ message: '\u7b2c' + row + '\u884c\u5df2\u8bbe\u7f6e\u4e3a: ' + typeLabel, indicator: 'green' });
+        const typeLabel = rowType || 'Normal Row';
+        frappe.show_alert({ message: 'Row ' + row + ' set to: ' + typeLabel, indicator: 'green' });
     }
 
     setRowDisplay(row, display) {
@@ -734,7 +734,7 @@ class SuperPrintDesigner {
         this.refreshGrid();
     }
 
-    // ==================== 列属性面板 ====================
+    // ==================== Column Property Panel ====================
 
     renderColProperties(col) {
         const container = document.getElementById(this.designContainerId);
@@ -747,16 +747,16 @@ class SuperPrintDesigner {
 
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
-            titleElement.innerHTML = '<i class="fa fa-arrows-h"></i> 列样式设置 <small style="color:#6c757d;font-weight:normal">(第' + col + '列)</small>';
+            titleElement.innerHTML = '<i class="fa fa-arrows-h"></i> Column Style Settings <small style="color:#6c757d;font-weight:normal">(Col ' + col + ')</small>';
         }
 
         let formHtml = '<form id="col-property-form" class="property-form">' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-expand"></i> 列尺寸</div>' +
+                '<div class="property-section-header"><i class="fa fa-expand"></i> Column Dimensions</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<div class="layout-controls">' +
                         '<div class="layout-control-group" style="flex:1">' +
-                            '<label style="font-size:9px">列宽:</label>' +
+                            '<label style="font-size:9px">Column Width:</label>' +
                             '<div class="number-spinner number-spinner-sm">' +
                                 '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="col-width" data-step="10">-</button>' +
                                 '<input type="number" id="col-width" class="form-control spin-input" value="' + (colStyle.width || '') + '" min="1" max="500" step="1" placeholder="60">' +
@@ -767,20 +767,20 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-align-center"></i> 文字对齐</div>' +
+                '<div class="property-section-header"><i class="fa fa-align-center"></i> Text Alignment</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px;margin-bottom:4px">水平对齐:</label>' +
+                    '<label style="font-size:9px;margin-bottom:4px">Horizontal Align:</label>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="left" title="左对齐"><i class="fa fa-align-left"></i> 左</button>' +
-                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="center" title="居中"><i class="fa fa-align-center"></i> 中</button>' +
-                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="right" title="右对齐"><i class="fa fa-align-right"></i> 右</button>' +
+                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="left" title="Left Align"><i class="fa fa-align-left"></i> Left</button>' +
+                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="center" title="Center"><i class="fa fa-align-center"></i> Center</button>' +
+                        '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="right" title="Right Align"><i class="fa fa-align-right"></i> Right</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> 列样式</div>' +
+                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> Column Style</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<label style="font-size:9px">CSS样式:</label>' +
+                    '<label style="font-size:9px">CSS Style:</label>' +
                     '<textarea id="col-css-style" class="form-control css-editor" rows="2" placeholder="text-align: center;">' + cssPreview.trim() + '</textarea>' +
                 '</div>' +
             '</div>' +
@@ -805,7 +805,7 @@ class SuperPrintDesigner {
             this.updateColStyle(col, 'css_style', e.target.value);
         });
 
-        // 水平对齐按钮
+        // Horizontal alignment buttons
         container.querySelectorAll('.col-align-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -827,7 +827,7 @@ class SuperPrintDesigner {
         return Object.entries(pairs).map(([k, v]) => k + ':' + v).join('; ');
     }
 
-    // ==================== 单元格属性面板 ====================
+    // ==================== Cell Property Panel ====================
 
     renderCellProperties(cellId) {
         const container = document.getElementById(this.designContainerId);
@@ -838,7 +838,7 @@ class SuperPrintDesigner {
 
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
-            titleElement.innerHTML = '<i class="fa fa-cog"></i> 单元格属性 <small style="color:#6c757d;font-weight:normal">(' + cellId + ')</small>';
+            titleElement.innerHTML = '<i class="fa fa-cog"></i> Cell Properties <small style="color:#6c757d;font-weight:normal">(' + cellId + ')</small>';
         }
 
         const typeOptions = this.cellTypes.map(t => '<option value="' + t.value + '">' + t.label + '</option>').join('');
@@ -850,35 +850,35 @@ class SuperPrintDesigner {
         const styleTabCls = activeTab === 'style' ? ' active' : '';
 
         let formHtml = '<div class="prop-tabs">' +
-            '<div class="prop-tab' + contentTabCls + '" data-tab="content"><i class="fa fa-edit"></i> 内容</div>' +
-            '<div class="prop-tab' + styleTabCls + '" data-tab="style"><i class="fa fa-paint-brush"></i> 样式</div>' +
+            '<div class="prop-tab' + contentTabCls + '" data-tab="content"><i class="fa fa-edit"></i> Content</div>' +
+            '<div class="prop-tab' + styleTabCls + '" data-tab="style"><i class="fa fa-paint-brush"></i> Style</div>' +
         '</div>' +
         '<div class="prop-tab-contents">' +
             '<div class="prop-tab-content' + contentTabCls + '" data-tab="content">' +
-                '<label>类型:</label>' +
+                '<label>Type:</label>' +
                 '<select id="prop-cell-type" class="form-control">' + typeOptions + '</select>' +
-                '<label>值:</label>' +
+                '<label>Value:</label>' +
                 '<textarea id="prop-cell-value" class="form-control" rows="2"></textarea>' +
                 '<div id="query-group" style="display:none">' +
-                    '<label>数据键:</label>' +
-                    '<input id="prop-data-key" class="form-control" placeholder="如 item_code">' +
+                    '<label>Data Key:</label>' +
+                    '<input id="prop-data-key" class="form-control" placeholder="e.g. item_code">' +
                 '</div>' +
                 '<div id="barcode-group" style="display:none">' +
-                    '<label>条码格式:</label>' +
+                    '<label>Barcode Format:</label>' +
                     '<select id="prop-barcode-format" class="form-control">' + barcodeFormatOptions + '</select>' +
-                    '<label>宽度(px):</label>' +
+                    '<label>Width (px):</label>' +
                     '<input type="number" id="prop-barcode-width" class="form-control" value="100">' +
-                    '<label>高度(px):</label>' +
+                    '<label>Height (px):</label>' +
                     '<input type="number" id="prop-barcode-height" class="form-control" value="40">' +
                 '</div>' +
                 '<div id="qrcode-group" style="display:none">' +
-                    '<p style="font-size:11px;color:#888;margin:4px 0;">二维码自动适配单元格尺寸（1:1）</p>' +
+                    '<p style="font-size:11px;color:#888;margin:4px 0;">QR code auto-fits cell dimensions (1:1)</p>' +
                 '</div>' +
             '</div>' +
             '<div class="prop-tab-content' + styleTabCls + '" data-tab="style">' +
                 '<div class="layout-controls">' +
                     '<div class="layout-control-group">' +
-                        '<label>跨行:</label>' +
+                        '<label>Rowspan:</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-rowspan" data-step="1">-</button>' +
                             '<input type="number" id="prop-rowspan" class="form-control spin-input" min="1" max="100" value="' + (cell.rowspan || 1) + '">' +
@@ -886,7 +886,7 @@ class SuperPrintDesigner {
                         '</div>' +
                     '</div>' +
                     '<div class="layout-control-group">' +
-                        '<label>跨列:</label>' +
+                        '<label>Colspan:</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-colspan" data-step="1">-</button>' +
                             '<input type="number" id="prop-colspan" class="form-control spin-input" min="1" max="26" value="' + (cell.colspan || 1) + '">' +
@@ -896,7 +896,7 @@ class SuperPrintDesigner {
                 '</div>' +
                 '<div class="layout-controls">' +
                     '<div class="layout-control-group">' +
-                        '<label>字体(px):</label>' +
+                        '<label>Font (px):</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-font-size" data-step="1">-</button>' +
                             '<input type="number" id="prop-font-size" class="form-control spin-input" value="' + this.extractFontSize(cell.css_style, row) + '" min="8" max="36">' +
@@ -904,7 +904,7 @@ class SuperPrintDesigner {
                         '</div>' +
                     '</div>' +
                     '<div class="layout-control-group">' +
-                        '<label>内边距:</label>' +
+                        '<label>Padding:</label>' +
                         '<div class="number-spinner">' +
                             '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-padding" data-step="1">-</button>' +
                             '<input type="number" id="prop-padding" class="form-control spin-input" value="' + this.extractPadding(cell.css_style) + '" min="0" max="20">' +
@@ -913,37 +913,37 @@ class SuperPrintDesigner {
                     '</div>' +
                 '</div>' +
                 '<div class="css-quick-buttons css-quick-compact">' +
-                    '<label style="font-size:9px">快捷:</label>' +
+                    '<label style="font-size:9px">Quick:</label>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:left" data-prop="text-align" title="左对齐"><i class="fa fa-align-left"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:center" data-prop="text-align" title="居中"><i class="fa fa-align-center"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:right" data-prop="text-align" title="右对齐"><i class="fa fa-align-right"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-weight:bold" data-prop="font-weight" title="粗体"><i class="fa fa-bold"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="斜体"><i class="fa fa-italic"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:left" data-prop="text-align" title="Left Align"><i class="fa fa-align-left"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:center" data-prop="text-align" title="Center"><i class="fa fa-align-center"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:right" data-prop="text-align" title="Right Align"><i class="fa fa-align-right"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-weight:bold" data-prop="font-weight" title="Bold"><i class="fa fa-bold"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="Italic"><i class="fa fa-italic"></i></button>' +
                     '</div>' +
                     '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<div class="color-picker-wrapper" title="背景色"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
-                        '<div class="color-picker-wrapper" title="文字色"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
-                        '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="默认样式" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">默认</span></button>' +
-                        '<button type="button" class="btn btn-xs btn-danger css-quick-btn" data-action="clear-css" title="清除CSS" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-eraser"></i> 清除</button>' +
+                        '<div class="color-picker-wrapper" title="Background Color"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
+                        '<div class="color-picker-wrapper" title="Text Color"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
+                        '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="Default Style" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">Default</span></button>' +
+                        '<button type="button" class="btn btn-xs btn-danger css-quick-btn" data-action="clear-css" title="Clear CSS" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-eraser"></i> Clear</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="border-settings" style="margin:6px 0;padding:6px;background:#f8f9fa;border-radius:4px;border:1px solid #e9ecef">' +
-                    '<label style="font-size:9px;margin-bottom:4px">边框:</label>' +
+                    '<label style="font-size:9px;margin-bottom:4px">Border:</label>' +
                     '<div class="btn-group-wrap" style="margin-top:2px;gap:2px">' +
                         '<div class="border-width-selector" style="display:flex;align-items:center;gap:2px">' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn bw-active" data-width="1" style="width:24px;height:20px;padding:0;font-size:8px">细</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="2" style="width:24px;height:20px;padding:0;font-size:8px">中</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="3" style="width:24px;height:20px;padding:0;font-size:8px">粗</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="0" style="width:24px;height:20px;padding:0;font-size:8px">无</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn bw-active" data-width="1" style="width:24px;height:20px;padding:0;font-size:8px">Thin</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="2" style="width:24px;height:20px;padding:0;font-size:8px">Medium</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="3" style="width:24px;height:20px;padding:0;font-size:8px">Thick</button>' +
+                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="0" style="width:24px;height:20px;padding:0;font-size:8px">None</button>' +
                         '</div>' +
                     '</div>' +
                     '<div class="btn-group-wrap" style="margin-top:4px;gap:2px">' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="top" style="width:24px;height:20px;padding:0;font-size:8px">上</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="bottom" style="width:24px;height:20px;padding:0;font-size:8px">下</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="left" style="width:24px;height:20px;padding:0;font-size:8px">左</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="right" style="width:24px;height:20px;padding:0;font-size:8px">右</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="none" style="width:24px;height:20px;padding:0;font-size:8px">全</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="top" style="width:24px;height:20px;padding:0;font-size:8px">Top</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="bottom" style="width:24px;height:20px;padding:0;font-size:8px">Bottom</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="left" style="width:24px;height:20px;padding:0;font-size:8px">Left</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="right" style="width:24px;height:20px;padding:0;font-size:8px">Right</button>' +
+                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="none" style="width:24px;height:20px;padding:0;font-size:8px">All</button>' +
                     '</div>' +
                 '</div>' +
                 '<label>CSS:</label>' +
@@ -1026,7 +1026,7 @@ class SuperPrintDesigner {
         this.bindBorderButtons();
         this.bindSpinnerButtons();
 
-        // Tab切换
+        // Tab switching
         container.querySelectorAll('.prop-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
                 container.querySelectorAll('.prop-tab').forEach(t => t.classList.remove('active'));
@@ -1070,23 +1070,23 @@ class SuperPrintDesigner {
         const startCol = col - 1;
 
         if (newColspan > oldColspan) {
-            // 扩展：检查新增区域是否都是独立单元格（非合并）
+            // Expand: check if new area cells are independent (non-merged)
             for (let c = startCol + oldColspan; c < startCol + newColspan; c++) {
                 if (c >= this.cols) {
-                    frappe.show_alert({ message: '跨列数超出网格范围', indicator: 'red' });
+                    frappe.show_alert({ message: 'Colspan exceeds grid range', indicator: 'red' });
                     return;
                 }
                 const target = this.grid[startRow]?.[c];
                 if (target && !target._merged && (target.rowspan > 1 || target.colspan > 1)) {
-                    frappe.show_alert({ message: '目标区域存在合并单元格，无法扩展', indicator: 'red' });
+                    frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
                     return;
                 }
                 if (target?._merged) {
-                    frappe.show_alert({ message: '目标区域存在合并单元格，无法扩展', indicator: 'red' });
+                    frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
                     return;
                 }
             }
-            // 占用新增的独立单元格
+            // Occupy new independent cells
             for (let c = startCol + oldColspan; c < startCol + newColspan; c++) {
                 const target = this.grid[startRow][c];
                 if (target && !target._merged) {
@@ -1095,7 +1095,7 @@ class SuperPrintDesigner {
                 this.grid[startRow][c] = { _merged: true, master_cell_id: cell.cell_id };
             }
         } else {
-            // 收缩：释放的格子变为独立单元格
+            // Shrink: released cells become independent
             for (let c = startCol + newColspan; c < startCol + oldColspan; c++) {
                 if (c < this.cols) {
                     const newCellId = 'R' + row + 'C' + (c + 1);
@@ -1119,25 +1119,25 @@ class SuperPrintDesigner {
         const startCol = col - 1;
 
         if (newRowspan > oldRowspan) {
-            // 扩展：检查新增区域
+            // Expand: check new area
             for (let r = startRow + oldRowspan; r < startRow + newRowspan; r++) {
                 if (r >= this.rows) {
-                    frappe.show_alert({ message: '跨行数超出网格范围', indicator: 'red' });
+                    frappe.show_alert({ message: 'Rowspan exceeds grid range', indicator: 'red' });
                     return;
                 }
                 for (let c = startCol; c < startCol + (cell.colspan || 1); c++) {
                     const target = this.grid[r]?.[c];
                     if (target && !target._merged && (target.rowspan > 1 || target.colspan > 1)) {
-                        frappe.show_alert({ message: '目标区域存在合并单元格，无法扩展', indicator: 'red' });
+                        frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
                         return;
                     }
                     if (target?._merged) {
-                        frappe.show_alert({ message: '目标区域存在合并单元格，无法扩展', indicator: 'red' });
+                        frappe.show_alert({ message: 'Target area contains merged cells, cannot expand', indicator: 'red' });
                         return;
                     }
                 }
             }
-            // 占用新增的独立单元格
+            // Occupy new independent cells
             for (let r = startRow + oldRowspan; r < startRow + newRowspan; r++) {
                 for (let c = startCol; c < startCol + (cell.colspan || 1); c++) {
                     const target = this.grid[r][c];
@@ -1148,7 +1148,7 @@ class SuperPrintDesigner {
                 }
             }
         } else {
-            // 收缩：释放的格子变为独立单元格
+            // Shrink: released cells become independent
             for (let r = startRow + newRowspan; r < startRow + oldRowspan; r++) {
                 for (let c = startCol; c < startCol + (cell.colspan || 1); c++) {
                     if (r < this.rows && c < this.cols) {
@@ -1196,7 +1196,7 @@ class SuperPrintDesigner {
     }
 
     extractFontSize(cssStyle, row) {
-        // 优先从单元格样式中提取，其次从行级样式，最后用设计器默认值
+        // Priority: cell style > row style > designer default
         if (cssStyle) {
             const pairs = this.parseCssString(cssStyle);
             if (pairs['font-size']) {
@@ -1313,20 +1313,20 @@ class SuperPrintDesigner {
             cssPairs['border-left'] = borderValue;
         }
 
-        const sideNames = { top: '上', bottom: '下', left: '左', right: '右', none: '所有' };
+        const sideNames = { top: 'Top', bottom: 'Bottom', left: 'Left', right: 'Right', none: 'All' };
         const allSides = ['top', 'right', 'bottom', 'left'];
         const borderVal = width > 0 ? width + 'px solid black' : '1px solid transparent';
 
         if (side === 'none') {
-            // "全"按钮：对所有四边应用当前宽度
+            // "All" button: apply current width to all four sides
             allSides.forEach(s => { cssPairs['border-' + s] = borderVal; });
             const newCss = Object.entries(cssPairs).map(([k, v]) => k + ':' + v).join('; ');
             cssEditor.value = newCss;
             cssEditor.dispatchEvent(new Event('change', { bubbles: true }));
             if (width > 0) {
-                frappe.show_alert({ message: '已设置所有边框 ' + width + 'px', indicator: 'green' });
+                frappe.show_alert({ message: 'All borders set to ' + width + 'px', indicator: 'green' });
             } else {
-                frappe.show_alert({ message: '已将所有边框设为无', indicator: 'orange' });
+                frappe.show_alert({ message: 'All borders removed', indicator: 'orange' });
             }
             return;
         }
@@ -1336,9 +1336,9 @@ class SuperPrintDesigner {
         cssEditor.value = newCss;
         cssEditor.dispatchEvent(new Event('change', { bubbles: true }));
         if (width > 0) {
-            frappe.show_alert({ message: '已设置' + sideNames[side] + '边框 ' + width + 'px', indicator: 'green' });
+            frappe.show_alert({ message: sideNames[side] + ' border set to ' + width + 'px', indicator: 'green' });
         } else {
-            frappe.show_alert({ message: '已将' + sideNames[side] + '边框设为无', indicator: 'orange' });
+            frappe.show_alert({ message: sideNames[side] + ' border removed', indicator: 'orange' });
         }
     }
 
@@ -1377,7 +1377,7 @@ class SuperPrintDesigner {
                     if (fontSizeInput) fontSizeInput.value = this.fontSize;
                     if (paddingInput) paddingInput.value = 0;
                     this.updateCellProperty('css_style', defaultCss);
-                    frappe.show_alert({ message: '已恢复默认样式', indicator: 'green' });
+                    frappe.show_alert({ message: 'Default style restored', indicator: 'green' });
                 } else if (cssProp) {
                     this.toggleCssProperty(cssProp);
                 }
@@ -1409,19 +1409,19 @@ class SuperPrintDesigner {
             const newCss = Object.entries(cssPairs).map(([k, v]) => k + ':' + v).join('; ');
             cssEditor.value = newCss;
             cssEditor.dispatchEvent(new Event('change', { bubbles: true }));
-            frappe.show_alert({ message: '已清除 ' + propName + ' 属性', indicator: 'orange' });
+            frappe.show_alert({ message: 'Cleared ' + propName + ' property', indicator: 'orange' });
         }
     }
 
     generateQueryOptions() {
         if (this.frm.doc.query_code) {
-            return '<option value="main">主查询</option>';
+            return '<option value="main">Main Query</option>';
         }
         return '';
     }
 
     saveDesign() {
-        // 从工具栏输入框同步当前行列数
+        // Sync current row/col count from toolbar inputs
         const container = document.getElementById(this.designContainerId);
         if (container) {
             const inputRows = parseInt(container.querySelector('#spd-rows')?.value);
@@ -1459,7 +1459,7 @@ class SuperPrintDesigner {
         this.frm.set_value('font_family', this.fontFamily);
         this.frm.set_value('design_items', items);
         this.frm.save().then(() => {
-            frappe.show_alert({ message: '设计已保存，' + items.length + ' 个单元格', indicator: 'green' });
+            frappe.show_alert({ message: 'Design saved, ' + items.length + ' cells', indicator: 'green' });
         });
     }
 
@@ -1478,7 +1478,7 @@ class SuperPrintDesigner {
     }
 
     clearDesign() {
-        if (!confirm('确定清空所有设计？此操作不可撤销。')) return;
+        if (!confirm('Are you sure you want to clear all designs? This action cannot be undone.')) return;
         this.initGrid();
         this.cellDataMap = {};
         this.rowStyles = {};
@@ -1494,7 +1494,7 @@ class SuperPrintDesigner {
         }
         this.refreshGrid();
         this.frm.dirty();
-        frappe.show_alert({ message: '设计已清空', indicator: 'yellow' });
+        frappe.show_alert({ message: 'Design cleared', indicator: 'yellow' });
     }
 
     applyGridSize() {
@@ -1509,7 +1509,7 @@ class SuperPrintDesigner {
         this.loadExistingDesign();
         this.refreshGrid();
         this.frm.dirty();
-        frappe.show_alert({ message: '网格已更新为 ' + newRows + 'x' + newCols, indicator: 'green' });
+        frappe.show_alert({ message: 'Grid updated to ' + newRows + 'x' + newCols, indicator: 'green' });
     }
 
     refreshGrid() {
@@ -1520,12 +1520,12 @@ class SuperPrintDesigner {
             grid.innerHTML = this.generateGridHtml();
             grid.style.fontFamily = "'" + this.fontFamily + "', sans-serif";
         }
-        // 更新行列号
+        // Update row/col headers
         const colHeaders = container.querySelector('#spd-col-headers');
         const rowHeaders = container.querySelector('#spd-row-headers');
         if (colHeaders) colHeaders.innerHTML = this.generateColHeadersHtml();
         if (rowHeaders) rowHeaders.innerHTML = this.generateRowHeadersHtml();
-        // 偏移同步
+        // Offset sync
         const PX_PER_MM = 4;
         const mTop = (this.marginTop || 0) * PX_PER_MM;
         const mLeft = (this.marginLeft || 0) * PX_PER_MM;
@@ -1543,7 +1543,7 @@ class SuperPrintDesigner {
             const centeredOffset = Math.max(0, (contentAreaW - totalWidth) / 2);
             colHeaders.style.marginLeft = (22 + mLeft + centeredOffset) + 'px';
         }
-        // 更新页眉页脚
+        // Update header/footer
         this.pageHeaderLeft = this.frm.doc.page_header_left || '';
         this.pageHeaderCenter = this.frm.doc.page_header_center || '';
         this.pageHeaderRight = this.frm.doc.page_header_right || '';
@@ -1558,7 +1558,7 @@ class SuperPrintDesigner {
             const hc = this.pageHeaderCenter || '';
             const hr = this.pageHeaderRight || '';
             const hasH = hl || hc || hr;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">\u9875\u7709\u533a\u57df</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">Header Area</span>';
             headerArea.innerHTML =
                 '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (hl || (hasH ? '' : placeholder)) + '</div>' +
                 '<div style="flex:1;text-align:center;">' + (hc || '') + '</div>' +
@@ -1569,7 +1569,7 @@ class SuperPrintDesigner {
             const fc = this.pageFooterCenter || '';
             const fr_ = this.pageFooterRight || '';
             const hasF = fl || fc || fr_;
-            const placeholder = '<span style="color:#ccc;font-size:10px;">\u9875\u811a\u533a\u57df</span>';
+            const placeholder = '<span style="color:#ccc;font-size:10px;">Footer Area</span>';
             footerArea.innerHTML =
                 '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (fl || (hasF ? '' : placeholder)) + '</div>' +
                 '<div style="flex:1;text-align:center;">' + (fc || '') + '</div>' +
@@ -1602,31 +1602,31 @@ class SuperPrintDesigner {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-    // 查询定义弹窗
+    // Query definition dialog
     showQueryDialog() {
         const dialog = new frappe.ui.Dialog({
-            title: '查询定义',
+            title: 'Query Definition',
             fields: [
-                { fieldname: 'query_code', label: 'Python查询代码', fieldtype: 'Code', options: 'Python',
+                { fieldname: 'query_code', label: 'Python Query Code', fieldtype: 'Code', options: 'Python',
                   default: this.frm.doc.query_code || '',
-                  description: '将查询结果赋给变量 result' },
-                { fieldname: 'query_parameters', label: '查询参数', fieldtype: 'Small Text',
+                  description: 'Assign query result to variable result' },
+                { fieldname: 'query_parameters', label: 'Query Parameters', fieldtype: 'Small Text',
                   default: this.frm.doc.query_parameters || '',
-                  description: '每行一个参数，格式: key=value' }
+                  description: 'One parameter per line, format: key=value' }
             ],
-            primary_action_label: '保存',
+            primary_action_label: 'Save',
             primary_action: (values) => {
                 this.frm.set_value('query_code', values.query_code);
                 this.frm.set_value('query_parameters', values.query_parameters);
                 this.frm.dirty();
-                frappe.show_alert({ message: '查询定义已更新（需保存文档生效）', indicator: 'green' });
+                frappe.show_alert({ message: 'Query definition updated (save document to take effect)', indicator: 'green' });
                 dialog.hide();
             }
         });
         dialog.show();
     }
 
-    // 参数定义弹窗
+    // Parameter definition dialog
     showParamsDialog() {
         const params = this.frm.doc.design_parameters || [];
         let listHtml = params.length > 0
@@ -1635,12 +1635,12 @@ class SuperPrintDesigner {
                 '<td><button class="btn btn-xs btn-default edit-p" data-idx="' + i + '"><i class="fa fa-edit"></i></button></td>' +
                 '<td><button class="btn btn-xs btn-danger del-p" data-idx="' + i + '"><i class="fa fa-trash"></i></button></td>' +
               '</tr>').join('')
-            : '<tr><td colspan="5" class="text-muted text-center">暂无参数定义</td></tr>';
+            : '<tr><td colspan="5" class="text-muted text-center">No parameter definitions</td></tr>';
 
         const dialog = new frappe.ui.Dialog({
-            title: '参数定义管理',
-            fields: [{ fieldtype: 'HTML', options: '<div><button class="btn btn-primary btn-sm add-p">新增参数</button><table class="table table-bordered mt-2"><thead><tr><th>名称</th><th>类型</th><th>默认值</th><th>编辑</th><th>删除</th></tr></thead><tbody>' + listHtml + '</tbody></table></div>' }],
-            primary_action_label: '关闭',
+            title: 'Parameter Management',
+            fields: [{ fieldtype: 'HTML', options: '<div><button class="btn btn-primary btn-sm add-p">Add Parameter</button><table class="table table-bordered mt-2"><thead><tr><th>Name</th><th>Type</th><th>Default</th><th>Edit</th><th>Delete</th></tr></thead><tbody>' + listHtml + '</tbody></table></div>' }],
+            primary_action_label: 'Close',
             primary_action: () => dialog.hide()
         });
         dialog.show();
@@ -1650,7 +1650,7 @@ class SuperPrintDesigner {
             dialog.$wrapper.find('.edit-p').on('click', (e) => this.showParamEditDialog(dialog, parseInt($(e.currentTarget).data('idx'))));
             dialog.$wrapper.find('.del-p').on('click', (e) => {
                 const idx = parseInt($(e.currentTarget).data('idx'));
-                frappe.confirm('确定删除此参数？', () => {
+                frappe.confirm('Are you sure you want to delete this parameter?', () => {
                     this.frm.doc.design_parameters.splice(idx, 1);
                     this.refreshParamsList(dialog);
                 });
@@ -1664,16 +1664,16 @@ class SuperPrintDesigner {
         const p = isEdit ? params[editIndex] : { param_name: '', param_label: '', param_type: 'Data', default_value: '', reqd: 0, options: '' };
 
         const editDialog = new frappe.ui.Dialog({
-            title: isEdit ? '编辑参数' : '新增参数',
+            title: isEdit ? 'Edit Parameter' : 'Add Parameter',
             fields: [
-                { fieldname: 'param_name', label: '参数标识', fieldtype: 'Data', reqd: 1, default: p.param_name },
-                { fieldname: 'param_label', label: '显示标签', fieldtype: 'Data', default: p.param_label },
-                { fieldname: 'param_type', label: '类型', fieldtype: 'Select', options: 'Data\nInt\nFloat\nDate\nLink\nSelect', default: p.param_type || 'Data' },
-                { fieldname: 'default_value', label: '默认值', fieldtype: 'Data', default: p.default_value },
-                { fieldname: 'reqd', label: '必填', fieldtype: 'Check', default: p.reqd },
-                { fieldname: 'options', label: '选项/目标DocType', fieldtype: 'Small Text', default: p.options }
+                { fieldname: 'param_name', label: 'Parameter Id', fieldtype: 'Data', reqd: 1, default: p.param_name },
+                { fieldname: 'param_label', label: 'Display Label', fieldtype: 'Data', default: p.param_label },
+                { fieldname: 'param_type', label: 'Type', fieldtype: 'Select', options: 'Data\nInt\nFloat\nDate\nLink\nSelect', default: p.param_type || 'Data' },
+                { fieldname: 'default_value', label: 'Default Value', fieldtype: 'Data', default: p.default_value },
+                { fieldname: 'reqd', label: 'Required', fieldtype: 'Check', default: p.reqd },
+                { fieldname: 'options', label: 'Options / Target DocType', fieldtype: 'Small Text', default: p.options }
             ],
-            primary_action_label: isEdit ? '更新' : '添加',
+            primary_action_label: isEdit ? 'Update' : 'Add',
             primary_action: (values) => {
                 if (isEdit) params[editIndex] = values;
                 else {
@@ -1708,17 +1708,17 @@ class SuperPrintDesigner {
             .spd-actions { display:flex; gap:6px; margin-left:auto; }
             .spd-main { display:flex; gap:12px; min-height:400px; }
 
-            /* 网格容器 - 灰色背景 + 滚动 */
+            /* Grid container - gray background + scrolling */
             .spd-grid-wrap { flex:1; overflow:auto; max-height:600px; border:1px solid #dee2e6; border-radius:6px; background:#e0e0e0; padding:20px; display:flex; justify-content:center; align-items:flex-start; }
 
-            /* 纸张预览层 */
+            /* Paper preview layer */
             .spd-paper-preview { }
             .grid-wrapper { display:flex; flex-direction:column; align-items:flex-start; }
 
-            /* 行列体: 行号在左，纸张(含列号+表格)在右 */
+            /* Grid body: row headers on left, paper (with col headers + table) on right */
             .grid-body { display:flex; flex-direction:row; align-items:flex-start; }
 
-            /* 行号 - 与表格行逐行对齐 */
+            /* Row headers - aligned with table rows */
             .row-headers { display:flex; flex-direction:column; flex-shrink:0; }
             .row-header-cell { background:#e9ecef; border-top:1px solid #dee2e6; border-left:1px solid #dee2e6; border-bottom:1px solid #dee2e6; border-right:none; padding:0 2px; text-align:center; font-size:9px; color:#495057; font-weight:600; cursor:pointer; width:22px; box-sizing:border-box; overflow:hidden; }
             .row-header-cell:first-child { border-top-left-radius:3px; }
@@ -1733,13 +1733,13 @@ class SuperPrintDesigner {
             .row-header-data-driven { border-left:3px solid #2196f3 !important; }
             .spd-row-type-controls { gap:3px; }
 
-            /* 纸张 - 白色，无padding，严格按纸张物理尺寸渲染 */
+            /* Paper - white, no padding, rendered at exact paper dimensions */
             .spd-paper { background:#fff; box-shadow:0 4px 20px rgba(0,0,0,0.15); position:relative; overflow:visible; box-sizing:border-box; }
 
-            /* 边距虚线 - 在纸张内部，由inline style定位到边距边界 */
+            /* Margin dashed line - inside paper, positioned by inline style to margin boundary */
             .spd-margin-line { position:absolute; border:1px dashed rgba(0,120,215,0.4); pointer-events:none; z-index:1; }
 
-            /* 列号 - 纸张外上方 */
+            /* Column headers - above paper */
             .col-headers { display:flex; flex-shrink:0; }
             .col-header-cell { background:#e9ecef; border-left:1px solid #dee2e6; border-top:1px solid #dee2e6; border-right:1px solid #dee2e6; padding:2px 0; text-align:center; font-size:9px; color:#495057; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
             .col-header-cell:first-child { border-top-left-radius:0; }
@@ -1747,7 +1747,7 @@ class SuperPrintDesigner {
             .col-header-cell:hover { background:#d0d0d0; }
             .col-header-cell.col-header-selected { background:#c8e6c9; border-color:#4caf50; }
 
-            /* 网格表格 */
+            /* Grid table */
             .spd-grid { border-collapse:collapse; table-layout:fixed; }
             .spd-grid td { border:1px solid #dee2e6; cursor:pointer; text-align:center; overflow:hidden; padding:0; position:relative; }
             .spd-grid td:hover { background:#f0f7ff !important; }
@@ -1759,13 +1759,13 @@ class SuperPrintDesigner {
             .cell-preview i { font-size:10px; }
             .cell-content { font-size:inherit; padding:2px; word-break:break-all; overflow:hidden; }
 
-            /* 属性面板 */
+            /* Property panel */
             .spd-props { width:280px; min-width:280px; background:#fff; border:1px solid #ddd; border-radius:6px; padding:10px; overflow-y:auto; max-height:600px; }
             .spd-props h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid #ddd; font-size:13px; }
             .spd-props label { display:block; margin:5px 0 2px; font-size:10px; font-weight:600; color:#495057; }
             .spd-props input,.spd-props select,.spd-props textarea { width:100%; padding:4px 6px; margin-bottom:5px; font-size:11px; }
 
-            /* 属性 section */
+            /* Property section */
             .property-section { margin-bottom:8px; border:1px solid #e9ecef; border-radius:4px; overflow:hidden; }
             .property-section-header { padding:6px 8px; background:#f8f9fa; font-size:10px; font-weight:600; color:#495057; cursor:pointer; display:flex; align-items:center; gap:4px; }
             .property-section-header i { font-size:10px; }
@@ -1830,7 +1830,7 @@ frappe.ui.form.on('Super Print Design', {
             if (frm.page && frm.page.sidebar) {
                 frm.page.sidebar.hide();
             }
-            // 限制页眉页脚 Code 字段高度
+            // Limit header/footer Code field height
             const headerFooterFields = [
                 'page_header_left', 'page_header_center', 'page_header_right',
                 'page_footer_left', 'page_footer_center', 'page_footer_right'
@@ -1870,7 +1870,7 @@ frappe.ui.form.on('Super Print Design', {
             }, 100);
         } else {
             frm.set_df_property('design_html', 'options',
-                '<div class="alert alert-info" style="margin-top:15px"><h5>请先选择目标文档类型</h5></div>');
+                '<div class="alert alert-info" style="margin-top:15px"><h5>Please select a target DocType first</h5></div>');
             refresh_field('design_html');
         }
     },
@@ -1890,7 +1890,7 @@ frappe.ui.form.on('Super Print Design', {
     async print_paper(frm) {
         if (spd_designer && frm.doc.print_paper) {
             await spd_designer.loadPaperSize();
-            // 重新渲染设计器以应用新纸张尺寸
+            // Re-render designer to apply new paper size
             const html = spd_designer.generateDesigner();
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');

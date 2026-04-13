@@ -18,7 +18,7 @@
       "fieldname": "query_name",
       "fieldtype": "Data",
       "in_list_view": 1,
-      "label": "查询名称",
+      "label": "Query Name",
       "reqd": 1
     },
     {
@@ -27,34 +27,34 @@
     },
     {
       "default": "0",
-      "description": "勾选后，查询返回列表将驱动模板行自动复制",
+      "description": "When checked, the query result list will drive automatic row duplication in the template",
       "fieldname": "is_iterable",
       "fieldtype": "Check",
       "in_list_view": 1,
-      "label": "可迭代"
+      "label": "Iterable"
     },
     {
       "fieldname": "section_break_code",
       "fieldtype": "Section Break",
-      "label": "查询代码"
+      "label": "Query Code"
     },
     {
       "fieldname": "query_code",
       "fieldtype": "Code",
-      "label": "Python代码",
+      "label": "Python Code",
       "options": "Python",
-      "description": "将查询结果赋给变量 result"
+      "description": "Assign the query result to variable 'result'"
     },
     {
       "fieldname": "section_break_params",
       "fieldtype": "Section Break",
-      "label": "参数映射"
+      "label": "Parameter Mapping"
     },
     {
       "fieldname": "parameters",
       "fieldtype": "Text",
-      "label": "参数",
-      "description": "每行一个参数，格式: key=value"
+      "label": "Parameters",
+      "description": "One parameter per line, format: key=value"
     }
   ],
   "index_web_pages_for_search": 0,

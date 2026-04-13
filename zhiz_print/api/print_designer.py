@@ -11,11 +11,11 @@ import re
 
 @frappe.whitelist()
 def get_available_designs(doctype, docname=None):
-	"""获取文档类型可用的打印设计列表"""
+	"""Get list of available print designs for a DocType"""
 	if not doctype:
 		return []
 
-	# 获取当前文档实例，供启用条件评估使用
+	# Get current document instance for enable condition evaluation
 	doc = None
 	if docname:
 		try:
@@ -35,11 +35,11 @@ def get_available_designs(doctype, docname=None):
 
 	result = []
 	for d in designs:
-		# 检查启用条件
+		# Check enable conditions
 		if not frappe.get_cached_doc("Super Print Design", d.name).check_enable_conditions(d.name, doc=doc):
 			continue
 
-		# 获取纸张信息（含边距）
+		# Get paper info (with margins)
 		paper_info = {}
 		if d.print_paper:
 			paper_info = frappe.db.get_value("Super Print Paper", d.print_paper,
@@ -47,7 +47,7 @@ def get_available_designs(doctype, docname=None):
 											  "margin_top", "margin_bottom",
 											  "margin_left", "margin_right"], as_dict=True) or {}
 
-		# 检查是否有参数
+		# Check if parameters exist
 		has_params = frappe.db.count("Super Print Design Parameter",
 									  filters={"parent": d.name, "parenttype": "Super Print Design"})
 
@@ -65,7 +65,7 @@ def get_available_designs(doctype, docname=None):
 
 
 def get_design_parameters(design_name):
-	"""获取设计参数定义"""
+	"""Get design parameter definitions"""
 	params = frappe.get_all(
 		"Super Print Design Parameter",
 		filters={"parent": design_name, "parenttype": "Super Print Design"},
@@ -77,7 +77,7 @@ def get_design_parameters(design_name):
 
 @frappe.whitelist()
 def render_print_preview(doctype, docname, design_name, params=None):
-	"""渲染打印预览HTML"""
+	"""Render print preview HTML"""
 	if isinstance(params, str):
 		try:
 			params = json.loads(params)
@@ -86,14 +86,14 @@ def render_print_preview(doctype, docname, design_name, params=None):
 
 	design = frappe.get_doc("Super Print Design", design_name)
 
-	# 权限检查
+	# Permission check
 	if not frappe.has_permission(doctype, "print", docname):
-		frappe.throw(_("没有打印权限"), frappe.PermissionError)
+		frappe.throw(_("No print permission"), frappe.PermissionError)
 
-	# 获取纸张信息（含边距）
+	# Get paper info (with margins)
 	paper = frappe.get_doc("Super Print Paper", design.print_paper)
 
-	# 渲染HTML
+	# Render HTML
 	html = design.get_preview_for_document(doc_name=docname, params=params)
 
 	return {
@@ -109,7 +109,7 @@ def render_print_preview(doctype, docname, design_name, params=None):
 
 @frappe.whitelist()
 def record_print_log(doctype, docname, design_name, params=None, preview_html=None, export_type=None):
-	"""记录打印日志"""
+	"""Record print log"""
 	if isinstance(params, str):
 		try:
 			params = json.loads(params)
@@ -123,7 +123,7 @@ def record_print_log(doctype, docname, design_name, params=None, preview_html=No
 		"print_design": design_name,
 		"parameters_used": json.dumps(params, ensure_ascii=False) if params else "{}",
 		"print_preview_html": preview_html or "",
-		"export_type": export_type or "打印",
+		"export_type": export_type or "Print",
 	})
 	log.insert(ignore_permissions=True)
 
@@ -134,16 +134,16 @@ def record_print_log(doctype, docname, design_name, params=None, preview_html=No
 
 
 def _fix_merged_cell_borders_for_pdf(html):
-	"""PDF 专用：修复合并单元格的幽灵边线。
-	1. transparent 边框 → 移除该属性，让 CSS border:none 生效
-	2. 合并单元格黑边框 → 加 background:white 覆盖内部幽灵列线"""
+	"""PDF-specific: fix ghost borders of merged cells.
+	1. transparent borders -> remove property so CSS border:none takes effect
+	2. merged cells with black borders -> add background:white to cover internal ghost column lines"""
 	from bs4 import BeautifulSoup
 	soup = BeautifulSoup(html, 'html.parser')
 	for td in soup.find_all('td'):
 		style = td.get('style', '')
 		if not style:
 			continue
-		# Fix 1: transparent borders → 移除 border 属性
+		# Fix 1: transparent borders -> remove border property
 		if 'solid transparent' in style:
 			style = re.sub(r'\s*border-([a-z]+):\s*[\d.]+\s*px\s+solid\s+transparent;?', '', style)
 			style = re.sub(r'\s*border:\s*[\d.]+\s*px\s+solid\s+transparent;?', '', style)
@@ -155,7 +155,7 @@ def _fix_merged_cell_borders_for_pdf(html):
 			if 'background' not in style:
 				style = style.rstrip(';') + ';background:white'
 		td['style'] = style
-	# 同时修复内部 div 的 transparent 边框
+	# Also fix transparent borders on inner divs
 	for div in soup.find_all('div'):
 		style = div.get('style', '')
 		if not style:
@@ -169,8 +169,8 @@ def _fix_merged_cell_borders_for_pdf(html):
 
 
 def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False):
-	"""公共函数：渲染打印 HTML 并执行 px 缩放，供各 PDF 引擎共用。
-	返回 (html, design) 元组。"""
+	"""Common function: render print HTML and apply px scaling, shared by PDF engines.
+	Returns (html, design) tuple."""
 	import os
 
 	if isinstance(params, str):
@@ -182,15 +182,12 @@ def _render_print_html(doctype, docname, design_name, params=None, skip_px_scali
 	design = frappe.get_doc("Super Print Design", design_name)
 
 	if not frappe.has_permission(doctype, "print", docname):
-		frappe.throw(_("没有打印权限"), frappe.PermissionError)
+		frappe.throw(_("No print permission"), frappe.PermissionError)
 
 	html = design.get_preview_for_document(doc_name=docname, params=params)
 
 	if not skip_px_scaling:
-		# WeasyPrint px→mm 转换率: 25.4/96 ≈ 0.264583 mm/px
-		# 预览用 PX_PER_MM=4（即 1px = 0.25mm），与 WeasyPrint 不同
-		# 解决方案：将 HTML 中所有 px 值乘以 (96/25.4)/4 ≈ 0.9449，
-		# 使内容在 WeasyPrint 中恰好渲染为正确的 mm 尺寸，无需 transform/clip。
+		# WeasyPrint px->mm conversion rate: 25.4/96 ~ 0.264583 mm/px
 		if design.print_paper:
 			wp_scale = (96 / 25.4) / 4  # ≈ 0.9449
 
@@ -224,7 +221,7 @@ def _render_print_html(doctype, docname, design_name, params=None, skip_px_scali
 
 
 def _pdf_response(pdf_bytes, filename):
-	"""构造 PDF 内联预览响应"""
+	"""Construct PDF inline preview response"""
 	frappe.local.response.filename = filename
 	frappe.local.response.filecontent = pdf_bytes
 	frappe.local.response.type = "pdf"
@@ -232,15 +229,15 @@ def _pdf_response(pdf_bytes, filename):
 
 @frappe.whitelist()
 def generate_print_pdf(doctype, docname, design_name, params=None):
-	"""使用 WeasyPrint 生成 PDF，浏览器直接预览（inline）"""
+	"""Generate PDF using WeasyPrint, browser inline preview"""
 	from weasyprint import HTML as WeasyHTML
 
 	html, design = _render_print_html(doctype, docname, design_name, params)
 
-	# PDF 专用：修复合并单元格幽灵边线
+	# PDF-specific: fix ghost borders of merged cells
 	html = _fix_merged_cell_borders_for_pdf(html)
 
-	# DEBUG: 保存最终 HTML
+	# DEBUG: save final HTML
 	import os
 	debug_dir = os.path.join(frappe.get_site_path(), 'public', 'files', 'pdf_debug')
 	os.makedirs(debug_dir, exist_ok=True)
@@ -251,14 +248,14 @@ def generate_print_pdf(doctype, docname, design_name, params=None):
 		pdf_bytes = WeasyHTML(string=html).write_pdf()
 		_pdf_response(pdf_bytes, f"{docname}-{design.design_name}-WeasyPrint.pdf")
 	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), 'WeasyPrint PDF生成失败')
-		frappe.throw(_("PDF 生成失败: {0}").format(str(e)))
+		frappe.log_error(frappe.get_traceback(), 'WeasyPrint PDF generation failed')
+		frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
 def _prepare_html_for_wkhtmltopdf(html):
-	"""为 wkhtmltopdf 预处理 HTML：
+	"""Preprocess HTML for wkhtmltopdf:
 	1. SVG data URL -> PNG data URL
-	2. background 简写 /size -> 拆分 background-size
+	2. background shorthand /size -> split background-size
 	3. footer flex -> table
 	4. border < 1px -> 1px"""
 	import base64
@@ -359,12 +356,12 @@ def _prepare_html_for_wkhtmltopdf(html):
 
 @frappe.whitelist()
 def generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
-	"""使用 wkhtmltopdf 生成 PDF，浏览器直接预览（inline）"""
+	"""Generate PDF using wkhtmltopdf, browser inline preview"""
 	import pdfkit
 
 	html, design = _render_print_html(doctype, docname, design_name, params)
 
-	# wkhtmltopdf 预处理：SVG→PNG、background 简写修复、flex→table
+	# wkhtmltopdf preprocessing: SVG->PNG, background shorthand fix, flex->table
 	html = _prepare_html_for_wkhtmltopdf(html)
 
 	options = {
@@ -388,20 +385,20 @@ def generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
 		pdf_bytes = pdfkit.from_string(html, False, options=options)
 		_pdf_response(pdf_bytes, f"{docname}-{design.design_name}-wkhtmltopdf.pdf")
 	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), 'wkhtmltopdf PDF生成失败')
-		frappe.throw(_("PDF 生成失败: {0}").format(str(e)))
+		frappe.log_error(frappe.get_traceback(), 'wkhtmltopdf PDF generation failed')
+		frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
 @frappe.whitelist()
 def generate_print_pdf_chromium(doctype, docname, design_name, params=None):
-	"""使用 Chromium headless 生成 PDF，浏览器直接预览（inline）"""
+	"""Generate PDF using Chromium headless, browser inline preview"""
 	import os
 	import subprocess
 	import tempfile
 
 	html, design = _render_print_html(doctype, docname, design_name, params)
 
-	# 查找可用的 Chromium 可执行文件
+	# Find available Chromium executable
 	chromium_cmd = None
 	for cmd in ['/snap/bin/chromium', 'chromium-browser', 'chromium', 'google-chrome', 'google-chrome-stable']:
 		try:
@@ -413,7 +410,7 @@ def generate_print_pdf_chromium(doctype, docname, design_name, params=None):
 			continue
 
 	if not chromium_cmd:
-		frappe.throw(_("Chromium 未安装，请先在服务器上执行: apt-get install -y chromium-browser"))
+		frappe.throw(_("Chromium is not installed. Please run: apt-get install -y chromium-browser"))
 
 	# Use site files dir (snap Chromium cannot write to /tmp)
 	tmpdir = os.path.abspath(os.path.join(frappe.get_site_path(), 'public', 'files', 'pdf_debug'))
@@ -449,24 +446,24 @@ def generate_print_pdf_chromium(doctype, docname, design_name, params=None):
 		result = subprocess.run(chrome_args, capture_output=True, text=True, timeout=30)
 
 		if not os.path.exists(pdf_path):
-			frappe.throw(_("Chromium 生成 PDF 失败"))
+			frappe.throw(_("Chromium PDF generation failed"))
 
 		with open(pdf_path, 'rb') as f:
 			pdf_bytes = f.read()
 
 		_pdf_response(pdf_bytes, f"{docname}-{design.design_name}-Chromium.pdf")
 	except subprocess.TimeoutExpired:
-		frappe.throw(_("Chromium 生成 PDF 超时"))
+		frappe.throw(_("Chromium PDF generation timed out"))
 	except frappe.exceptions.ValidationError:
 		raise
 	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), 'Chromium PDF生成失败')
-		frappe.throw(_("PDF 生成失败: {0}").format(str(e)))
+		frappe.log_error(frappe.get_traceback(), 'Chromium PDF generation failed')
+		frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
 @frappe.whitelist()
 def get_print_log_count(doctype, docname, design_name=None):
-	"""获取打印次数"""
+	"""Get print count"""
 	filters = {
 		"reference_doctype": doctype,
 		"reference_name": docname,
@@ -479,7 +476,7 @@ def get_print_log_count(doctype, docname, design_name=None):
 
 @frappe.whitelist()
 def get_print_log_list(doctype, docname):
-	"""获取打印日志列表"""
+	"""Get print log list"""
 	filters = {"reference_doctype": doctype, "reference_name": docname}
 	total_count = frappe.db.count("Super Print Log", filters=filters)
 	logs = frappe.get_all("Super Print Log",
@@ -488,7 +485,7 @@ def get_print_log_list(doctype, docname):
 		order_by="print_time desc",
 		limit=50
 	)
-	# 注入用户全名
+	# Inject user full name
 	for log in logs:
 		if log.print_user:
 			log.user_fullname = frappe.db.get_value("User", log.print_user, "full_name") or log.print_user
@@ -498,15 +495,15 @@ def get_print_log_list(doctype, docname):
 	return {"logs": logs, "total_count": total_count}
 
 
-# ==================== Excel导出辅助函数 ====================
+# ==================== Excel Export Helper Functions ====================
 
 def _parse_inline_style(style_str):
-	"""解析CSS内联样式为字典，正确处理url()中的分号"""
+	"""Parse CSS inline style to dict, handle semicolons in url() correctly"""
 	styles = {}
 	if not style_str:
 		return styles
 	import re
-	# 保护 url(...) 中的内容，避免被 ; 分割
+	# Protect content in url(...) from being split by ;
 	_url_holder = []
 	def _save(m):
 		_url_holder.append(m.group(0))
@@ -524,7 +521,7 @@ def _parse_inline_style(style_str):
 
 
 def _extract_css_rules(soup):
-	"""从<style>标签提取CSS规则"""
+	"""Extract CSS rules from <style> tags"""
 	try:
 		import cssutils
 		import logging
@@ -554,7 +551,7 @@ def _extract_css_rules(soup):
 
 
 def _element_matches_selector(element, selector):
-	"""检查元素是否匹配CSS选择器（简化版，支持后代/类/标签/ID选择器）"""
+	"""Check if element matches CSS selector (simplified, supports descendant/class/tag/ID selectors)"""
 	parts = selector.strip().split()
 	target = parts[-1] if parts else selector
 
@@ -586,7 +583,7 @@ def _element_matches_selector(element, selector):
 
 
 def _get_element_styles(element, css_rules):
-	"""获取元素的合并样式（CSS规则 + 内联样式），内联优先"""
+	"""Get merged element styles (CSS rules + inline), inline takes priority"""
 	merged = {}
 	for rule in css_rules:
 		if _element_matches_selector(element, rule['selector']):
@@ -597,7 +594,7 @@ def _get_element_styles(element, css_rules):
 
 
 def _css_color_to_hex(color_str):
-	"""将CSS颜色值转换为hex（不含#）"""
+	"""Convert CSS color value to hex (without #)"""
 	import re
 	if not color_str or color_str.strip().lower() in ('transparent', 'none', 'inherit', 'initial'):
 		return None
@@ -623,7 +620,7 @@ def _css_color_to_hex(color_str):
 
 
 def _css_px_value(value_str):
-	"""从CSS值中提取数字"""
+	"""Extract number from CSS value"""
 	import re
 	if not value_str:
 		return None
@@ -632,24 +629,24 @@ def _css_px_value(value_str):
 
 
 def _css_width_to_excel(width_str):
-	"""CSS宽度(px) → Excel列宽(字符单位)，设计器px/4=mm"""
+	"""CSS width (px) -> Excel column width (character units), designer px/4=mm"""
 	val = _css_px_value(width_str)
 	if val is None:
 		return None
-	mm = val / 4.0  # 设计器 PX_PER_MM=4，px/4得到mm
-	# openpyxl column width 以字符宽度为单位
-	# 直接使用mm值，因为 openpyxl 1个字符宽≈1.85mm
-	# mm值 / 1.85 转换为字符宽度
+	mm = val / 4.0  # designer PX_PER_MM=4, px/4=mm
+	# openpyxl column width is in character units
+	# Use mm value directly, since openpyxl 1 char width ~ 1.85mm
+	# Convert mm / 1.85 to character width
 	width = mm / 1.85
 	return max(round(width, 2), 2)
 
 
 def _css_height_to_excel(height_str):
-	"""CSS高度(px) → Excel行高(pt)，设计器px/4=mm"""
+	"""CSS height (px) -> Excel row height (pt), designer px/4=mm"""
 	val = _css_px_value(height_str)
 	if val is None:
 		return None
-	mm = val / 4.0  # 设计器 PX_PER_MM=4，px/4得到mm
+	mm = val / 4.0  # designer PX_PER_MM=4, px/4=mm
 	return mm * 2.8346  # mm → pt (72/25.4)
 
 
@@ -706,7 +703,7 @@ def _parse_border_side(border_str):
 
 
 def _parse_cell_value(text):
-	"""尝试将文本解析为数字"""
+	"""Try to parse text as number"""
 	import re
 	if not text:
 		return ''
@@ -720,13 +717,13 @@ def _parse_cell_value(text):
 
 
 def _apply_cell_format(cell, styles):
-	"""将CSS样式应用到openpyxl单元格"""
+	"""Apply CSS styles to openpyxl cell"""
 	from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 
 	if not styles:
 		return
 
-	# 字体
+	# Font
 	font_kw = {}
 	if 'font-size' in styles:
 		s = _css_font_size_to_pt(styles['font-size'])
@@ -745,7 +742,7 @@ def _apply_cell_format(cell, styles):
 	if font_kw:
 		cell.font = Font(**font_kw)
 
-	# 对齐
+	# Alignment
 	align_kw = {}
 	if 'text-align' in styles:
 		align_kw['horizontal'] = styles['text-align']
@@ -759,13 +756,13 @@ def _apply_cell_format(cell, styles):
 	if align_kw:
 		cell.alignment = Alignment(**align_kw)
 
-	# 背景色
+	# Background color
 	if 'background-color' in styles:
 		c = _css_color_to_hex(styles['background-color'])
 		if c:
 			cell.fill = PatternFill(start_color=c, end_color=c, fill_type='solid')
 
-	# 边框 - 先应用简写border，再用各边border-X覆盖
+	# Border - apply shorthand border first, then override with border-X sides
 	border_kw = {}
 	if 'border' in styles:
 		s = _parse_border_side(styles['border'])
@@ -779,7 +776,7 @@ def _apply_cell_format(cell, styles):
 
 
 def _extract_background_image(styles):
-	"""从CSS样式中提取背景图片数据（base64或URL）"""
+	"""Extract background image data from CSS styles (base64 or URL)"""
 	import re
 	import base64
 
@@ -803,7 +800,7 @@ def _extract_background_image(styles):
 			except Exception:
 				return None
 	else:
-		# 普通 URL 图片
+		# Regular URL image
 		try:
 			if url.startswith('/'):
 				import os
@@ -828,7 +825,7 @@ def _extract_background_image(styles):
 
 
 def _svg_to_png_bytes(svg_bytes):
-	"""将SVG转换为PNG字节"""
+	"""Convert SVG to PNG bytes"""
 	try:
 		import cairosvg
 		return cairosvg.svg2png(bytestring=svg_bytes)
@@ -837,7 +834,7 @@ def _svg_to_png_bytes(svg_bytes):
 
 
 def _add_image_to_excel_cell(ws, row, col, rowspan, colspan, img_info, align='left'):
-	"""添加图片到Excel单元格，自动适应合并区域尺寸"""
+	"""Add image to Excel cell, auto-fit to merged area dimensions"""
 	from openpyxl.drawing.image import Image as XlImage
 	from openpyxl.utils import get_column_letter
 	from io import BytesIO
@@ -851,7 +848,7 @@ def _add_image_to_excel_cell(ws, row, col, rowspan, colspan, img_info, align='le
 		if png_data:
 			img_data = png_data
 		else:
-			return  # 无法转换则跳过
+			return  # skip if conversion fails
 
 	try:
 		img_stream = BytesIO(img_data)
@@ -859,7 +856,7 @@ def _add_image_to_excel_cell(ws, row, col, rowspan, colspan, img_info, align='le
 	except Exception:
 		return
 
-	# 计算合并区域的总高度(pt → mm → px@96DPI)
+	# Calculate total height of merged area (pt -> mm -> px@96DPI)
 	total_h_pt = 0
 	for r in range(row, row + rowspan):
 		h = ws.row_dimensions[r].height
@@ -868,7 +865,7 @@ def _add_image_to_excel_cell(ws, row, col, rowspan, colspan, img_info, align='le
 	total_h_mm = total_h_pt / 2.8346 if total_h_pt else 10
 	total_h_px = total_h_mm * 96.0 / 25.4
 
-	# 计算合并区域的总宽度(chars → mm → px@96DPI)
+	# Calculate total width of merged area (chars -> mm -> px@96DPI)
 	mm_per_char = 7.0 * 25.4 / 96.0
 	total_w_chars = 0
 	for c in range(col, col + colspan):
@@ -879,7 +876,7 @@ def _add_image_to_excel_cell(ws, row, col, rowspan, colspan, img_info, align='le
 	total_w_mm = total_w_chars * mm_per_char if total_w_chars else 30
 	total_w_px = total_w_mm * 96.0 / 25.4
 
-	# 保持长宽比缩放到单元格区域内
+	# Scale with aspect ratio to fit within cell area
 	orig_w = xl_img.width or 1
 	orig_h = xl_img.height or 1
 	cell_w = max(total_w_px, 10)
@@ -890,7 +887,7 @@ def _add_image_to_excel_cell(ws, row, col, rowspan, colspan, img_info, align='le
 	xl_img.width = img_w
 	xl_img.height = img_h
 
-	# 对齐处理：根据 align 调整锚定列位置
+	# Alignment: adjust anchor column based on align
 	if align == 'right' and colspan > 1:
 		anchor_col = col + colspan - 1
 	elif align == 'center' and colspan > 1:
@@ -902,12 +899,12 @@ def _add_image_to_excel_cell(ws, row, col, rowspan, colspan, img_info, align='le
 
 
 def _set_column_widths(ws, table, css_rules):
-	"""从colgroup或首行单元格的CSS width设置Excel列宽"""
+	"""Set Excel column widths from colgroup or first row cell CSS widths"""
 	from openpyxl.utils import get_column_letter
 
 	col_widths = {}
 
-	# 优先从colgroup获取
+	# Prefer colgroup first
 	colgroup = table.find('colgroup')
 	if colgroup:
 		for idx, col in enumerate(colgroup.find_all('col'), 1):
@@ -917,7 +914,7 @@ def _set_column_widths(ws, table, css_rules):
 				if w:
 					col_widths[idx] = w
 
-	# 其次从首行单元格获取
+	# Then fall back to first row cells
 	if not col_widths:
 		first_tr = table.find('tr')
 		if first_tr:
@@ -936,11 +933,11 @@ def _set_column_widths(ws, table, css_rules):
 
 
 def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
-	"""将HTML表格写入Excel，解析CSS样式，返回写入的行数"""
+	"""Write HTML table to Excel, parse CSS styles, return number of rows written"""
 	occupied = {}
 	_set_column_widths(ws, table, css_rules)
 
-	images_to_add = []  # 收集图片信息，最后统一添加（需要行高列宽已设置）
+	images_to_add = []  # Collect image info, add at end (needs row heights and col widths set)
 
 	trs = table.find_all('tr')
 	excel_row = start_row
@@ -957,20 +954,20 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 			colspan = int(cell_elem.get('colspan', 1))
 			rowspan = int(cell_elem.get('rowspan', 1))
 
-			# 获取文本
+			# Get text
 			text = cell_elem.get_text(strip=True)
 			if not text and cell_elem.find('img'):
 				text = cell_elem.find('img').get('alt', '')
 
-			# 获取样式
+			# Get styles
 			cell_styles = _get_element_styles(cell_elem, css_rules)
 			if cell_elem.name == 'th' and 'font-weight' not in cell_styles:
 				cell_styles['font-weight'] = 'bold'
 
-			# 检查背景图片（二维码/条形码/图片单元格）
+			# Check background image (QR/barcode/image cells)
 			bg_img = _extract_background_image(cell_styles)
 			if bg_img:
-				text = ''  # 图片单元格不输出文本
+				text = ''  # No text output for image cells
 				images_to_add.append({
 					'row': excel_row, 'col': col,
 					'rowspan': rowspan, 'colspan': colspan,
@@ -978,12 +975,12 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 					'align': cell_styles.get('text-align', 'left'),
 				})
 
-			# 写入值和样式
+			# Write value and styles
 			value = _parse_cell_value(text)
 			cell = ws.cell(row=excel_row, column=col, value=value)
 			_apply_cell_format(cell, cell_styles)
 
-			# 合并单元格
+			# Merge cells
 			if colspan > 1 or rowspan > 1:
 				ws.merge_cells(
 					start_row=excel_row, start_column=col,
@@ -995,7 +992,7 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 						if (r, c) != (excel_row, col):
 							_apply_cell_format(ws.cell(row=r, column=c), cell_styles)
 
-			# 标记被占用的单元格
+			# Mark occupied cells
 			for r in range(excel_row, excel_row + rowspan):
 				for c in range(col, col + colspan):
 					if r != excel_row or c != col:
@@ -1003,7 +1000,7 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 
 			col += colspan
 
-		# 行高
+		# Row height
 		row_styles = _get_element_styles(tr, css_rules)
 		if 'height' in row_styles:
 			h = _css_height_to_excel(row_styles['height'])
@@ -1012,7 +1009,7 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 
 		excel_row += 1
 
-	# 第二遍：添加图片（此时行高列宽已全部设置完毕）
+	# Second pass: add images (row heights and col widths now fully set)
 	for item in images_to_add:
 		_add_image_to_excel_cell(
 			ws, item['row'], item['col'],
@@ -1024,11 +1021,11 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 	return excel_row - start_row
 
 
-# ==================== Excel导出主函数 ====================
+# ==================== Excel Export Main Function ====================
 
 @frappe.whitelist()
 def export_print_excel(doctype, docname, design_name=None, params=None):
-	"""导出打印设计数据为 Excel，解析CSS样式，完整复现打印预览内容"""
+	"""Export print design data to Excel, parse CSS styles, fully reproduce print preview content"""
 	import base64
 	from io import BytesIO
 	from frappe.utils.xlsxutils import make_xlsx
@@ -1042,9 +1039,9 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 			params = {}
 
 	if not design_name:
-		# 无设计名称时回退到简单字段导出
+		# Fall back to simple field export when no design name
 		doc = frappe.get_doc(doctype, docname)
-		rows = [["字段标签", "字段名", "字段值"]]
+		rows = [["Field Label", "Field Name", "Field Value"]]
 		meta = frappe.get_meta(doctype)
 		for df in meta.fields:
 			if df.fieldtype in ('Section Break', 'Column Break', 'HTML', 'Button', 'Fold'):
@@ -1058,12 +1055,12 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 	design = frappe.get_doc("Super Print Design", design_name)
 
 	if not frappe.has_permission(doctype, "print", docname):
-		frappe.throw(_("没有打印权限"), frappe.PermissionError)
+		frappe.throw(_("No print permission"), frappe.PermissionError)
 
-	# 渲染 HTML（与打印预览一致）
+	# Render HTML (same as print preview)
 	html = design.get_preview_for_document(doc_name=docname, params=params)
 
-	# 解析 HTML
+	# Parse HTML
 	soup = BeautifulSoup(html, 'html.parser')
 	css_rules = _extract_css_rules(soup)
 
@@ -1071,7 +1068,7 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 	ws = wb.active
 	ws.title = "Sheet1"
 
-	# 收集所有页面的表格
+	# Collect all page tables
 	pages = []
 	for page_div in soup.find_all('div', class_='print-page'):
 		content_div = page_div.find('div', class_='print-page-content')
@@ -1082,9 +1079,9 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 			pages.append(table)
 
 	if not pages:
-		ws.cell(row=1, column=1, value="无数据")
+		ws.cell(row=1, column=1, value="No Data")
 	else:
-		# 跨页去重：比较第一页和第二页的前N行文本，确定重复标题行数
+		# Cross-page dedup: compare first N rows of page 1 and page 2 to determine repeat title rows
 		header_count = 0
 		if len(pages) > 1:
 			rows_1 = [tr.get_text(strip=True) for tr in pages[0].find_all('tr')]
@@ -1095,14 +1092,14 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 				else:
 					break
 
-		# 逐页写入Excel
+		# Write to Excel page by page
 		current_row = 1
 		for page_idx, table in enumerate(pages):
 			skip = header_count if page_idx > 0 else 0
 			rows_written = _write_table_to_excel(ws, table, current_row, css_rules, skip_rows=skip)
 			current_row += rows_written
 
-	# 生成Excel文件
+	# Generate Excel file
 	output = BytesIO()
 	wb.save(output)
 	output.seek(0)
