@@ -107,7 +107,8 @@
     {
       "fieldname": "license_key_input",
       "fieldtype": "Data",
-      "label": "License Key"
+      "label": "Current License",
+      "read_only": 1
     }
   ],
   "issingle": 1,

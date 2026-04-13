@@ -18,40 +18,70 @@ frappe.ui.form.on('Zprint Setting', {
             });
         });
 
-        // Activate License button
+        // Activate License button — opens dialog
         frm.add_custom_button(__('Activate License'), function() {
-            let key = frm.doc.license_key_input;
-            if (!key || !key.trim()) {
-                frappe.msgprint(__('Please enter a license key first'));
-                return;
-            }
-            frappe.call({
-                method: 'zhiz_print.api.license.activate_license',
-                args: { license_key: key.trim() },
-                freeze: true,
-                freeze_message: __('Activating license...'),
-                callback(r) {
-                    if (r.message && r.message.success) {
-                        frappe.show_alert({message: r.message.message, indicator: 'green'});
-                        frm.set_value('license_key_input', '');
-                        // Refresh boot cache after activation
-                        frappe.call({
-                            method: 'zhiz_print.api.print_setting.refresh_boot_cache',
-                            callback(r2) {
-                                if (r2.message) {
-                                    frappe.boot.zhiz_print = frappe.boot.zhiz_print || {};
-                                    frappe.boot.zhiz_print.license = r2.message.license;
-                                }
-                                frm.trigger('render_license_info');
-                            }
-                        });
+            let dialog = new frappe.ui.Dialog({
+                title: __('Activate License'),
+                fields: [
+                    {
+                        fieldname: 'license_key',
+                        fieldtype: 'Data',
+                        label: __('License Key'),
+                        reqd: 1,
+                        description: __('Enter the license key provided by the vendor')
                     }
+                ],
+                primary_action_label: __('Activate'),
+                primary_action(values) {
+                    if (!values.license_key || !values.license_key.trim()) {
+                        frappe.msgprint(__('Please enter a license key'));
+                        return;
+                    }
+                    frappe.call({
+                        method: 'zhiz_print.api.license.activate_license',
+                        args: { license_key: values.license_key.trim() },
+                        freeze: true,
+                        freeze_message: __('Activating license...'),
+                        callback(r) {
+                            if (r.message && r.message.success) {
+                                dialog.hide();
+                                frappe.show_alert({message: r.message.message, indicator: 'green'});
+                                // Refresh boot cache and update UI
+                                frappe.call({
+                                    method: 'zhiz_print.api.print_setting.refresh_boot_cache',
+                                    callback(r2) {
+                                        if (r2.message) {
+                                            frappe.boot.zhiz_print = frappe.boot.zhiz_print || {};
+                                            frappe.boot.zhiz_print.license = r2.message.license;
+                                        }
+                                        frm.trigger('render_license_info');
+                                        // Update current license display
+                                        frm.trigger('load_current_license');
+                                    }
+                                });
+                            }
+                        }
+                    });
                 }
             });
+            dialog.show();
         }).addClass('btn-primary');
 
         // Render license info
         frm.trigger('render_license_info');
+        frm.trigger('load_current_license');
+    },
+
+    load_current_license(frm) {
+        // Load current active license key to display in read-only field
+        frappe.db.get_value('Zprint License', {'status': 'Active'}, 'license_key')
+            .then(r => {
+                if (r && r.message && r.message.license_key) {
+                    frm.set_value('license_key_input', r.message.license_key);
+                } else {
+                    frm.set_value('license_key_input', '');
+                }
+            });
     },
 
     render_license_info(frm) {

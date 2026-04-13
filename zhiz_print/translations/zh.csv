@@ -244,7 +244,9 @@ Subscription,订阅管理
 License Info,许可证信息
 Activate License,激活许可证
 Activating license...,正在激活许可证...
-Please enter a license key first,请先输入许可证密钥
+Please enter a license key,请输入许可证密钥
+Enter the license key provided by the vendor,请输入供应商提供的许可证密钥
+Current License,当前使用许可证
 Subscription Expired,订阅已过期
 Your subscription has expired. Please renew to continue using Super Print.,您的订阅已过期，请续费后继续使用超级打印功能。
 Go to Settings,前往设置
