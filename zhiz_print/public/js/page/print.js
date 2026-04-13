@@ -131,10 +131,15 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		this.page.clear_icons();
 		$(this.page.inner_toolbar).find('.inner-page-message').remove();
 
-		// Keep only: Print primary button + Export buttons
+		// Keep only: Print primary button + Export buttons (based on settings)
 		this.page.set_primary_action(__('Print'), () => this.printit(), 'printer');
-		this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
-		this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
+		const pd = frappe.boot.zhiz_print?.print_designer;
+		if (pd?.allow_export_pdf !== false) {
+			this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
+		}
+		if (pd?.allow_export_excel !== false) {
+			this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
+		}
 	}
 
 	// ==================== Menu Override ====================

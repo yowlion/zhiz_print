@@ -19,6 +19,15 @@ def get_boot_settings(bootinfo):
     }
 
 
+@frappe.whitelist()
+def refresh_boot_cache():
+    """Clear cache and rebuild boot settings for current session"""
+    frappe.only_for("System Manager")
+    frappe.clear_cache()
+    setting = frappe.get_single("Zprint Setting")
+    return _get_print_designer_boot_settings(setting)
+
+
 def _get_print_designer_boot_settings(setting):
     """Get print designer boot configuration"""
     try:
@@ -44,6 +53,10 @@ def _get_print_designer_boot_settings(setting):
                     if item.enabled and item.doctype_name:
                         doctypes.append(item.doctype_name)
                 result["enabled_doctypes"] = doctypes
+
+            # Export settings
+            result["allow_export_pdf"] = bool(frappe.utils.cint(setting.get("allow_export_pdf")))
+            result["allow_export_excel"] = bool(frappe.utils.cint(setting.get("allow_export_excel")))
 
         return result
     except Exception:

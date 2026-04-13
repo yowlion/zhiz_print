@@ -93,6 +93,9 @@ Enable Super Print Page,启用超级打印页面
 Enable Mode,启用方式
 PDF Engine Mode,PDF引擎模式
 Enabled DocTypes,已启用的单据类型
+Export Settings,导出设置
+Allow Export PDF,允许导出PDF
+Allow Export Excel,允许导出Excel
 Enable for All,全部单据启用
 Enable for Specific,指定单据启用
 Normal Row,普通行
@@ -217,3 +220,7 @@ Parameter Id,参数ID
 Update,更新
 Add,添加
 Please select a target DocType first,请先选择目标单据类型
+Refresh Boot Cache,刷新启动缓存
+Refreshing cache...,正在刷新缓存...
+Boot cache refreshed,启动缓存已刷新
+Tools,工具
