@@ -606,39 +606,16 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
-		try {
-			const result = await frappe.call({
-				method: 'zhiz_print.api.print_designer.export_print_excel',
-				args: {
-					doctype: this.frm.doctype,
-					docname: this.frm.docname,
-					design_name: this.current_design,
-					params: this.current_params || {}
-				}
-			});
-
-			if (result.message?.xlsx_base64) {
-				const raw = atob(result.message.xlsx_base64);
-				const uInt8 = new Uint8Array(raw.length);
-				for (let i = 0; i < raw.length; i++) uInt8[i] = raw.charCodeAt(i);
-				const blob = new Blob([uInt8], {
-					type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-				});
-				const url = URL.createObjectURL(blob);
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = result.message.filename || `${this.frm.docname}.xlsx`;
-				a.click();
-				setTimeout(() => URL.revokeObjectURL(url), 60000);
-				frappe.show_alert({ message: __('Excel exported'), indicator: 'green' });
-
-				// Record Excel export log
-				this.record_export_log('Export Excel');
-			}
-		} catch (e) {
-			console.error('Excel export failed:', e);
-			frappe.show_alert({ message: __('Excel export failed') + ': ' + (e.message || String(e)), indicator: 'red' });
-		}
+		// Direct file download via URL (backend returns binary file stream)
+		const excelParams = new URLSearchParams({
+			doctype: this.frm.doctype,
+			docname: this.frm.docname,
+			design_name: this.current_design,
+			params: JSON.stringify(this.current_params || {})
+		});
+		window.open('/api/method/zhiz_print.api.print_designer.export_print_excel?' + excelParams, '_blank');
+		frappe.show_alert({ message: __('Excel exported'), indicator: 'green' });
+		this.record_export_log('Export Excel');
 	}
 
 	async record_export_log(export_type) {

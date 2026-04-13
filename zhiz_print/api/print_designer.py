@@ -5,6 +5,7 @@
 from __future__ import unicode_literals
 import frappe
 from frappe import _
+from frappe.utils import cint
 import json
 import re
 
@@ -502,6 +503,140 @@ def get_print_log_list(doctype, docname):
 			log.user_fullname = ''
 
 	return {"logs": logs, "total_count": total_count}
+
+
+# ==================== Design Save/Load API ====================
+
+
+@frappe.whitelist()
+def save_design(design_name, rows, columns, row_styles, col_styles, font_family,
+                font_size, page_header_left, page_header_center, page_header_right,
+                page_footer_left, page_footer_center, page_footer_right,
+                cells=None):
+    """Save design grid data from frontend.
+
+    Frontend sends only non-merged cells. Backend validate_cells() will
+    automatically generate merge markers for covered positions.
+    """
+    if isinstance(row_styles, str):
+        row_styles = json.loads(row_styles)
+    if isinstance(col_styles, str):
+        col_styles = json.loads(col_styles)
+    if isinstance(cells, str):
+        cells = json.loads(cells)
+
+    doc = frappe.get_doc("Super Print Design", design_name)
+
+    doc.rows = cint(rows)
+    doc.columns = cint(columns)
+    doc.row_styles = json.dumps(row_styles, ensure_ascii=False) if row_styles else "{}"
+    doc.col_styles = json.dumps(col_styles, ensure_ascii=False) if col_styles else "{}"
+    doc.font_family = font_family or "Microsoft YaHei"
+    doc.font_size = cint(font_size) or 12
+    doc.page_header_left = page_header_left or ""
+    doc.page_header_center = page_header_center or ""
+    doc.page_header_right = page_header_right or ""
+    doc.page_footer_left = page_footer_left or ""
+    doc.page_footer_center = page_footer_center or ""
+    doc.page_footer_right = page_footer_right or ""
+
+    # Clear existing items
+    doc.design_items = []
+
+    # Build flat items from cells (only non-merged cells from frontend)
+    if cells:
+        for cell in cells:
+            doc.append("design_items", {
+                "cell_id": cell.get("cell_id", ""),
+                "row": cint(cell.get("row", 0)),
+                "col": cint(cell.get("col", 0)),
+                "rowspan": cint(cell.get("rowspan", 1)),
+                "colspan": cint(cell.get("colspan", 1)),
+                "cell_type": cell.get("cell_type", "static"),
+                "cell_value": cell.get("cell_value", ""),
+                "cell_options": cell.get("cell_options", ""),
+                "css_style": cell.get("css_style", ""),
+                "data_key": cell.get("data_key", ""),
+                "query_name": cell.get("query_name", ""),
+                "barcode_format": cell.get("barcode_format", "CODE128"),
+                "barcode_width": cint(cell.get("barcode_width", 100)),
+                "barcode_height": cint(cell.get("barcode_height", 40)),
+                "row_type": cell.get("row_type", ""),
+                "row_display": cell.get("row_display", ""),
+            })
+
+    # validate() will call ensure_full_coverage() + validate_cells()
+    # which fills missing cells and generates merge markers automatically
+    doc.save()
+
+    item_count = len(doc.design_items) if doc.design_items else 0
+    return {"success": True, "item_count": item_count}
+
+
+@frappe.whitelist()
+def load_design_data(design_name):
+    """Load design data as a parsed grid for frontend consumption.
+
+    Returns row_styles, col_styles, headers/footers, and a flat cell list
+    with merge info resolved. Frontend can directly build its grid from this.
+    """
+    doc = frappe.get_doc("Super Print Design", design_name)
+
+    row_styles = json.loads(doc.row_styles) if doc.row_styles else {}
+    col_styles = json.loads(doc.col_styles) if doc.col_styles else {}
+
+    # Parse paper info
+    paper_info = {}
+    if doc.print_paper:
+        paper_info = frappe.db.get_value("Super Print Paper", doc.print_paper,
+            ["width", "height", "margin_top", "margin_bottom",
+             "margin_left", "margin_right"], as_dict=True) or {}
+
+    # Parse cells into structured list
+    cells = []
+    if doc.design_items:
+        for item in doc.design_items:
+            is_merged = bool(item.cell_value and item.cell_value.startswith("||MERGED::"))
+            cell_data = {
+                "cell_id": item.cell_id or "",
+                "row": item.row,
+                "col": item.col,
+                "rowspan": item.rowspan or 1,
+                "colspan": item.colspan or 1,
+                "cell_type": item.cell_type or "static",
+                "cell_value": item.cell_value or "",
+                "css_style": item.css_style or "",
+                "data_key": item.data_key or "",
+                "query_name": item.query_name or "",
+                "barcode_format": item.barcode_format or "CODE128",
+                "barcode_width": item.barcode_width or 100,
+                "barcode_height": item.barcode_height or 40,
+                "row_type": item.row_type or "",
+                "row_display": item.row_display or "",
+                "is_merged": is_merged,
+            }
+            if is_merged:
+                # Extract master cell id from ||MERGED::<id>||
+                val = item.cell_value or ""
+                cell_data["master_cell_id"] = val[10:-2] if len(val) > 12 else ""
+            cells.append(cell_data)
+
+    return {
+        "rows": doc.rows or 20,
+        "columns": doc.columns or 15,
+        "font_family": doc.font_family or "Microsoft YaHei",
+        "font_size": doc.font_size or 12,
+        "row_styles": row_styles,
+        "col_styles": col_styles,
+        "page_header_left": doc.page_header_left or "",
+        "page_header_center": doc.page_header_center or "",
+        "page_header_right": doc.page_header_right or "",
+        "page_footer_left": doc.page_footer_left or "",
+        "page_footer_center": doc.page_footer_center or "",
+        "page_footer_right": doc.page_footer_right or "",
+        "paper": paper_info,
+        "cells": cells,
+    }
 
 
 # ==================== Excel Export Helper Functions ====================
@@ -1034,8 +1169,7 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 
 @frappe.whitelist()
 def export_print_excel(doctype, docname, design_name=None, params=None):
-	"""Export print design data to Excel, parse CSS styles, fully reproduce print preview content"""
-	import base64
+	"""Export print design data to Excel file download."""
 	from io import BytesIO
 	from frappe.utils.xlsxutils import make_xlsx
 	from bs4 import BeautifulSoup
@@ -1058,8 +1192,10 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 			value = doc.get(df.fieldname)
 			rows.append([df.label or df.fieldname, df.fieldname, str(value) if value else ''])
 		xlsx_data = make_xlsx(rows, doctype)
-		xlsx_base64 = base64.b64encode(xlsx_data.getvalue()).decode('utf-8')
-		return {"xlsx_base64": xlsx_base64, "filename": f"{docname}.xlsx"}
+		frappe.local.response.filename = f"{docname}.xlsx"
+		frappe.local.response.filecontent = xlsx_data.getvalue()
+		frappe.local.response.type = "binary"
+		return
 
 	design = frappe.get_doc("Super Print Design", design_name)
 
@@ -1113,9 +1249,8 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 	wb.save(output)
 	output.seek(0)
 
-	xlsx_base64 = base64.b64encode(output.read()).decode('utf-8')
+	frappe.local.response.filename = f"{docname}-{design.design_name}.xlsx"
+	frappe.local.response.filecontent = output.getvalue()
+	frappe.local.response.type = "binary"
+	return
 
-	return {
-		"xlsx_base64": xlsx_base64,
-		"filename": f"{docname}-{design.design_name}.xlsx"
-	}

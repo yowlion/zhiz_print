@@ -323,6 +323,9 @@ def get_license_info_for_boot():
 
     valid, info = check_license_valid()
 
+    # Add machine_id for frontend display
+    info["machine_id"] = get_machine_id()
+
     # Determine if this is a trial
     trial_licenses = frappe.get_all(
         "Zprint License",

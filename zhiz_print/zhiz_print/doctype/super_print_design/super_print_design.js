@@ -87,6 +87,23 @@ class SuperPrintDesigner {
         if (this.marginRight === undefined) this.marginRight = 15;
     }
 
+    async loadDesignFromServer() {
+        if (!this.frm.doc.__islocal && this.frm.doc.name) {
+            try {
+                const r = await frappe.call({
+                    method: 'zhiz_print.api.print_designer.load_design_data',
+                    args: { design_name: this.frm.doc.name }
+                });
+                if (r.message) {
+                    return r.message;
+                }
+            } catch (e) {
+                console.error('Failed to load design from server:', e);
+            }
+        }
+        return null;
+    }
+
     initGrid() {
         this.grid = Array(this.rows).fill().map(() => Array(this.cols).fill(null));
     }
@@ -103,59 +120,67 @@ class SuperPrintDesigner {
         return str.slice(10, -2);
     }
 
-    loadExistingDesign() {
+    loadExistingDesign(serverData) {
         this.initGrid();
         this.cellDataMap = {};
         const defaultCellStyle = 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
 
-        if (this.frm.doc.row_styles) {
-            try { this.rowStyles = JSON.parse(this.frm.doc.row_styles); } catch (e) { this.rowStyles = {}; }
-        }
-        if (this.frm.doc.col_styles) {
-            try { this.colStyles = JSON.parse(this.frm.doc.col_styles); } catch (e) { this.colStyles = {}; }
-        }
-        if (this.frm.doc.font_family) {
-            this.fontFamily = this.frm.doc.font_family;
-        }
-        this.pageHeaderLeft = this.frm.doc.page_header_left || '';
-        this.pageHeaderCenter = this.frm.doc.page_header_center || '';
-        this.pageHeaderRight = this.frm.doc.page_header_right || '';
-        this.pageFooterLeft = this.frm.doc.page_footer_left || '';
-        this.pageFooterCenter = this.frm.doc.page_footer_center || '';
-        this.pageFooterRight = this.frm.doc.page_footer_right || '';
+        if (serverData) {
+            // Use server-parsed data
+            this.rows = serverData.rows || this.rows;
+            this.cols = serverData.columns || this.cols;
+            this.fontFamily = serverData.font_family || this.fontFamily;
+            this.fontSize = serverData.font_size || this.fontSize;
+            this.rowStyles = serverData.row_styles || {};
+            this.colStyles = serverData.col_styles || {};
+            this.pageHeaderLeft = serverData.page_header_left || '';
+            this.pageHeaderCenter = serverData.page_header_center || '';
+            this.pageHeaderRight = serverData.page_header_right || '';
+            this.pageFooterLeft = serverData.page_footer_left || '';
+            this.pageFooterCenter = serverData.page_footer_center || '';
+            this.pageFooterRight = serverData.page_footer_right || '';
 
-        if (this.frm.doc.design_items && this.frm.doc.design_items.length > 0) {
-            const sortedItems = [...this.frm.doc.design_items].sort((a, b) => {
-                if (a.row !== b.row) return a.row - b.row;
-                return a.col - b.col;
-            });
+            // Load paper info from server data
+            if (serverData.paper) {
+                this.paperWidth = parseFloat(serverData.paper.width) || this.paperWidth;
+                this.paperHeight = parseFloat(serverData.paper.height) || this.paperHeight;
+                this.marginTop = parseInt(serverData.paper.margin_top) || this.marginTop;
+                this.marginBottom = parseInt(serverData.paper.margin_bottom) || this.marginBottom;
+                this.marginLeft = parseInt(serverData.paper.margin_left) || this.marginLeft;
+                this.marginRight = parseInt(serverData.paper.margin_right) || this.marginRight;
+            }
 
-            sortedItems.forEach(item => {
-                const rowIndex = item.row - 1;
-                const colIndex = item.col - 1;
+            // Re-init grid with correct dimensions
+            this.grid = Array(this.rows).fill().map(() => Array(this.cols).fill(null));
 
-                if (rowIndex >= 0 && rowIndex < this.rows && colIndex >= 0 && colIndex < this.cols) {
-                    if (this.isMergedMark(item.cell_value)) {
+            // Parse cells from server
+            if (serverData.cells && serverData.cells.length > 0) {
+                serverData.cells.forEach(cell => {
+                    const rowIndex = cell.row - 1;
+                    const colIndex = cell.col - 1;
+                    if (rowIndex < 0 || rowIndex >= this.rows || colIndex < 0 || colIndex >= this.cols) return;
+
+                    if (cell.is_merged) {
                         this.grid[rowIndex][colIndex] = {
                             _merged: true,
-                            master_cell_id: this.extractMasterId(item.cell_value)
+                            master_cell_id: cell.master_cell_id || ''
                         };
                     } else {
                         const cellData = {
-                            cell_id: item.cell_id || `R${item.row}C${item.col}`,
-                            row: item.row, col: item.col,
-                            rowspan: parseInt(item.rowspan) || 1,
-                            colspan: parseInt(item.colspan) || 1,
-                            cell_type: item.cell_type || 'static',
-                            cell_value: item.cell_value || '',
-                            css_style: item.css_style || '',
-                            data_key: item.data_key || '',
-                            query_name: item.query_name || '',
-                            barcode_format: item.barcode_format || 'CODE128',
-                            barcode_width: parseInt(item.barcode_width) || 100,
-                            barcode_height: parseInt(item.barcode_height) || 40,
-                            row_type: item.row_type || '',
-                            row_display: item.row_display || '',
+                            cell_id: cell.cell_id || `R${cell.row}C${cell.col}`,
+                            row: cell.row, col: cell.col,
+                            rowspan: parseInt(cell.rowspan) || 1,
+                            colspan: parseInt(cell.colspan) || 1,
+                            cell_type: cell.cell_type || 'static',
+                            cell_value: cell.cell_value || '',
+                            css_style: cell.css_style || '',
+                            data_key: cell.data_key || '',
+                            query_name: cell.query_name || '',
+                            barcode_format: cell.barcode_format || 'CODE128',
+                            barcode_width: parseInt(cell.barcode_width) || 100,
+                            barcode_height: parseInt(cell.barcode_height) || 40,
+                            row_type: cell.row_type || '',
+                            row_display: cell.row_display || '',
                         };
                         this.grid[rowIndex][colIndex] = cellData;
                         this.cellDataMap[cellData.cell_id] = cellData;
@@ -164,8 +189,69 @@ class SuperPrintDesigner {
                             this.markMergedCells(cellData);
                         }
                     }
-                }
-            });
+                });
+            }
+        } else {
+            // Fallback: parse from frm.doc (new document or server unavailable)
+            if (this.frm.doc.row_styles) {
+                try { this.rowStyles = JSON.parse(this.frm.doc.row_styles); } catch (e) { this.rowStyles = {}; }
+            }
+            if (this.frm.doc.col_styles) {
+                try { this.colStyles = JSON.parse(this.frm.doc.col_styles); } catch (e) { this.colStyles = {}; }
+            }
+            if (this.frm.doc.font_family) {
+                this.fontFamily = this.frm.doc.font_family;
+            }
+            this.pageHeaderLeft = this.frm.doc.page_header_left || '';
+            this.pageHeaderCenter = this.frm.doc.page_header_center || '';
+            this.pageHeaderRight = this.frm.doc.page_header_right || '';
+            this.pageFooterLeft = this.frm.doc.page_footer_left || '';
+            this.pageFooterCenter = this.frm.doc.page_footer_center || '';
+            this.pageFooterRight = this.frm.doc.page_footer_right || '';
+
+            if (this.frm.doc.design_items && this.frm.doc.design_items.length > 0) {
+                const sortedItems = [...this.frm.doc.design_items].sort((a, b) => {
+                    if (a.row !== b.row) return a.row - b.row;
+                    return a.col - b.col;
+                });
+
+                sortedItems.forEach(item => {
+                    const rowIndex = item.row - 1;
+                    const colIndex = item.col - 1;
+
+                    if (rowIndex >= 0 && rowIndex < this.rows && colIndex >= 0 && colIndex < this.cols) {
+                        if (this.isMergedMark(item.cell_value)) {
+                            this.grid[rowIndex][colIndex] = {
+                                _merged: true,
+                                master_cell_id: this.extractMasterId(item.cell_value)
+                            };
+                        } else {
+                            const cellData = {
+                                cell_id: item.cell_id || `R${item.row}C${item.col}`,
+                                row: item.row, col: item.col,
+                                rowspan: parseInt(item.rowspan) || 1,
+                                colspan: parseInt(item.colspan) || 1,
+                                cell_type: item.cell_type || 'static',
+                                cell_value: item.cell_value || '',
+                                css_style: item.css_style || '',
+                                data_key: item.data_key || '',
+                                query_name: item.query_name || '',
+                                barcode_format: item.barcode_format || 'CODE128',
+                                barcode_width: parseInt(item.barcode_width) || 100,
+                                barcode_height: parseInt(item.barcode_height) || 40,
+                                row_type: item.row_type || '',
+                                row_display: item.row_display || '',
+                            };
+                            this.grid[rowIndex][colIndex] = cellData;
+                            this.cellDataMap[cellData.cell_id] = cellData;
+
+                            if (cellData.rowspan > 1 || cellData.colspan > 1) {
+                                this.markMergedCells(cellData);
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         // Fill empty cells
@@ -1430,16 +1516,19 @@ class SuperPrintDesigner {
             if (inputCols && inputCols > 0) this.cols = inputCols;
         }
 
-        const items = [];
+        // Collect only non-merged cells — backend validate_cells() handles merge markers
+        const cells = [];
         for (let row = 1; row <= this.rows; row++) {
             for (let col = 1; col <= this.cols; col++) {
                 const cell = this.grid[row - 1]?.[col - 1];
                 if (!cell) {
-                    items.push(this.createBlankItem(row, col));
+                    // Empty cell
+                    cells.push(this.createBlankItem(row, col));
                 } else if (cell._merged) {
-                    items.push(this.createMergedItem(row, col, cell.master_cell_id));
+                    // Skip merged cells — backend will generate markers automatically
+                    continue;
                 } else {
-                    items.push({
+                    cells.push({
                         cell_id: cell.cell_id, row, col,
                         rowspan: cell.rowspan || 1, colspan: cell.colspan || 1,
                         cell_type: cell.cell_type || 'static', cell_value: cell.cell_value || '',
@@ -1452,14 +1541,35 @@ class SuperPrintDesigner {
             }
         }
 
-        this.frm.set_value('rows', this.rows);
-        this.frm.set_value('columns', this.cols);
-        this.frm.set_value('row_styles', JSON.stringify(this.rowStyles));
-        this.frm.set_value('col_styles', JSON.stringify(this.colStyles));
-        this.frm.set_value('font_family', this.fontFamily);
-        this.frm.set_value('design_items', items);
-        this.frm.save().then(() => {
-            frappe.show_alert({ message: __('Design saved') + ', ' + items.length + ' ' + __('cells'), indicator: 'green' });
+        // Send to backend API
+        frappe.call({
+            method: 'zhiz_print.api.print_designer.save_design',
+            args: {
+                design_name: this.frm.doc.name,
+                rows: this.rows,
+                columns: this.cols,
+                row_styles: JSON.stringify(this.rowStyles),
+                col_styles: JSON.stringify(this.colStyles),
+                font_family: this.fontFamily,
+                font_size: this.fontSize,
+                page_header_left: this.pageHeaderLeft,
+                page_header_center: this.pageHeaderCenter,
+                page_header_right: this.pageHeaderRight,
+                page_footer_left: this.pageFooterLeft,
+                page_footer_center: this.pageFooterCenter,
+                page_footer_right: this.pageFooterRight,
+                cells: cells,
+            },
+            freeze: true,
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    frappe.show_alert({
+                        message: __('Design saved') + ', ' + r.message.item_count + ' ' + __('cells'),
+                        indicator: 'green'
+                    });
+                    this.frm.reload_doc();
+                }
+            }
         });
     }
 
@@ -1824,7 +1934,13 @@ frappe.ui.form.on('Super Print Design', {
     async refresh(frm) {
         if (spd_designer) spd_designer = null;
         spd_designer = new SuperPrintDesigner(frm);
-        spd_designer.init();
+
+        // Load design data from server for existing documents
+        let serverData = null;
+        if (!frm.is_new() && frm.doc.name) {
+            serverData = await spd_designer.loadDesignFromServer();
+        }
+        spd_designer.loadExistingDesign(serverData);
 
         setTimeout(() => {
             if (frm.page && frm.page.sidebar) {
@@ -1858,7 +1974,10 @@ frappe.ui.form.on('Super Print Design', {
         }
 
         if (frm.doc.target_doctype) {
-            await spd_designer.loadPaperSize();
+            // Skip loadPaperSize if server data already has paper info
+            if (!serverData || !serverData.paper || !serverData.paper.width) {
+                await spd_designer.loadPaperSize();
+            }
             const html = spd_designer.generateDesigner();
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');

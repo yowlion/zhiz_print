@@ -31,6 +31,7 @@
       "fieldtype": "Data",
       "in_list_view": 1,
       "label": "License Key",
+      "read_only": 1,
       "reqd": 1,
       "unique": 1
     },
@@ -40,7 +41,8 @@
       "fieldtype": "Select",
       "in_list_view": 1,
       "label": "Plan",
-      "options": "Trial\nStandard\nProfessional"
+      "options": "Trial\nStandard\nProfessional",
+      "read_only": 1
     },
     {
       "default": "Active",
@@ -48,7 +50,8 @@
       "fieldtype": "Select",
       "in_list_view": 1,
       "label": "Status",
-      "options": "Active\nExpired\nRevoked"
+      "options": "Active\nExpired\nRevoked",
+      "read_only": 1
     },
     {
       "fieldname": "column_break_info",
@@ -57,18 +60,21 @@
     {
       "fieldname": "activated_at",
       "fieldtype": "Datetime",
-      "label": "Activated At"
+      "label": "Activated At",
+      "read_only": 1
     },
     {
       "fieldname": "expires_at",
       "fieldtype": "Datetime",
       "in_list_view": 1,
-      "label": "Expires At"
+      "label": "Expires At",
+      "read_only": 1
     },
     {
       "fieldname": "last_validated_at",
       "fieldtype": "Datetime",
-      "label": "Last Validated At"
+      "label": "Last Validated At",
+      "read_only": 1
     },
     {
       "fieldname": "section_break_customer",
@@ -78,7 +84,8 @@
     {
       "fieldname": "company_name",
       "fieldtype": "Data",
-      "label": "Company Name"
+      "label": "Company Name",
+      "read_only": 1
     },
     {
       "fieldname": "column_break_contact",
@@ -87,18 +94,21 @@
     {
       "fieldname": "contact_name",
       "fieldtype": "Data",
-      "label": "Contact Name"
+      "label": "Contact Name",
+      "read_only": 1
     },
     {
       "fieldname": "contact_email",
       "fieldtype": "Data",
       "label": "Contact Email",
-      "options": "Email"
+      "options": "Email",
+      "read_only": 1
     },
     {
       "fieldname": "contact_phone",
       "fieldtype": "Data",
-      "label": "Contact Phone"
+      "label": "Contact Phone",
+      "read_only": 1
     },
     {
       "fieldname": "section_break_binding",
@@ -108,7 +118,8 @@
     {
       "fieldname": "machine_id",
       "fieldtype": "Data",
-      "label": "Machine ID"
+      "label": "Machine ID",
+      "read_only": 1
     },
     {
       "fieldname": "column_break_site",
@@ -117,7 +128,8 @@
     {
       "fieldname": "site_name",
       "fieldtype": "Data",
-      "label": "Site Name"
+      "label": "Site Name",
+      "read_only": 1
     },
     {
       "fieldname": "section_break_features",
@@ -128,9 +140,12 @@
       "fieldname": "features",
       "fieldtype": "Code",
       "label": "Features",
-      "options": "JSON"
+      "options": "JSON",
+      "read_only": 1
     }
   ],
+  "hide_toolbar": 1,
+  "in_create": 1,
   "index_web_pages_for_search": 0,
   "links": [],
   "modified": "2026-04-13 00:00:00.000000",
