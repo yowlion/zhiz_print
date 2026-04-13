@@ -3,6 +3,7 @@ qrcode
 beautifulsoup4
 openpyxl
 cssutils
+pycryptodome>=3.19.0
 # PDF 引擎（按需安装一个即可）
 # weasyprint
 # pdfkit
