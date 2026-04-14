@@ -98,7 +98,7 @@ class SuperPrintDesigner {
                     return r.message;
                 }
             } catch (e) {
-                console.error('Failed to load design from server:', e);
+                console.errfor('Failed to load design from server:', e);
             }
         }
         return null;
