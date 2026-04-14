@@ -289,85 +289,58 @@ class SuperPrintDesigner {
         }
     }
 
-    generateDesigner() {
-        // 1mm = 4px strict ratio
+    async fetchDesignerHtml() {
         const PX_PER_MM = 4;
-        let totalWidth = 0;
-        for (let col = 1; col <= this.cols; col++) {
-            totalWidth += (this.colStyles[col]?.width || 60);
-        }
-
-        const paperW = this.paperWidth * PX_PER_MM;
-        const paperH = this.paperHeight * PX_PER_MM;
         const mTop = (this.marginTop || 0) * PX_PER_MM;
         const mBottom = (this.marginBottom || 0) * PX_PER_MM;
         const mLeft = (this.marginLeft || 0) * PX_PER_MM;
         const mRight = (this.marginRight || 0) * PX_PER_MM;
 
-        let html = '<div id="' + this.designContainerId + '" class="spd-container">';
-        // Toolbar
-        html += '<div class="spd-toolbar">' +
-            '<div class="spd-controls">' +
-                '<label>' + __('Rows') + ':</label><input type="number" id="spd-rows" class="form-control" min="1" max="100" value="' + this.rows + '" style="width:70px">' +
-                '<label>' + __('Cols') + ':</label><input type="number" id="spd-cols" class="form-control" min="1" max="26" value="' + this.cols + '" style="width:70px">' +
-                '<button class="btn btn-default btn-sm" id="spd-apply-grid"><i class="fa fa-refresh"></i> ' + __('Apply') + '</button>' +
-            '</div>' +
-            '<div class="spd-controls">' +
-                '<label>' + __('Font') + ':</label>' +
-                '<select id="spd-font" class="form-control" style="width:100px">';
-        this.fontFamilies.forEach(f => {
-            html += '<option value="' + f.value + '" ' + (this.fontFamily === f.value ? 'selected' : '') + '>' + f.label + '</option>';
+        const r = await frappe.call({
+            method: 'zhiz_print.api.print_designer.get_designer_html',
+            args: {
+                design_name: this.frm.doc.name || null,
+                rows: this.rows,
+                columns: this.cols,
+                font_family: this.fontFamily,
+                print_paper: this.frm.doc.print_paper || null,
+                col_styles: JSON.stringify(this.colStyles),
+            }
         });
-        html += '</select></div>' +
-            '<div class="spd-controls spd-row-type-controls" style="display:none">' +
-                '<button class="btn btn-default btn-sm" id="spd-repeat-title-btn" title="' + __('Set Repeat Title Row') + '"><i class="fa fa-repeat" style="color:#ff9800"></i> <small style="font-size:9px;color:#ff9800">' + __('Title Row') + '</small></button>' +
-                '<button class="btn btn-default btn-sm" id="spd-data-driven-btn" title="' + __('Set Data-Driven Row') + '"><i class="fa fa-database" style="color:#2196f3"></i> <small style="font-size:9px;color:#2196f3">' + __('Data Row') + '</small></button>' +
-                '<button class="btn btn-default btn-sm" id="spd-normal-row-btn" title="' + __('Restore to Normal Row') + '"><i class="fa fa-minus"></i> <small style="font-size:9px">' + __('Normal Row') + '</small></button>' +
-            '</div>' +
-            '<div class="spd-actions">' +
-                '<button class="btn btn-info btn-sm" id="spd-query-btn"><i class="fa fa-database"></i> ' + __('Query Definition') + '</button>' +
-                '<button class="btn btn-info btn-sm" id="spd-params-btn"><i class="fa fa-sliders"></i> ' + __('Parameters') + '</button>' +
-                '<button class="btn btn-warning btn-sm" id="spd-clear-btn"><i class="fa fa-trash"></i> ' + __('Clear') + '</button>' +
-                '<button class="btn btn-primary btn-sm" id="spd-save-btn"><i class="fa fa-save"></i> ' + __('Save') + '</button>' +
-            '</div>' +
-        '</div>';
+        let html = r.message || '';
 
-        // Main area: grid + property panel
-        // Structure: grid-wrapper > col-headers(above paper) + grid-body > row-headers(left of paper) + spd-paper > margin-line + table
-        const rowHeaderWidth = 22;
-        const contentAreaW = paperW - mLeft - mRight;
-        const centeredOffset = Math.max(0, (contentAreaW - totalWidth) / 2);
-        const colHeaderOffset = rowHeaderWidth + mLeft + centeredOffset;
-        html += '<div class="spd-main">' +
-            '<div class="spd-grid-wrap">' +
-                '<div class="spd-paper-preview">' +
-                    '<div class="grid-wrapper">' +
-                        '<div class="col-headers" id="spd-col-headers" style="margin-left:' + colHeaderOffset + 'px;">' +
-                            this.generateColHeadersHtml() +
-                        '</div>' +
-                        '<div class="grid-body">' +
-                            '<div class="row-headers" id="spd-row-headers" style="margin-top:' + mTop + 'px;">' +
-                                this.generateRowHeadersHtml() +
-                            '</div>' +
-                            '<div class="spd-paper" id="spd-paper" style="width:' + paperW + 'px; min-height:' + paperH + 'px; position:relative;">' +
-                                '<div class="spd-margin-line" style="top:' + mTop + 'px; left:' + mLeft + 'px; right:' + mRight + 'px; bottom:' + mBottom + 'px;"></div>' +
-                                this.generateHeaderFooterHtml(mTop, mBottom, mLeft, mRight) +
-                                '<div class="spd-table-area" style="position:absolute; top:' + mTop + 'px; left:' + mLeft + 'px; right:' + mRight + 'px; display:flex; justify-content:center;">' +
-                                    '<table class="spd-grid" id="spd-grid" style="width:' + totalWidth + 'px">' +
-                                    this.generateGridHtml() +
-                                '</table>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-            '<div class="spd-props" id="spd-props">' +
-                '<h4><i class="fa fa-cog"></i> ' + __('Cell Properties') + '</h4>' +
-                '<div id="spd-prop-form"></div>' +
-            '</div>' +
-        '</div></div>';
+        // Fill dynamic content into server shell
+        this.designContainerId = (html.match(/id="(spd-\d+)"/) || [])[1] || this.designContainerId;
+
+        // Insert col headers, row headers, grid, header/footer into the shell
+        html = html.replace(/<div class="col-headers" id="spd-col-headers"[^>]*><\/div>/,
+            '<div class="col-headers" id="spd-col-headers" style="margin-left:' + this._getColHeaderOffset() + 'px;">' + this.generateColHeadersHtml() + '</div>');
+        html = html.replace(/<div class="row-headers" id="spd-row-headers"[^>]*><\/div>/,
+            '<div class="row-headers" id="spd-row-headers" style="margin-top:' + mTop + 'px;">' + this.generateRowHeadersHtml() + '</div>');
+        html = html.replace(/<div id="spd-header-footer"><\/div>/,
+            this.generateHeaderFooterHtml(mTop, mBottom, mLeft, mRight));
+        html = html.replace(/<table class="spd-grid" id="spd-grid"[^>]*><\/table>/,
+            '<table class="spd-grid" id="spd-grid" style="width:' + this._getTotalWidth() + 'px">' + this.generateGridHtml() + '</table>');
+
         return html;
+    }
+
+    _getTotalWidth() {
+        let w = 0;
+        for (let col = 1; col <= this.cols; col++) {
+            w += (this.colStyles[col]?.width || 60);
+        }
+        return w;
+    }
+
+    _getColHeaderOffset() {
+        const PX_PER_MM = 4;
+        const mLeft = (this.marginLeft || 0) * PX_PER_MM;
+        const mRight = (this.marginRight || 0) * PX_PER_MM;
+        const paperW = this.paperWidth * PX_PER_MM;
+        const contentAreaW = paperW - mLeft - mRight;
+        const centeredOffset = Math.max(0, (contentAreaW - this._getTotalWidth()) / 2);
+        return 22 + mLeft + centeredOffset;
     }
 
     generateHeaderFooterHtml(mTop, mBottom, mLeft, mRight) {
@@ -1866,7 +1839,7 @@ frappe.ui.form.on('Super Print Design', {
             if (!serverData || !serverData.paper || !serverData.paper.width) {
                 await spd_designer.loadPaperSize();
             }
-            const html = spd_designer.generateDesigner();
+            const html = await spd_designer.fetchDesignerHtml();
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {
@@ -1885,7 +1858,7 @@ frappe.ui.form.on('Super Print Design', {
             spd_designer = new SuperPrintDesigner(frm);
             spd_designer.init();
             await spd_designer.loadPaperSize();
-            const html = spd_designer.generateDesigner();
+            const html = await spd_designer.fetchDesignerHtml();
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {
@@ -1896,8 +1869,7 @@ frappe.ui.form.on('Super Print Design', {
     async print_paper(frm) {
         if (spd_designer && frm.doc.print_paper) {
             await spd_designer.loadPaperSize();
-            // Re-render designer to apply new paper size
-            const html = spd_designer.generateDesigner();
+            const html = await spd_designer.fetchDesignerHtml();
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {

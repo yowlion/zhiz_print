@@ -594,6 +594,103 @@ def save_design(design_name, rows, columns, row_styles, col_styles, font_family,
 
 
 @frappe.whitelist()
+def get_designer_html(design_name=None, rows=20, columns=15, font_family="Microsoft YaHei",
+                      print_paper=None, col_styles=None):
+    """Render designer shell HTML server-side. Returns the toolbar, paper structure,
+    and property panel. Dynamic grid content is filled by JS after loading."""
+    import time
+
+    PX_PER_MM = 4
+    rows = cint(rows) or 20
+    columns = cint(columns) or 15
+
+    if isinstance(col_styles, str):
+        try:
+            col_styles = json.loads(col_styles)
+        except (json.JSONDecodeError, TypeError):
+            col_styles = {}
+    if not col_styles:
+        col_styles = {}
+
+    # Load paper info
+    paper_w, paper_h = 210, 297
+    m_top, m_bottom, m_left, m_right = 10, 10, 15, 15
+
+    if design_name:
+        doc = frappe.get_doc("Super Print Design", design_name)
+        rows = doc.rows or rows
+        columns = doc.columns or columns
+        font_family = doc.font_family or font_family
+        if doc.row_styles:
+            try:
+                rs = json.loads(doc.row_styles)
+            except Exception:
+                rs = {}
+        else:
+            rs = {}
+        if doc.col_styles:
+            try:
+                cs = json.loads(doc.col_styles)
+                col_styles = cs
+            except Exception:
+                pass
+        print_paper = doc.print_paper
+
+    if print_paper:
+        paper = frappe.db.get_value("Super Print Paper", print_paper,
+            ["width", "height", "margin_top", "margin_bottom", "margin_left", "margin_right"], as_dict=True)
+        if paper:
+            paper_w = float(paper.width or 210)
+            paper_h = float(paper.height or 297)
+            m_top = int(paper.margin_top or 10)
+            m_bottom = int(paper.margin_bottom or 10)
+            m_left = int(paper.margin_left or 15)
+            m_right = int(paper.margin_right or 15)
+
+    # Calculate dimensions
+    total_width = sum(
+        (col_styles.get(str(c), {}).get("width") or 60) for c in range(1, columns + 1)
+    )
+    paper_w_px = int(paper_w * PX_PER_MM)
+    paper_h_px = int(paper_h * PX_PER_MM)
+    m_top_px = m_top * PX_PER_MM
+    m_bottom_px = m_bottom * PX_PER_MM
+    m_left_px = m_left * PX_PER_MM
+    m_right_px = m_right * PX_PER_MM
+
+    content_area_w = paper_w_px - m_left_px - m_right_px
+    centered_offset = max(0, (content_area_w - total_width) / 2)
+    col_header_offset = 22 + m_left_px + centered_offset
+
+    font_families = [
+        {"value": "Microsoft YaHei", "label": "Microsoft YaHei"},
+        {"value": "SimSun", "label": "SimSun"},
+        {"value": "SimHei", "label": "SimHei"},
+        {"value": "KaiTi", "label": "KaiTi"},
+        {"value": "FangSong", "label": "FangSong"},
+    ]
+
+    context = {
+        "container_id": "spd-" + str(int(time.time() * 1000)),
+        "rows": rows,
+        "cols": columns,
+        "font_family": font_family,
+        "font_families": font_families,
+        "paper_w": paper_w_px,
+        "paper_h": paper_h_px,
+        "m_top": m_top_px,
+        "m_bottom": m_bottom_px,
+        "m_left": m_left_px,
+        "m_right": m_right_px,
+        "col_header_offset": int(col_header_offset),
+        "total_width": total_width,
+    }
+
+    template_path = "zhiz_print/zhiz_print/doctype/super_print_design/designer_template.html"
+    return frappe.render_template(template_path, context)
+
+
+@frappe.whitelist()
 def load_design_data(design_name):
     """Load design data as a parsed grid for frontend consumption.
 

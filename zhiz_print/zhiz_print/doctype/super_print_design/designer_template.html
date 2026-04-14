@@ -1,0 +1,60 @@
+{# Super Print Designer - Server-side shell template #}
+<div id="{{ container_id }}" class="spd-container">
+    <div class="spd-toolbar">
+        <div class="spd-controls">
+            <label>{{ _("Rows") }}:</label>
+            <input type="number" id="spd-rows" class="form-control" min="1" max="100" value="{{ rows }}" style="width:70px">
+            <label>{{ _("Cols") }}:</label>
+            <input type="number" id="spd-cols" class="form-control" min="1" max="26" value="{{ cols }}" style="width:70px">
+            <button class="btn btn-default btn-sm" id="spd-apply-grid"><i class="fa fa-refresh"></i> {{ _("Apply") }}</button>
+        </div>
+        <div class="spd-controls">
+            <label>{{ _("Font") }}:</label>
+            <select id="spd-font" class="form-control" style="width:100px">
+                {% for f in font_families %}
+                <option value="{{ f.value }}" {% if f.value == font_family %}selected{% endif %}>{{ f.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="spd-controls spd-row-type-controls" style="display:none">
+            <button class="btn btn-default btn-sm" id="spd-repeat-title-btn" title="{{ _('Set Repeat Title Row') }}">
+                <i class="fa fa-repeat" style="color:#ff9800"></i> <small style="font-size:9px;color:#ff9800">{{ _("Title Row") }}</small>
+            </button>
+            <button class="btn btn-default btn-sm" id="spd-data-driven-btn" title="{{ _('Set Data-Driven Row') }}">
+                <i class="fa fa-database" style="color:#2196f3"></i> <small style="font-size:9px;color:#2196f3">{{ _("Data Row") }}</small>
+            </button>
+            <button class="btn btn-default btn-sm" id="spd-normal-row-btn" title="{{ _('Restore to Normal Row') }}">
+                <i class="fa fa-minus"></i> <small style="font-size:9px">{{ _("Normal Row") }}</small>
+            </button>
+        </div>
+        <div class="spd-actions">
+            <button class="btn btn-info btn-sm" id="spd-query-btn"><i class="fa fa-database"></i> {{ _("Query Definition") }}</button>
+            <button class="btn btn-info btn-sm" id="spd-params-btn"><i class="fa fa-sliders"></i> {{ _("Parameters") }}</button>
+            <button class="btn btn-warning btn-sm" id="spd-clear-btn"><i class="fa fa-trash"></i> {{ _("Clear") }}</button>
+            <button class="btn btn-primary btn-sm" id="spd-save-btn"><i class="fa fa-save"></i> {{ _("Save") }}</button>
+        </div>
+    </div>
+    <div class="spd-main">
+        <div class="spd-grid-wrap">
+            <div class="spd-paper-preview">
+                <div class="grid-wrapper">
+                    <div class="col-headers" id="spd-col-headers" style="margin-left:{{ col_header_offset }}px;"></div>
+                    <div class="grid-body">
+                        <div class="row-headers" id="spd-row-headers" style="margin-top:{{ m_top }}px;"></div>
+                        <div class="spd-paper" id="spd-paper" style="width:{{ paper_w }}px; min-height:{{ paper_h }}px; position:relative;">
+                            <div class="spd-margin-line" style="top:{{ m_top }}px; left:{{ m_left }}px; right:{{ m_right }}px; bottom:{{ m_bottom }}px;"></div>
+                            <div id="spd-header-footer"></div>
+                            <div class="spd-table-area" style="position:absolute; top:{{ m_top }}px; left:{{ m_left }}px; right:{{ m_right }}px; display:flex; justify-content:center;">
+                                <table class="spd-grid" id="spd-grid" style="width:{{ total_width }}px"></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="spd-props" id="spd-props">
+            <h4><i class="fa fa-cog"></i> {{ _("Cell Properties") }}</h4>
+            <div id="spd-prop-form"></div>
+        </div>
+    </div>
+</div>
