@@ -606,16 +606,70 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
-		// Direct file download via URL (backend returns binary file stream)
+		// Use XMLHttpRequest for binary download with proper error handling
 		const excelParams = new URLSearchParams({
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
 			design_name: this.current_design,
 			params: JSON.stringify(this.current_params || {})
 		});
-		window.open('/api/method/zhiz_print.api.print_designer.export_print_excel?' + excelParams, '_blank');
-		frappe.show_alert({ message: __('Excel exported'), indicator: 'green' });
-		this.record_export_log('Export Excel');
+		const url = '/api/method/zhiz_print.api.print_designer.export_print_excel?' + excelParams;
+
+		frappe.show_alert({ message: __('Exporting Excel...'), indicator: 'blue' });
+
+		try {
+			const blob = await new Promise((resolve, reject) => {
+				const xhr = new XMLHttpRequest();
+				xhr.open('GET', url, true);
+				xhr.responseType = 'blob';
+				xhr.setRequestHeader('X-Frappe-CSRF-Token', frappe.csrf_token);
+				xhr.onload = function() {
+					if (xhr.status === 200) {
+						const contentType = xhr.getResponseHeader('Content-Type') || '';
+						if (contentType.indexOf('application/json') !== -1 || contentType.indexOf('text/html') !== -1) {
+							// Server returned JSON error instead of binary
+							const reader = new FileReader();
+							reader.onload = function() {
+								try {
+									const err = JSON.parse(reader.result);
+									reject(new Error(err.exception || err.message || __('Export failed')));
+								} catch (e) {
+									reject(new Error(reader.result || __('Export failed')));
+								}
+							};
+							reader.readAsText(xhr.response);
+						} else {
+							resolve(xhr.response);
+						}
+					} else {
+						reject(new Error(__('Export failed (HTTP {0})', [xhr.status])));
+					}
+				};
+				xhr.onerror = function() {
+					reject(new Error(__('Network error')));
+				};
+				xhr.send();
+			});
+
+			// Extract filename from Content-Disposition header or use default
+			const filename = this.frm.docname + '-' + (this.current_design_info?.design_name || 'export') + '.xlsx';
+
+			// Trigger browser download
+			const blobUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = blobUrl;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(blobUrl);
+
+			frappe.show_alert({ message: __('Excel exported'), indicator: 'green' });
+			this.record_export_log('Export Excel');
+		} catch (e) {
+			console.error('Excel export failed:', e);
+			frappe.show_alert({ message: e.message || __('Excel export failed'), indicator: 'red' });
+		}
 	}
 
 	async record_export_log(export_type) {

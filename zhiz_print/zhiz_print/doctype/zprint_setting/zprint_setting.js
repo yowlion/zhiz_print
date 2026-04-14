@@ -77,10 +77,12 @@ frappe.ui.form.on('Zprint Setting', {
         frappe.db.get_value('Zprint License', {'status': 'Active'}, 'license_key')
             .then(r => {
                 if (r && r.message && r.message.license_key) {
-                    frm.set_value('license_key_input', r.message.license_key);
+                    frm.doc.license_key_input = r.message.license_key;
                 } else {
-                    frm.set_value('license_key_input', '');
+                    frm.doc.license_key_input = '';
                 }
+                // Directly update display without triggering dirty flag
+                frm.get_field('license_key_input').refresh();
             });
     },
 
@@ -88,28 +90,51 @@ frappe.ui.form.on('Zprint Setting', {
         let container = document.getElementById('license-info-container');
         if (!container) return;
 
-        let lic = frappe.boot.zhiz_print?.license || {};
-        let html = '';
+        // Always fetch fresh license status from server
+        frappe.call({
+            method: 'zhiz_print.api.license.get_license_status',
+            callback(r) {
+                let lic = (r.message || {});
+                let html = '';
 
-        if (lic.valid) {
-            let statusColor = lic.trial ? '#f39c12' : '#27ae60';
-            let statusText = lic.trial ? __('Trial') : __(lic.plan || 'Active');
-            html = '<div style="display:flex;gap:20px;align-items:center;padding:10px 0">';
-            html += '<span style="font-size:13px"><strong>' + __('Status') + ':</strong> ';
-            html += '<span style="color:' + statusColor + ';font-weight:600">' + statusText + '</span></span>';
-            if (lic.expires_at) {
-                html += '<span style="font-size:13px"><strong>' + __('Expires') + ':</strong> ' + frappe.datetime.str_to_user(lic.expires_at.split(' ')[0]) + '</span>';
+                if (lic.valid) {
+                    let statusColor = lic.trial ? '#f39c12' : '#27ae60';
+                    let statusText = lic.trial ? __('Trial') : __(lic.plan || 'Active');
+                    html = '<div style="display:flex;gap:20px;align-items:center;padding:10px 0">';
+                    html += '<span style="font-size:13px"><strong>' + __('Status') + ':</strong> ';
+                    html += '<span style="color:' + statusColor + ';font-weight:600">' + statusText + '</span></span>';
+                    if (lic.expires_at) {
+                        html += '<span style="font-size:13px"><strong>' + __('Expires') + ':</strong> ' + frappe.datetime.str_to_user(lic.expires_at.split(' ')[0]) + '</span>';
+                    }
+                    html += '<span style="font-size:12px;color:#999"><strong>' + __('Machine ID') + ':</strong> ' + (lic.machine_id || '') + '</span>';
+                    html += '</div>';
+                } else if (lic.status === 'Locked') {
+                    let expiry_str = lic.expires_at ? frappe.datetime.str_to_user(lic.expires_at.split(' ')[0]) : '';
+                    html = '<div style="padding:10px 0;color:#e67e22;font-weight:600">';
+                    html += '<i class="fa fa-lock"></i> ';
+                    html += __('License expires at {0}, status is locked, please contact vendor to unlock.').replace('{0}', expiry_str);
+                    html += '</div>';
+                } else if (lic.status === 'Expired') {
+                    let expiry_str = lic.expires_at ? frappe.datetime.str_to_user(lic.expires_at.split(' ')[0]) : '';
+                    html = '<div style="padding:10px 0;color:#e74c3c;font-weight:600">';
+                    html += '<i class="fa fa-exclamation-triangle"></i> ';
+                    html += __('License expired on {0}. Please renew your subscription.').replace('{0}', expiry_str);
+                    html += '</div>';
+                } else if (lic.status === 'Revoked') {
+                    html = '<div style="padding:10px 0;color:#e74c3c;font-weight:600">';
+                    html += '<i class="fa fa-ban"></i> ';
+                    html += __('License has been revoked.');
+                    html += '</div>';
+                } else {
+                    html = '<div style="padding:10px 0;color:#e74c3c;font-weight:600">';
+                    html += '<i class="fa fa-exclamation-triangle"></i> ';
+                    html += __('Not activated. Please refresh boot cache to get a trial license or purchase a full license.');
+                    html += '</div>';
+                }
+
+                container.innerHTML = html;
             }
-            html += '<span style="font-size:12px;color:#999"><strong>' + __('Machine ID') + ':</strong> ' + (lic.machine_id || '') + '</span>';
-            html += '</div>';
-        } else {
-            html = '<div style="padding:10px 0;color:#e74c3c;font-weight:600">';
-            html += '<i class="fa fa-exclamation-triangle"></i> ';
-            html += lic.message || __('License expired or not activated');
-            html += '</div>';
-        }
-
-        container.innerHTML = html;
+        });
     },
 
     after_save(frm) {

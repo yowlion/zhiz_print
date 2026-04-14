@@ -253,10 +253,14 @@ Go to Settings,前往设置
 Trial,试用
 Standard,标准版
 Professional,专业版
-Active,有效
+Active,已激活
 Expired,已过期
-Revoked,已吊销
+Unused,未使用
+Locked,已锁定
+"License expires at {0}, status is locked, please contact vendor to unlock.","许可证到期时间 {0}，状态已锁定，请联系供应商解锁。"
+"License expired on {0}. Please renew your subscription.","许可证已于 {0} 过期，请续订许可证。"
 No License,无许可证
 License expired or not activated,许可证已过期或未激活
 Expires,过期时间
+"Not activated. Please refresh boot cache to get a trial license or purchase a full license.","未激活，请刷新启动缓存获取试用许可或购买正式许可。"
 Cannot create new print design,无法创建新的打印设计

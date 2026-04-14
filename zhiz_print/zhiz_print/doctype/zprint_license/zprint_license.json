@@ -10,8 +10,9 @@
     "status",
     "column_break_info",
     "activated_at",
-    "expires_at",
     "last_validated_at",
+    "column_break_expiry",
+    "expires_at",
     "section_break_customer",
     "company_name",
     "column_break_contact",
@@ -23,7 +24,8 @@
     "column_break_site",
     "site_name",
     "section_break_features",
-    "features"
+    "features",
+    "license_hash"
   ],
   "fields": [
     {
@@ -50,7 +52,7 @@
       "fieldtype": "Select",
       "in_list_view": 1,
       "label": "Status",
-      "options": "Active\nExpired\nRevoked",
+      "options": "Unused\nActive\nExpired",
       "read_only": 1
     },
     {
@@ -75,6 +77,10 @@
       "fieldtype": "Datetime",
       "label": "Last Validated At",
       "read_only": 1
+    },
+    {
+      "fieldname": "column_break_expiry",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "section_break_customer",
@@ -141,6 +147,13 @@
       "fieldtype": "Code",
       "label": "Features",
       "options": "JSON",
+      "read_only": 1
+    },
+    {
+      "fieldname": "license_hash",
+      "fieldtype": "Data",
+      "hidden": 1,
+      "label": "License Hash",
       "read_only": 1
     }
   ],
