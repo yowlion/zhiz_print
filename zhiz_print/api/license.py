@@ -286,7 +286,7 @@ def check_license_valid():
             frappe.db.set_value("Zprint License", lic.name, "last_validated_at", now)
             lic.last_validated_at = now
         elif remote_result and not remote_result.get("valid"):
-            # Server explicitly rejected (e.g. locked/expired)
+            # Server explicitly rejected (e.g. locked/expired/not found)
             error = remote_result.get("error", "")
             if "locked" in error.lower():
                 result = {
@@ -308,6 +308,20 @@ def check_license_valid():
                     "expired": True,
                     "expires_at": str(lic.expires_at),
                     "message": "License has been expired by the server.",
+                }
+                _cache_result(result)
+                return (False, result)
+            if "not found" in error.lower():
+                # License deleted from server — delete local and treat as no license
+                frappe.delete_doc("Zprint License", lic.name, force=True)
+                frappe.db.commit()
+                frappe.cache().delete_value(LICENSE_CACHE_KEY)
+                result = {
+                    "valid": False,
+                    "status": "No License",
+                    "plan": None,
+                    "expired": True,
+                    "message": "License no longer exists on server. Please refresh boot cache.",
                 }
                 _cache_result(result)
                 return (False, result)
@@ -592,6 +606,7 @@ def get_license_status():
 
     # Check locked from server (remote check)
     is_locked = False
+    not_found = False
     try:
         remote_result = _call_license_api("validate", {
             "license_key": lic.license_key,
@@ -602,6 +617,8 @@ def get_license_status():
             error = remote_result.get("error", "")
             if "locked" in error.lower():
                 is_locked = True
+            elif "not found" in error.lower():
+                not_found = True
     except Exception:
         pass
 
@@ -611,8 +628,16 @@ def get_license_status():
             "status": "Locked",
             "plan": lic.plan,
             "expires_at": str(lic.expires_at) if lic.expires_at else "",
-            "machine_id": lic.machine_id or get_machine_id(),
+            "machine_id": get_machine_id(),
             "message": "License has been locked. Please contact vendor to unlock.",
+        }
+
+    if not_found:
+        return {
+            "valid": False,
+            "status": "No License",
+            "machine_id": get_machine_id(),
+            "message": "",
         }
 
     # Check expiry
@@ -637,7 +662,7 @@ def get_license_status():
         "expired": False,
         "trial": is_trial,
         "expires_at": str(lic.expires_at),
-        "machine_id": lic.machine_id or get_machine_id(),
+        "machine_id": get_machine_id(),
     }
 
 
@@ -684,6 +709,15 @@ def _sync_license_from_server(lic):
             return
         elif "expired" in error.lower():
             new_status = "Expired"
+        elif "not found" in error.lower():
+            # License deleted from server — delete local record so we can re-request
+            frappe.delete_doc("Zprint License", lic.get("name"), force=True)
+            frappe.db.commit()
+            frappe.cache().delete_value(LICENSE_CACHE_KEY)
+            return
+        elif "machine mismatch" in error.lower():
+            # Machine binding changed — mark invalid
+            new_status = "Expired"
 
         if new_status != lic.get("status"):
             new_hash = _compute_license_hash(
@@ -713,6 +747,15 @@ def get_license_info_for_boot():
     else:
         # Always sync status from server on boot cache refresh
         _sync_license_from_server(licenses[0])
+
+        # After sync, local license may have been deleted (e.g. server deleted it)
+        # Re-check and create trial if needed
+        remaining = frappe.get_all("Zprint License", limit=1)
+        if not remaining:
+            try:
+                create_trial_license()
+            except Exception:
+                pass
 
     valid, info = check_license_valid()
     info["machine_id"] = get_machine_id()
