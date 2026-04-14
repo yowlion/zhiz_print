@@ -303,7 +303,6 @@ class SuperPrintDesigner {
         const mBottom = (this.marginBottom || 0) * PX_PER_MM;
         const mLeft = (this.marginLeft || 0) * PX_PER_MM;
         const mRight = (this.marginRight || 0) * PX_PER_MM;
-        console.log('[SPD] generateDesigner paper:', this.paperWidth, 'x', this.paperHeight, 'mm =>', paperW, 'x', paperH, 'px, margins:', mTop, mRight, mBottom, mLeft, 'px');
 
         let html = '<div id="' + this.designContainerId + '" class="spd-container">';
         // Toolbar
@@ -354,7 +353,7 @@ class SuperPrintDesigner {
                                 '<div class="spd-margin-line" style="top:' + mTop + 'px; left:' + mLeft + 'px; right:' + mRight + 'px; bottom:' + mBottom + 'px;"></div>' +
                                 this.generateHeaderFooterHtml(mTop, mBottom, mLeft, mRight) +
                                 '<div class="spd-table-area" style="position:absolute; top:' + mTop + 'px; left:' + mLeft + 'px; right:' + mRight + 'px; display:flex; justify-content:center;">' +
-                                    '<table class="spd-grid" id="spd-grid" style="width:' + totalWidth + 'px; font-family:\'' + this.fontFamily + '\', sans-serif">' +
+                                    '<table class="spd-grid" id="spd-grid" style="width:' + totalWidth + 'px">' +
                                     this.generateGridHtml() +
                                 '</table>' +
                                 '</div>' +
@@ -1803,115 +1802,6 @@ class SuperPrintDesigner {
     }
 
     bindPropertyEvents() { /* handled in bindEvents */ }
-
-    addCssStyles() {
-        const styleId = 'spd-styles';
-        let style = document.getElementById(styleId);
-        if (style) style.remove();
-        style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .spd-container { display:flex; flex-direction:column; gap:10px; margin-top:15px; }
-            .spd-toolbar { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f8f9fa; border-radius:6px; border:1px solid #dee2e6; flex-wrap:wrap; }
-            .spd-controls { display:flex; align-items:center; gap:5px; }
-            .spd-controls label { margin:0; font-weight:600; font-size:12px; }
-            .spd-actions { display:flex; gap:6px; margin-left:auto; }
-            .spd-main { display:flex; gap:12px; min-height:400px; }
-
-            /* Grid container - gray background + scrolling */
-            .spd-grid-wrap { flex:1; overflow:auto; max-height:600px; border:1px solid #dee2e6; border-radius:6px; background:#e0e0e0; padding:20px; display:flex; justify-content:center; align-items:flex-start; }
-
-            /* Paper preview layer */
-            .spd-paper-preview { }
-            .grid-wrapper { display:flex; flex-direction:column; align-items:flex-start; }
-
-            /* Grid body: row headers on left, paper (with col headers + table) on right */
-            .grid-body { display:flex; flex-direction:row; align-items:flex-start; }
-
-            /* Row headers - aligned with table rows */
-            .row-headers { display:flex; flex-direction:column; flex-shrink:0; }
-            .row-header-cell { background:#e9ecef; border-top:1px solid #dee2e6; border-left:1px solid #dee2e6; border-bottom:1px solid #dee2e6; border-right:none; padding:0 2px; text-align:center; font-size:9px; color:#495057; font-weight:600; cursor:pointer; width:22px; box-sizing:border-box; overflow:hidden; }
-            .row-header-cell:first-child { border-top-left-radius:3px; }
-            .row-header-cell:last-child { border-bottom-left-radius:3px; }
-            .row-header-cell:hover { background:#d0d0d0; }
-            .row-header-cell.row-header-selected { background:#c8e6c9; border-color:#4caf50; }
-            .row-header-cell { position:relative; }
-            .row-type-badge { position:absolute; top:0; left:0; font-size:7px; font-weight:bold; padding:0 2px; border-radius:0 0 2px 0; line-height:1; z-index:2; color:#fff; }
-            .badge-repeat { background:#ff9800; }
-            .badge-data { background:#2196f3; }
-            .row-header-repeat-title { border-left:3px solid #ff9800 !important; }
-            .row-header-data-driven { border-left:3px solid #2196f3 !important; }
-            .spd-row-type-controls { gap:3px; }
-
-            /* Paper - white, no padding, rendered at exact paper dimensions */
-            .spd-paper { background:#fff; box-shadow:0 4px 20px rgba(0,0,0,0.15); position:relative; overflow:visible; box-sizing:border-box; }
-
-            /* Margin dashed line - inside paper, positioned by inline style to margin boundary */
-            .spd-margin-line { position:absolute; border:1px dashed rgba(0,120,215,0.4); pointer-events:none; z-index:1; }
-
-            /* Column headers - above paper */
-            .col-headers { display:flex; flex-shrink:0; }
-            .col-header-cell { background:#e9ecef; border-left:1px solid #dee2e6; border-top:1px solid #dee2e6; border-right:1px solid #dee2e6; padding:2px 0; text-align:center; font-size:9px; color:#495057; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
-            .col-header-cell:first-child { border-top-left-radius:0; }
-            .col-header-cell:last-child { border-top-right-radius:3px; }
-            .col-header-cell:hover { background:#d0d0d0; }
-            .col-header-cell.col-header-selected { background:#c8e6c9; border-color:#4caf50; }
-
-            /* Grid table */
-            .spd-grid { border-collapse:collapse; table-layout:fixed; }
-            .spd-grid td { border:1px solid #dee2e6; cursor:pointer; text-align:center; overflow:hidden; padding:0; position:relative; }
-            .spd-grid td:hover { background:#f0f7ff !important; }
-            .spd-grid td.selected { background:#e3f2fd !important; border:2px solid #2196f3 !important; }
-            .spd-grid tr.row-selected td { background-color:#fff3e0 !important; }
-            .spd-grid td.col-selected { background-color:#e8f5e9 !important; }
-
-            .cell-preview { display:flex; align-items:center; justify-content:center; gap:2px; font-size:8px; color:#999; }
-            .cell-preview i { font-size:10px; }
-            .cell-content { font-size:inherit; padding:2px; word-break:break-all; overflow:hidden; }
-
-            /* Property panel */
-            .spd-props { width:280px; min-width:280px; background:#fff; border:1px solid #ddd; border-radius:6px; padding:10px; overflow-y:auto; max-height:600px; }
-            .spd-props h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid #ddd; font-size:13px; }
-            .spd-props label { display:block; margin:5px 0 2px; font-size:10px; font-weight:600; color:#495057; }
-            .spd-props input,.spd-props select,.spd-props textarea { width:100%; padding:4px 6px; margin-bottom:5px; font-size:11px; }
-
-            /* Property section */
-            .property-section { margin-bottom:8px; border:1px solid #e9ecef; border-radius:4px; overflow:hidden; }
-            .property-section-header { padding:6px 8px; background:#f8f9fa; font-size:10px; font-weight:600; color:#495057; cursor:pointer; display:flex; align-items:center; gap:4px; }
-            .property-section-header i { font-size:10px; }
-
-            .prop-tabs { display:flex; gap:2px; margin-top:8px; }
-            .prop-tab { flex:1; padding:8px; text-align:center; cursor:pointer; font-size:11px; font-weight:600; background:#f8f9fa; border:1px solid #dee2e6; border-radius:6px 6px 0 0; }
-            .prop-tab.active { background:#fff; color:#2196f3; border-bottom-color:#fff; }
-            .prop-tab-contents { border:1px solid #dee2e6; border-radius:0 0 6px 6px; padding:8px; }
-            .prop-tab-content { display:none; }
-            .prop-tab-content.active { display:block; }
-            .css-quick-buttons { display:flex; flex-wrap:wrap; gap:3px; margin:6px 0; }
-            .css-quick-buttons .btn { width:28px; height:28px; padding:0; display:flex; align-items:center; justify-content:center; }
-
-            .layout-controls { display:flex; gap:8px; margin-bottom:6px; }
-            .layout-control-group { flex:1; }
-            .layout-control-group label { font-size:9px; margin-bottom:2px; }
-
-            .number-spinner { display:flex; align-items:center; gap:2px; }
-            .number-spinner .spin-input { width:50px; text-align:center; padding:2px; }
-            .number-spinner .spin-btn { width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; font-size:14px; }
-            .number-spinner-sm .spin-input { width:45px; }
-
-            .color-picker-wrapper { position:relative; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid #ccc; border-radius:3px; cursor:pointer; }
-            .color-picker-wrapper i { position:relative; z-index:1; pointer-events:none; font-size:12px; }
-            .color-picker-wrapper input[type="color"] { position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; border:none; padding:0; }
-
-            .btn-group-wrap { display:flex; align-items:center; gap:3px; }
-            .css-quick-compact .btn-group-wrap .btn { width:28px; height:28px; padding:0; display:flex; align-items:center; justify-content:center; }
-
-            .border-settings .border-width-btn.bw-active { background:#2196f3; color:#fff; }
-            .border-settings .border-side-btn:hover { background:#e3f2fd; }
-
-            .css-editor { font-family:monospace; font-size:10px; }
-        `;
-        document.head.appendChild(style);
-    }
 }
 
 let spd_designer = null;
@@ -1919,9 +1809,8 @@ let spd_designer = null;
 frappe.ui.form.on('Super Print Design', {
     setup(frm) {
         setTimeout(() => {
-            if (frm.page && frm.page.sidebar) {
-                frm.page.sidebar.hide();
-            }
+            if (frm.page.sidebar) frm.page.sidebar.hide();
+            $('.page-head').hide();
         }, 300);
     },
 
@@ -1943,9 +1832,8 @@ frappe.ui.form.on('Super Print Design', {
         spd_designer.loadExistingDesign(serverData);
 
         setTimeout(() => {
-            if (frm.page && frm.page.sidebar) {
-                frm.page.sidebar.hide();
-            }
+            if (frm.page.sidebar) frm.page.sidebar.hide();
+            $('.page-head').hide();
             // Limit header/footer Code field height
             const headerFooterFields = [
                 'page_header_left', 'page_header_center', 'page_header_right',
@@ -1983,7 +1871,6 @@ frappe.ui.form.on('Super Print Design', {
             refresh_field('design_html');
             setTimeout(() => {
                 if (spd_designer) {
-                    spd_designer.addCssStyles();
                     spd_designer.bindEvents();
                 }
             }, 100);
@@ -2002,7 +1889,7 @@ frappe.ui.form.on('Super Print Design', {
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {
-                if (spd_designer) { spd_designer.addCssStyles(); spd_designer.bindEvents(); }
+                if (spd_designer) { spd_designer.bindEvents(); }
             }, 100);
         }
     },
@@ -2014,7 +1901,7 @@ frappe.ui.form.on('Super Print Design', {
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {
-                if (spd_designer) { spd_designer.addCssStyles(); spd_designer.bindEvents(); }
+                if (spd_designer) { spd_designer.bindEvents(); }
             }, 100);
         }
     },
