@@ -34,7 +34,17 @@ class SuperPrintDesign(frappe.model.document.Document):
             ))
 
     def validate(self):
+        self.check_license_on_save()
         self.ensure_full_coverage()
+
+    def check_license_on_save(self):
+        """Check license before saving design (both new and existing)."""
+        from zhiz_print.api.license import check_license_valid
+        valid, info = check_license_valid()
+        if not valid:
+            frappe.throw(_("License expired: {0}").format(
+                info.get("message", "License expired")
+            ))
         self.validate_cells()
 
     def ensure_full_coverage(self):

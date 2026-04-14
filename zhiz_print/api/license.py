@@ -60,14 +60,15 @@ def get_machine_id():
 
 # ==================== Local License Integrity ====================
 
-def _compute_license_hash(license_key, plan, status, expires_at, machine_id):
+def _compute_license_hash(license_key, plan, status, expires_at, machine_id, last_validated_at=None):
     """Compute HMAC hash of local license key fields."""
-    payload = "{license_key}|{plan}|{status}|{expires_at}|{machine_id}".format(
+    payload = "{license_key}|{plan}|{status}|{expires_at}|{machine_id}|{last_validated_at}".format(
         license_key=license_key or "",
         plan=plan or "",
         status=status or "",
         expires_at=str(expires_at) if expires_at else "",
         machine_id=machine_id or "",
+        last_validated_at=str(last_validated_at) if last_validated_at else "",
     )
     return hmac.new(_LOCAL_SIGN_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
@@ -75,7 +76,8 @@ def _compute_license_hash(license_key, plan, status, expires_at, machine_id):
 def _sign_local_license(doc):
     """Sign a local Zprint License document."""
     doc.license_hash = _compute_license_hash(
-        doc.license_key, doc.plan, doc.status, doc.expires_at, doc.machine_id
+        doc.license_key, doc.plan, doc.status, doc.expires_at, doc.machine_id,
+        getattr(doc, 'last_validated_at', None)
     )
 
 
@@ -86,6 +88,7 @@ def _verify_local_license(lic):
     expected = _compute_license_hash(
         lic.get("license_key"), lic.get("plan"), lic.get("status"),
         lic.get("expires_at"), lic.get("machine_id"),
+        lic.get("last_validated_at"),
     )
     return hmac.compare_digest(expected, lic.get("license_hash", ""))
 
@@ -282,8 +285,15 @@ def check_license_valid():
         })
 
         if remote_result and remote_result.get("valid"):
-            # Update last_validated_at
-            frappe.db.set_value("Zprint License", lic.name, "last_validated_at", now)
+            # Update last_validated_at and recalculate hash
+            new_hash = _compute_license_hash(
+                lic.license_key, lic.plan, lic.status, lic.expires_at,
+                lic.machine_id, now
+            )
+            frappe.db.set_value("Zprint License", lic.name, {
+                "last_validated_at": now,
+                "license_hash": new_hash,
+            })
             lic.last_validated_at = now
         elif remote_result and not remote_result.get("valid"):
             # Server explicitly rejected (e.g. locked/expired/not found)
@@ -369,7 +379,7 @@ def _update_license_status(license_name, status):
         lic = frappe.get_all(
             "Zprint License",
             filters={"name": license_name},
-            fields=["name", "license_key", "plan", "status", "expires_at", "machine_id"],
+            fields=["name", "license_key", "plan", "status", "expires_at", "machine_id", "last_validated_at"],
             limit=1,
         )
         if not lic:
@@ -377,7 +387,8 @@ def _update_license_status(license_name, status):
         lic = lic[0]
         lic["status"] = status
         new_hash = _compute_license_hash(
-            lic["license_key"], lic["plan"], status, lic["expires_at"], lic["machine_id"]
+            lic["license_key"], lic["plan"], status, lic["expires_at"], lic["machine_id"],
+            lic["last_validated_at"]
         )
         frappe.db.set_value("Zprint License", license_name, {
             "status": status,
@@ -580,7 +591,7 @@ def get_license_status():
     """Get current license status for frontend display (real-time, bypasses cache)."""
     licenses = frappe.get_all(
         "Zprint License",
-        fields=["name", "license_key", "plan", "status", "expires_at", "machine_id", "license_hash"],
+        fields=["name", "license_key", "plan", "status", "expires_at", "machine_id", "license_hash", "last_validated_at"],
         order_by="activated_at desc",
         limit=1,
     )
@@ -687,13 +698,15 @@ def _sync_license_from_server(lic):
     if result.get("valid"):
         new_status = "Active"
         new_expires = result.get("expires_at") or lic.get("expires_at")
+        now = frappe.utils.now_datetime()
         new_hash = _compute_license_hash(
-            lic.get("license_key"), lic.get("plan"), new_status, new_expires, lic.get("machine_id")
+            lic.get("license_key"), lic.get("plan"), new_status, new_expires,
+            lic.get("machine_id"), now
         )
         update_data = {
             "status": new_status,
             "license_hash": new_hash,
-            "last_validated_at": frappe.utils.now_datetime(),
+            "last_validated_at": now,
         }
         if result.get("expires_at"):
             update_data["expires_at"] = result.get("expires_at")
@@ -721,7 +734,8 @@ def _sync_license_from_server(lic):
 
         if new_status != lic.get("status"):
             new_hash = _compute_license_hash(
-                lic.get("license_key"), lic.get("plan"), new_status, lic.get("expires_at"), lic.get("machine_id")
+                lic.get("license_key"), lic.get("plan"), new_status, lic.get("expires_at"),
+                lic.get("machine_id"), lic.get("last_validated_at")
             )
             frappe.db.set_value("Zprint License", lic.get("name"), {
                 "status": new_status,

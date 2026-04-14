@@ -10,6 +10,20 @@ import json
 import re
 
 
+def _check_license():
+    """Check license validity before allowing print operations.
+
+    Uses check_license_valid() which has 24h cache — only validates remotely
+    once per day, uses cached result otherwise. Allows 7-day offline grace.
+    """
+    from zhiz_print.api.license import check_license_valid
+    valid, info = check_license_valid()
+    if not valid:
+        frappe.throw(_("License expired: {0}").format(
+            info.get("message", "Please activate a license.")
+        ))
+
+
 @frappe.whitelist()
 def get_available_designs(doctype, docname=None):
 	"""Get list of available print designs for a DocType"""
@@ -79,6 +93,7 @@ def get_design_parameters(design_name):
 @frappe.whitelist()
 def render_print_preview(doctype, docname, design_name, params=None):
 	"""Render print preview HTML"""
+	_check_license()
 	if isinstance(params, str):
 		try:
 			params = json.loads(params)
@@ -111,6 +126,7 @@ def render_print_preview(doctype, docname, design_name, params=None):
 @frappe.whitelist()
 def record_print_log(doctype, docname, design_name, params=None, preview_html=None, export_type=None):
 	"""Record print log"""
+	_check_license()
 	if isinstance(params, str):
 		try:
 			params = json.loads(params)
@@ -231,6 +247,7 @@ def _pdf_response(pdf_bytes, filename):
 @frappe.whitelist()
 def generate_print_pdf(doctype, docname, design_name, params=None):
 	"""Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting."""
+	_check_license()
 	engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
 	if engine_mode == "WeasyPrint":
 		return _generate_print_pdf_weasyprint(doctype, docname, design_name, params)
@@ -474,6 +491,7 @@ def _generate_print_pdf_chromium(doctype, docname, design_name, params=None):
 @frappe.whitelist()
 def get_print_log_count(doctype, docname, design_name=None):
 	"""Get print count"""
+	_check_license()
 	filters = {
 		"reference_doctype": doctype,
 		"reference_name": docname,
@@ -487,6 +505,7 @@ def get_print_log_count(doctype, docname, design_name=None):
 @frappe.whitelist()
 def get_print_log_list(doctype, docname):
 	"""Get print log list"""
+	_check_license()
 	filters = {"reference_doctype": doctype, "reference_name": docname}
 	total_count = frappe.db.count("Super Print Log", filters=filters)
 	logs = frappe.get_all("Super Print Log",
@@ -518,6 +537,7 @@ def save_design(design_name, rows, columns, row_styles, col_styles, font_family,
     Frontend sends only non-merged cells. Backend validate_cells() will
     automatically generate merge markers for covered positions.
     """
+    _check_license()
     if isinstance(row_styles, str):
         row_styles = json.loads(row_styles)
     if isinstance(col_styles, str):
@@ -580,6 +600,7 @@ def load_design_data(design_name):
     Returns row_styles, col_styles, headers/footers, and a flat cell list
     with merge info resolved. Frontend can directly build its grid from this.
     """
+    _check_license()
     doc = frappe.get_doc("Super Print Design", design_name)
 
     row_styles = json.loads(doc.row_styles) if doc.row_styles else {}
@@ -1170,6 +1191,7 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 @frappe.whitelist()
 def export_print_excel(doctype, docname, design_name=None, params=None):
 	"""Export print design data to Excel file download."""
+	_check_license()
 	from io import BytesIO
 	from frappe.utils.xlsxutils import make_xlsx
 	from bs4 import BeautifulSoup
