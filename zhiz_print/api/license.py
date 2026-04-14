@@ -15,14 +15,14 @@ import uuid
 # ==================== Configuration ====================
 
 # License server address (hardcoded, will be compiled into .so)
-LICENSE_SERVER = "https://gdzhiz.com:51818"
+LICENSE_SERVER = "http://gdzhiz.com:51818"
 
 # Product code registered on the license server
 PRODUCT_CODE = "zhiz_print"
 
 # API secret shared with license server (will be compiled into .so)
 # This will be replaced with the actual secret after Zlic Product is created on server
-API_SECRET = "zhiz_print_secret_placeholder"
+API_SECRET = "1e4266377127627a8782327e4d7054bcf8862e6ebd94c3885d14decfcf4ef21d"
 
 # Cache key for license validation result
 LICENSE_CACHE_KEY = "zhiz_print:license_status"
