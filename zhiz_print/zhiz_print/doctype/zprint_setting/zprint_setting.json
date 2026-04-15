@@ -18,7 +18,8 @@
     "allow_export_excel",
     "section_break_license",
     "license_info",
-    "license_key_input"
+    "license_key_input",
+    "contact_info"
   ],
   "fields": [
     {
@@ -109,6 +110,12 @@
       "fieldtype": "Data",
       "label": "Current License",
       "read_only": 1
+    },
+    {
+      "fieldname": "contact_info",
+      "fieldtype": "HTML",
+      "label": "Contact Info",
+      "options": "<div id=\"contact-info-container\"></div>"
     }
   ],
   "issingle": 1,

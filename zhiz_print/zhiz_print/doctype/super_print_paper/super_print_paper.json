@@ -25,6 +25,7 @@
       "fieldname": "paper_name",
       "fieldtype": "Data",
       "in_list_view": 1,
+      "allow_in_quick_entry": 1,
       "label": "Paper Name",
       "reqd": 1,
       "unique": 1
@@ -38,6 +39,7 @@
       "fieldname": "enabled",
       "fieldtype": "Check",
       "in_list_view": 1,
+      "allow_in_quick_entry": 1,
       "label": "Enabled"
     },
     {
@@ -49,6 +51,7 @@
       "fieldname": "width",
       "fieldtype": "Float",
       "in_list_view": 1,
+      "allow_in_quick_entry": 1,
       "label": "Width (mm)",
       "reqd": 1
     },
@@ -60,6 +63,7 @@
       "fieldname": "height",
       "fieldtype": "Float",
       "in_list_view": 1,
+      "allow_in_quick_entry": 1,
       "label": "Height (mm)",
       "reqd": 1
     },
@@ -69,15 +73,17 @@
       "label": "Margins (mm)"
     },
     {
-      "default": "10",
+      "default": "3",
       "fieldname": "margin_top",
       "fieldtype": "Int",
+      "allow_in_quick_entry": 1,
       "label": "Top Margin"
     },
     {
-      "default": "15",
+      "default": "3",
       "fieldname": "margin_left",
       "fieldtype": "Int",
+      "allow_in_quick_entry": 1,
       "label": "Left Margin"
     },
     {
@@ -85,15 +91,17 @@
       "fieldtype": "Column Break"
     },
     {
-      "default": "10",
+      "default": "3",
       "fieldname": "margin_bottom",
       "fieldtype": "Int",
+      "allow_in_quick_entry": 1,
       "label": "Bottom Margin"
     },
     {
-      "default": "15",
+      "default": "3",
       "fieldname": "margin_right",
       "fieldtype": "Int",
+      "allow_in_quick_entry": 1,
       "label": "Right Margin"
     }
   ],
@@ -105,6 +113,7 @@
   "name": "Super Print Paper",
   "naming_rule": "By fieldname",
   "owner": "Administrator",
+  "quick_entry": 1,
   "permissions": [
     {
       "create": 1,
