@@ -12,33 +12,16 @@ import os
 import time
 import uuid
 
-# ==================== Configuration ====================
-
-# License server address (hardcoded, will be compiled into .so)
 LICENSE_SERVER = "http://gdzhiz.com:51818"
-
-# Product code registered on the license server
 PRODUCT_CODE = "zhiz_print"
-
-# API secret shared with license server (will be compiled into .so)
-# This will be replaced with the actual secret after Zlic Product is created on server
 API_SECRET = "1e4266377127627a8782327e4d7054bcf8862e6ebd94c3885d14decfcf4ef21d"
-
-# Cache key for license validation result
 LICENSE_CACHE_KEY = "zhiz_print:license_status"
-LICENSE_CACHE_TTL = 86400  # 24 hours
-
-# Maximum offline days before license is considered expired
+LICENSE_CACHE_TTL = 86400
 MAX_OFFLINE_DAYS = 7
-
-# Local license signing key (derived from API_SECRET, will be compiled into .so)
 _LOCAL_SIGN_SECRET = hashlib.sha256((API_SECRET + ":local_license_sign:v1").encode()).hexdigest()
 
 
-# ==================== Company Name ====================
-
 def _get_company_name():
-    """Get the default company name from system settings."""
     company = frappe.defaults.get_user_default("company")
     if not company:
         companies = frappe.get_all("Company", limit=1)
@@ -47,33 +30,20 @@ def _get_company_name():
     return company or ""
 
 
-# ==================== Machine ID ====================
-
 def get_machine_id():
-    """Generate a unique machine fingerprint based on hardware info."""
     parts = []
-
-    # Try motherboard UUID
     try:
         with open("/sys/class/dmi/id/board_uuid", "r") as f:
             parts.append(f.read().strip())
     except Exception:
         pass
-
-    # MAC address
     parts.append(hex(uuid.getnode()))
-
-    # Hostname
     import socket
     parts.append(socket.gethostname())
-
     return hashlib.sha256(":".join(parts).encode()).hexdigest()[:32]
 
 
-# ==================== Local License Integrity ====================
-
 def _compute_license_hash(license_key, plan, status, expires_at, machine_id, last_validated_at=None):
-    """Compute HMAC hash of local license key fields."""
     payload = "{license_key}|{plan}|{status}|{expires_at}|{machine_id}|{last_validated_at}".format(
         license_key=license_key or "",
         plan=plan or "",
@@ -86,7 +56,6 @@ def _compute_license_hash(license_key, plan, status, expires_at, machine_id, las
 
 
 def _sign_local_license(doc):
-    """Sign a local Zprint License document."""
     doc.license_hash = _compute_license_hash(
         doc.license_key, doc.plan, doc.status, doc.expires_at, doc.machine_id,
         getattr(doc, 'last_validated_at', None)
@@ -94,7 +63,6 @@ def _sign_local_license(doc):
 
 
 def _verify_local_license(lic):
-    """Verify local license integrity. Returns True if valid."""
     if not lic.get("license_hash"):
         return False
     expected = _compute_license_hash(
@@ -105,25 +73,18 @@ def _verify_local_license(lic):
     return hmac.compare_digest(expected, lic.get("license_hash", ""))
 
 
-# ==================== Local Cache Signing ====================
-
 def sign_data(data):
-    """Sign data with HMAC-SHA256 for local cache integrity."""
     secret = "zhiz_print_lic_2026_" + hashlib.md5(b"zhiz_print_salt").hexdigest()[:8]
     payload = json.dumps(data, sort_keys=True, separators=(",", ":"))
     return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 
 def verify_signature(data, signature):
-    """Verify local HMAC signature."""
     expected = sign_data(data)
     return hmac.compare_digest(expected, signature)
 
 
-# ==================== Encrypted Communication with License Server ====================
-
 def _sign_request(product_code, timestamp, nonce, body_str, secret):
-    """Sign request with HMAC-SHA256."""
     message = "{product_code}{timestamp}{nonce}{body}".format(
         product_code=product_code,
         timestamp=timestamp,
@@ -134,12 +95,10 @@ def _sign_request(product_code, timestamp, nonce, body_str, secret):
 
 
 def _build_request(body_dict):
-    """Build a signed request payload for the license server."""
     timestamp = str(int(time.time()))
     nonce = os.urandom(8).hex()
     body_str = json.dumps(body_dict, separators=(",", ":"), ensure_ascii=False)
     signature = _sign_request(PRODUCT_CODE, timestamp, nonce, body_str, API_SECRET)
-
     return {
         "product_code": PRODUCT_CODE,
         "timestamp": timestamp,
@@ -150,16 +109,12 @@ def _build_request(body_dict):
 
 
 def _decrypt_response(encrypted_data):
-    """Decrypt response from the license server."""
     from base64 import b64decode
     from Crypto.Cipher import AES
     from Crypto.Util.Padding import unpad
-
     ct_b64 = encrypted_data.get("encrypted", "")
     iv_b64 = encrypted_data.get("iv", "")
     signature = encrypted_data.get("signature", "")
-
-    # Verify HMAC signature
     expected_sig = hmac.new(
         API_SECRET.encode(),
         (ct_b64 + iv_b64).encode("ascii"),
@@ -167,67 +122,36 @@ def _decrypt_response(encrypted_data):
     ).hexdigest()
     if not hmac.compare_digest(expected_sig, signature):
         raise ValueError("Response signature verification failed")
-
-    # Decrypt with AES-256-CBC
     key = hashlib.sha256(API_SECRET.encode()).digest()
     iv = b64decode(iv_b64)
     ciphertext = b64decode(ct_b64)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-
     return json.loads(plaintext.decode("utf-8"))
 
 
 def _call_license_api(endpoint, body_dict):
-    """Call the license server API with encrypted communication.
-
-    Args:
-        endpoint: API method name (e.g. "validate", "activate")
-        body_dict: Request body dict
-
-    Returns:
-        Decrypted response dict, or None on failure
-
-    Raises:
-        Exception on network errors (for offline detection)
-    """
     import requests
-
     request_payload = _build_request(body_dict)
     url = "{0}/api/method/zhiz_licser.api.license_api.{1}".format(LICENSE_SERVER, endpoint)
-
     response = requests.post(url, json=request_payload, timeout=10)
-
     if response.status_code == 200:
         data = response.json()
-        # Frappe wraps whitelisted method response in {"message": ...}
         if "message" in data:
             data = data["message"]
-        # If response has encrypted field, decrypt it
         if isinstance(data, dict) and "encrypted" in data and "iv" in data:
             return _decrypt_response(data)
-        # Fallback: unencrypted response (backward compatible)
         return data
-
     return None
 
 
-# ==================== Core Validation ====================
-
 def check_license_valid():
-    """Core license validation function.
-
-    Returns:
-        tuple: (is_valid: bool, license_info: dict)
-    """
-    # Step 1: Check cache (validates once per day)
     cached = frappe.cache().get_value(LICENSE_CACHE_KEY)
     if cached:
         if verify_signature(cached.get("data", {}), cached.get("signature", "")):
             data = cached["data"]
             return (data.get("valid", False), data)
 
-    # Step 2: Load license from database
     licenses = frappe.get_all(
         "Zprint License",
         filters={"status": "Active"},
@@ -251,7 +175,6 @@ def check_license_valid():
 
     lic = licenses[0]
 
-    # Step 2.1: Verify local license integrity
     if not _verify_local_license(lic):
         frappe.db.set_value("Zprint License", lic.name, "status", "Expired")
         result = {
@@ -264,7 +187,6 @@ def check_license_valid():
         _cache_result(result)
         return (False, result)
 
-    # Step 3: Local validation — check expiry
     now = frappe.utils.now_datetime()
     expires_at = frappe.utils.get_datetime(lic.expires_at) if lic.expires_at else now
 
@@ -283,7 +205,6 @@ def check_license_valid():
         _cache_result(result)
         return (False, result)
 
-    # Step 4: Remote validation attempt
     last_validated = frappe.utils.get_datetime(lic.last_validated_at) if lic.last_validated_at else None
     offline_days = 0
     if last_validated:
@@ -298,7 +219,6 @@ def check_license_valid():
         })
 
         if remote_result and remote_result.get("valid"):
-            # Update last_validated_at and recalculate hash
             new_hash = _compute_license_hash(
                 lic.license_key, lic.plan, lic.status, lic.expires_at,
                 lic.machine_id, now
@@ -309,7 +229,6 @@ def check_license_valid():
             })
             lic.last_validated_at = now
         elif remote_result and not remote_result.get("valid"):
-            # Server explicitly rejected (e.g. locked/expired/not found)
             error = remote_result.get("error", "")
             if "locked" in error.lower():
                 result = {
@@ -335,7 +254,6 @@ def check_license_valid():
                 _cache_result(result)
                 return (False, result)
             if "not found" in error.lower():
-                # License deleted from server — delete local and treat as no license
                 frappe.delete_doc("Zprint License", lic.name, force=True)
                 frappe.db.commit()
                 frappe.cache().delete_value(LICENSE_CACHE_KEY)
@@ -349,7 +267,6 @@ def check_license_valid():
                 _cache_result(result)
                 return (False, result)
     except Exception:
-        # Network error — allow offline usage up to MAX_OFFLINE_DAYS
         if offline_days > MAX_OFFLINE_DAYS:
             result = {
                 "valid": False,
@@ -364,7 +281,6 @@ def check_license_valid():
             _cache_result(result)
             return (False, result)
 
-    # Step 5: All checks passed
     result = {
         "valid": True,
         "status": lic.status,
@@ -378,7 +294,6 @@ def check_license_valid():
 
 
 def _cache_result(result):
-    """Cache license validation result with signature."""
     cached = {
         "data": result,
         "signature": sign_data(result),
@@ -387,7 +302,6 @@ def _cache_result(result):
 
 
 def _update_license_status(license_name, status):
-    """Update license status in database with hash recalculation."""
     try:
         lic = frappe.get_all(
             "Zprint License",
@@ -411,14 +325,7 @@ def _update_license_status(license_name, status):
         pass
 
 
-# ==================== Trial License ====================
-
 def create_trial_license():
-    """Request a trial license from the server (once per machine).
-
-    The server enforces one trial per machine_id per product.
-    If already issued, returns the existing license with remaining time.
-    """
     existing = frappe.get_all("Zprint License", limit=1)
     if existing:
         return existing[0]
@@ -426,7 +333,6 @@ def create_trial_license():
     machine_id = get_machine_id()
     site_name = frappe.local.site if hasattr(frappe.local, "site") else ""
 
-    # Request trial from server
     try:
         result = _call_license_api("request_trial", {
             "product_code": PRODUCT_CODE,
@@ -443,14 +349,12 @@ def create_trial_license():
         frappe.log_error("Trial rejected: {0}".format(error), "Trial License Denied")
         return None
 
-    # Server issued or reissued trial — create local record with server data
     license_key = result.get("license_key")
     expires_at = result.get("expires_at")
     server_status = result.get("status", "Active")
     now = frappe.utils.now_datetime()
     expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 30)
 
-    # If server says expired, mark accordingly
     if server_status == "Expired" or (expires_at and frappe.utils.get_datetime(expires_at) < now):
         status = "Expired"
     else:
@@ -475,12 +379,10 @@ def create_trial_license():
 
 
 def _sync_trial_from_server(license_key, machine_id, site_name):
-    """Sync an existing server-issued trial to local DB if not already present."""
     existing = frappe.get_all("Zprint License", filters={"license_key": license_key}, limit=1)
     if existing:
         return
 
-    # Get details from server
     try:
         result = _call_license_api("get_license_info", {"license_key": license_key})
     except Exception:
@@ -514,14 +416,8 @@ def _sync_trial_from_server(license_key, machine_id, site_name):
     frappe.db.commit()
 
 
-# ==================== Activation ====================
-
 @frappe.whitelist()
 def activate_license(license_key):
-    """Activate a license key on this server.
-
-    Calls the license server to bind the machine, then creates a local record.
-    """
     frappe.only_for("System Manager")
 
     if not license_key:
@@ -530,7 +426,6 @@ def activate_license(license_key):
     license_key = license_key.strip()
     machine_id = get_machine_id()
 
-    # Check if this license is already activated on this machine
     existing = frappe.get_all(
         "Zprint License",
         filters={"license_key": license_key, "machine_id": machine_id, "status": "Active"},
@@ -542,7 +437,6 @@ def activate_license(license_key):
     if len(license_key) < 16:
         frappe.throw("Invalid license key format")
 
-    # Remote activation required — no local fallback
     try:
         result = _call_license_api("activate", {
             "license_key": license_key,
@@ -561,7 +455,6 @@ def activate_license(license_key):
     remote_expires = result.get("expires_at")
     remote_plan = result.get("plan", "Standard")
 
-    # Expire any existing trial license
     trials = frappe.get_all(
         "Zprint License",
         filters={"plan": "Trial", "status": "Active"},
@@ -569,7 +462,6 @@ def activate_license(license_key):
     for t in trials:
         _update_license_status(t.name, "Expired")
 
-    # Create local license record with HMAC signature
     now = frappe.utils.now_datetime()
     expires = frappe.utils.get_datetime(remote_expires) if remote_expires else frappe.utils.add_days(now, 365)
 
@@ -588,7 +480,6 @@ def activate_license(license_key):
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
 
-    # Clear cached license status
     frappe.cache().delete_value(LICENSE_CACHE_KEY)
 
     return {
@@ -600,11 +491,8 @@ def activate_license(license_key):
     }
 
 
-# ==================== Status Queries ====================
-
 @frappe.whitelist()
 def get_license_status():
-    """Get current license status for frontend display (real-time, bypasses cache)."""
     licenses = frappe.get_all(
         "Zprint License",
         fields=["name", "license_key", "plan", "status", "expires_at", "machine_id", "license_hash", "last_validated_at"],
@@ -622,7 +510,6 @@ def get_license_status():
 
     lic = licenses[0]
 
-    # Verify integrity
     if not _verify_local_license(lic):
         return {
             "valid": False,
@@ -631,7 +518,6 @@ def get_license_status():
             "message": "License integrity check failed.",
         }
 
-    # Check locked from server (remote check)
     is_locked = False
     not_found = False
     try:
@@ -668,7 +554,6 @@ def get_license_status():
             "message": "",
         }
 
-    # Check expiry
     now = frappe.utils.now_datetime()
     expires_at = frappe.utils.get_datetime(lic.expires_at) if lic.expires_at else now
 
@@ -695,7 +580,6 @@ def get_license_status():
 
 
 def _sync_license_from_server(lic):
-    """Sync local license status from server. Used when local status is not Active."""
     if not lic.get("license_key"):
         return
 
@@ -712,7 +596,6 @@ def _sync_license_from_server(lic):
     if not result:
         return
 
-    # Server says valid — restore to Active
     if result.get("valid"):
         new_status = "Active"
         new_expires = result.get("expires_at") or lic.get("expires_at")
@@ -732,22 +615,18 @@ def _sync_license_from_server(lic):
         frappe.db.commit()
         frappe.cache().delete_value(LICENSE_CACHE_KEY)
     else:
-        # Server says invalid — sync status
         error = result.get("error", "")
         new_status = lic.get("status")
         if "locked" in error.lower():
-            # Keep local Active, server controls lock state
             return
         elif "expired" in error.lower():
             new_status = "Expired"
         elif "not found" in error.lower():
-            # License deleted from server — delete local record so we can re-request
             frappe.delete_doc("Zprint License", lic.get("name"), force=True)
             frappe.db.commit()
             frappe.cache().delete_value(LICENSE_CACHE_KEY)
             return
         elif "machine mismatch" in error.lower():
-            # Machine binding changed — mark invalid
             new_status = "Expired"
 
         if new_status != lic.get("status"):
@@ -764,7 +643,6 @@ def _sync_license_from_server(lic):
 
 
 def get_license_info_for_boot():
-    """Get license info to inject into boot settings."""
     licenses = frappe.get_all(
         "Zprint License",
         fields=["name", "license_key", "plan", "status", "expires_at", "machine_id"],
@@ -777,11 +655,7 @@ def get_license_info_for_boot():
         except Exception:
             pass
     else:
-        # Always sync status from server on boot cache refresh
         _sync_license_from_server(licenses[0])
-
-        # After sync, local license may have been deleted (e.g. server deleted it)
-        # Re-check and create trial if needed
         remaining = frappe.get_all("Zprint License", limit=1)
         if not remaining:
             try:
