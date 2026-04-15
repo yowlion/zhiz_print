@@ -294,6 +294,7 @@ def check_license_valid():
             "license_key": lic.license_key,
             "machine_id": get_machine_id(),
             "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
+            "company_name": _get_company_name(),
         })
 
         if remote_result and remote_result.get("valid"):
@@ -431,6 +432,7 @@ def create_trial_license():
             "product_code": PRODUCT_CODE,
             "machine_id": machine_id,
             "site_name": site_name,
+            "company_name": _get_company_name(),
         })
     except Exception as e:
         frappe.log_error(str(e), "Trial license request failed")
@@ -546,6 +548,7 @@ def activate_license(license_key):
             "license_key": license_key,
             "machine_id": machine_id,
             "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
+            "company_name": _get_company_name(),
         })
     except Exception as e:
         frappe.log_error(str(e), "License activation network error")
@@ -636,6 +639,7 @@ def get_license_status():
             "license_key": lic.license_key,
             "machine_id": get_machine_id(),
             "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
+            "company_name": _get_company_name(),
         })
         if remote_result and not remote_result.get("valid"):
             error = remote_result.get("error", "")
@@ -700,6 +704,7 @@ def _sync_license_from_server(lic):
             "license_key": lic.get("license_key"),
             "machine_id": get_machine_id(),
             "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
+            "company_name": _get_company_name(),
         })
     except Exception:
         return
