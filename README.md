@@ -26,14 +26,33 @@
 | Super Print Enabled Doctype | 子表 | 启用打印的单据类型 |
 | Zprint Setting | 单文档 | 打印设计器全局设置 |
 
+## 支持环境
+
+### 硬件架构
+
+| 架构 | 状态 |
+|------|------|
+| x86_64 (amd64) | 已编译 |
+| aarch64 (arm64) | 已编译 |
+
+### Python 版本
+
+| 版本 | x86_64 | aarch64 |
+|------|--------|---------|
+| Python 3.10 | .so | - |
+| Python 3.11 | .so | .so |
+| Python 3.12 | .so | - |
+
+Python 运行时自动加载匹配当前版本的 `.so` 文件，无需额外配置。
+
 ## 安装
 
 ```bash
 # 进入 bench 目录
 cd /home/frappe/frappe-bench
 
-# 获取 app
-bench get-app zhiz_print <仓库地址>
+# 克隆并指定目录名（仓库含编译产物，目录名必须为 zhiz_print）
+git clone git@gitee.com:gdzhiz/zhiz_print-dist.git apps/zhiz_print
 
 # 安装到站点
 bench --site <site-name> install-app zhiz_print

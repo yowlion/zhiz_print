@@ -26,11 +26,33 @@ A custom print template designer for Frappe/ERPNext, featuring visual grid-based
 | Super Print Enabled Doctype | Child Table | Enabled doctype filter |
 | Zprint Setting | Single Doc | Global print designer settings |
 
+## Supported Environments
+
+### Hardware Architecture
+
+| Architecture | Status |
+|--------------|--------|
+| x86_64 (amd64) | Compiled |
+| aarch64 (arm64) | Compiled |
+
+### Python Versions
+
+| Version | x86_64 | aarch64 |
+|---------|--------|---------|
+| Python 3.10 | .so | - |
+| Python 3.11 | .so | .so |
+| Python 3.12 | .so | - |
+
+Python automatically loads the `.so` file matching the current version at runtime. No additional configuration needed.
+
 ## Installation
 
 ```bash
 cd /home/frappe/frappe-bench
-bench get-app zhiz_print <repo-url>
+
+# Clone with correct directory name (repo contains compiled artifacts, directory must be zhiz_print)
+git clone git@gitee.com:gdzhiz/zhiz_print-dist.git apps/zhiz_print
+
 bench --site <site-name> install-app zhiz_print
 ```
 

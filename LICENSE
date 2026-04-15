@@ -1,0 +1,231 @@
+Zhiz Print Software License Agreement
+Version: 1.0
+Effective Date: 2026-04-15
+
+IMPORTANT — READ CAREFULLY: BY DOWNLOADING, INSTALLING, OR USING THIS SOFTWARE,
+YOU AGREE TO BE BOUND BY THE TERMS OF THIS LICENSE AGREEMENT. IF YOU DO NOT AGREE
+TO ALL OF THE TERMS, DO NOT DOWNLOAD, INSTALL, OR USE THIS SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+ZHIZ PRINT SOFTWARE LICENSE AGREEMENT
+
+This License Agreement ("Agreement") is a legal agreement between you, either
+an individual or a single entity ("Licensee"), and Guangde Zhizhao Technology
+Co., Ltd. ("广德智兆科技有限公司", hereinafter "Licensor"), for the software
+product identified above, including any associated media, printed materials, and
+"online" or electronic documentation (collectively, the "Software").
+
+By exercising your rights to the Software, you agree to be bound by the terms of
+this Agreement. If you do not agree to the terms of this Agreement, you may not
+install or use the Software.
+
+ARTICLE 1 — INTELLECTUAL PROPERTY RIGHTS
+
+1.1 The Software and all intellectual property rights therein, including but not
+    limited to copyrights, patents, trade secrets, trademarks, and any other
+    proprietary rights, are and shall remain the exclusive property of Guangde
+    Zhizhao Technology Co., Ltd. (广德智兆科技有限公司).
+
+1.2 The Software is protected by applicable intellectual property laws and
+    international treaties. This Agreement does not transfer any ownership of
+    the Software or any intellectual property rights to the Licensee.
+
+1.3 The Software contains compiled binary files (.so), obfuscated JavaScript
+    code, and other technical protection measures designed to protect the
+    Licensor's proprietary information and trade secrets.
+
+ARTICLE 2 — GRANT OF LICENSE
+
+2.1 Subject to the terms and conditions of this Agreement and upon payment of
+    the applicable license fees (if any), Licensor grants to Licensee a
+    non-exclusive, non-transferable, revocable, limited license to:
+
+    (a) Download the Software from the designated repository;
+    (b) Install the Software on a single Frappe/ERPNext instance owned or
+        controlled by the Licensee;
+    (c) Use the Software solely for the Licensee's internal business operations.
+
+2.2 The license granted herein is limited to the specific number of sites,
+    users, or usage scope as defined in the applicable subscription plan or
+    purchase order.
+
+ARTICLE 3 — LICENSE ACTIVATION AND VERIFICATION
+
+3.1 The Software requires a valid license key or subscription activation to
+    function. The Software may periodically connect to Licensor's license
+    verification servers to validate the license status.
+
+3.2 The Software includes technical measures to verify license compliance.
+    Licensee acknowledges and agrees that such verification is a legitimate
+    feature of the Software and does not constitute unauthorized monitoring.
+
+3.3 If the license expires or is terminated, the Software may cease to function
+    or operate with limited functionality until a valid license is restored.
+
+ARTICLE 4 — RESTRICTIONS
+
+4.1 The Licensee shall NOT:
+
+    (a) Reverse engineer, decompile, disassemble, or otherwise attempt to derive
+        the source code of the Software, including but not limited to the
+        obfuscated JavaScript files and compiled binary (.so) files;
+
+    (b) Remove, circumvent, disable, or modify any technical protection measures,
+        license verification mechanisms, or obfuscation applied to the Software;
+
+    (c) Modify, adapt, alter, translate, or create derivative works based on the
+        Software, in whole or in part;
+
+    (d) Distribute, transfer, sublicense, lease, lend, rent, or otherwise make
+        the Software available to any third party, whether in source, binary, or
+        any other form;
+
+    (e) Use the Software for any purpose other than as permitted under Article 2;
+
+    (f) Use the Software to provide competitive services or products, including
+        but not limited to developing, designing, or marketing a competing
+        product;
+
+    (g) Remove, alter, or obscure any copyright, trademark, or other proprietary
+        notices on or in the Software;
+
+    (h) Use the Software in violation of any applicable law or regulation.
+
+4.2 Any attempt to perform any of the acts prohibited in Article 4.1 shall
+    constitute a material breach of this Agreement and may result in immediate
+    termination of the license, in addition to any other remedies available to
+    the Licensor under applicable law.
+
+ARTICLE 5 — SUBSCRIPTION AND FEES
+
+5.1 The Software may be offered under a subscription model. The Licensee shall
+    pay the applicable fees as specified in the subscription plan selected by
+    the Licensee.
+
+5.2 Subscription periods, renewal terms, and pricing are as set forth in the
+    Licensor's official pricing schedule or as agreed upon in a separate
+    commercial agreement between the parties.
+
+5.3 The Licensor reserves the right to modify pricing upon renewal with prior
+    written notice to the Licensee.
+
+ARTICLE 6 — UPDATES AND SUPPORT
+
+6.1 During the active subscription period, the Licensee is entitled to receive
+    updates, bug fixes, and new versions of the Software as made available by
+    the Licensor.
+
+6.2 Technical support shall be provided in accordance with the support terms
+    applicable to the Licensee's subscription plan.
+
+6.3 Updates and new versions are subject to the terms of this Agreement unless
+    accompanied by a separate license agreement, in which case the separate
+    agreement shall govern.
+
+ARTICLE 7 — TERM AND TERMINATION
+
+7.1 This Agreement is effective from the date of installation or activation of
+    the Software and remains in effect for the duration of the subscription
+    period or until terminated in accordance with this Article.
+
+7.2 The Licensor may terminate this Agreement immediately upon notice if the
+    Licensee:
+
+    (a) Fails to pay the applicable license fees;
+    (b) Breaches any material provision of this Agreement;
+    (c) Engages in any activity prohibited under Article 4;
+    (d) Becomes insolvent or enters bankruptcy proceedings.
+
+7.3 Upon termination, the Licensee shall:
+
+    (a) Immediately cease all use of the Software;
+    (b) Delete or destroy all copies of the Software in the Licensee's
+        possession or control;
+    (c) Certify in writing to the Licensor that all copies have been deleted
+        or destroyed.
+
+7.4 Termination shall not affect any rights or remedies of the Licensor that
+    have accrued prior to termination.
+
+ARTICLE 8 — DISCLAIMER OF WARRANTIES
+
+8.1 THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. TO THE
+    MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR DISCLAIMS ALL
+    WARRANTIES, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED
+    WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+    NON-INFRINGEMENT.
+
+8.2 The Licensor does not warrant that the Software will meet the Licensee's
+    requirements, that the operation of the Software will be uninterrupted or
+    error-free, or that all defects in the Software will be corrected.
+
+ARTICLE 9 — LIMITATION OF LIABILITY
+
+9.1 TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE
+    LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR
+    PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA,
+    BUSINESS OPPORTUNITY, OR GOODWILL, ARISING OUT OF OR IN CONNECTION WITH THE
+    USE OR INABILITY TO USE THE SOFTWARE, EVEN IF THE LICENSOR HAS BEEN ADVISED
+    OF THE POSSIBILITY OF SUCH DAMAGES.
+
+9.2 The Licensor's total cumulative liability under this Agreement shall not
+    exceed the total fees paid by the Licensee for the Software during the
+    twelve (12) months immediately preceding the event giving rise to the claim.
+
+ARTICLE 10 — CONFIDENTIALITY
+
+10.1 The Licensee acknowledges that the Software contains trade secrets and
+     other confidential proprietary information of the Licensor.
+
+10.2 The Licensee shall take all reasonable measures to protect the
+     confidentiality of the Software, including implementing appropriate
+     access controls to prevent unauthorized access or disclosure.
+
+ARTICLE 11 — GOVERNING LAW AND DISPUTE RESOLUTION
+
+11.1 This Agreement shall be governed by and construed in accordance with the
+     laws of the People's Republic of China.
+
+11.2 Any dispute arising out of or in connection with this Agreement shall be
+     resolved first through good faith negotiation between the parties.
+
+11.3 If the dispute cannot be resolved through negotiation within thirty (30)
+     days, either party may submit the dispute to the people's court having
+     jurisdiction in the location of the Licensor's registered address.
+
+ARTICLE 12 — GENERAL PROVISIONS
+
+12.1 Entire Agreement: This Agreement constitutes the entire agreement between
+     the parties with respect to the Software and supersedes all prior or
+     contemporaneous understandings, agreements, representations, and warranties.
+
+12.2 Severability: If any provision of this Agreement is held to be invalid or
+     unenforceable, the remaining provisions shall remain in full force and
+     effect.
+
+12.3 No Waiver: The failure of either party to enforce any provision of this
+     Agreement shall not constitute a waiver of such provision or the right to
+     enforce it at a later time.
+
+12.4 Assignment: The Licensee may not assign or transfer this Agreement or any
+     rights or obligations hereunder without the prior written consent of the
+     Licensor.
+
+12.5 Amendments: The Licensor reserves the right to amend this Agreement at any
+     time. Continued use of the Software after such amendments constitutes
+     acceptance of the revised terms.
+
+12.6 Language: This Agreement is drafted in both Chinese and English. In the
+     event of any inconsistency, the Chinese version shall prevail.
+
+--------------------------------------------------------------------------------
+
+CONTACT INFORMATION
+
+Guangde Zhizhao Technology Co., Ltd. (广德智兆科技有限公司)
+For licensing inquiries: Please contact through the official Gitee repository.
+
+--------------------------------------------------------------------------------
+
+Copyright (c) 2026 广德智兆科技有限公司. All rights reserved.
