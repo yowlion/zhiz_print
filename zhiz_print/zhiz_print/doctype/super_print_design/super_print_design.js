@@ -313,10 +313,10 @@ class SuperPrintDesigner {
         this.designContainerId = (html.match(/id="(spd-\d+)"/) || [])[1] || this.designContainerId;
 
         // Insert col headers, row headers, grid, header/footer into the shell
-        html = html.replace(/<div class="col-headers" id="spd-col-headers"[^>]*><\/div>/,
-            '<div class="col-headers" id="spd-col-headers" style="margin-left:' + this._getColHeaderOffset() + 'px;">' + this.generateColHeadersHtml() + '</div>');
-        html = html.replace(/<div class="row-headers" id="spd-row-headers"[^>]*><\/div>/,
-            '<div class="row-headers" id="spd-row-headers" style="margin-top:' + mTop + 'px;">' + this.generateRowHeadersHtml() + '</div>');
+        html = html.replace(/<div class="super-zprint-col-headers" id="spd-col-headers"[^>]*><\/div>/,
+            '<div class="super-zprint-col-headers" id="spd-col-headers" style="margin-left:' + this._getColHeaderOffset() + 'px;">' + this.generateColHeadersHtml() + '</div>');
+        html = html.replace(/<div class="super-zprint-row-headers" id="spd-row-headers"[^>]*><\/div>/,
+            '<div class="super-zprint-row-headers" id="spd-row-headers" style="margin-top:' + mTop + 'px;">' + this.generateRowHeadersHtml() + '</div>');
         html = html.replace(/<div id="spd-header-footer"><\/div>/,
             this.generateHeaderFooterHtml(mTop, mBottom, mLeft, mRight));
         html = html.replace(/<table class="spd-grid" id="spd-grid"[^>]*><\/table>/,
@@ -387,8 +387,8 @@ class SuperPrintDesigner {
         for (let col = 1; col <= this.cols; col++) {
             const colStyle = this.colStyles[col] || {};
             const colWidth = colStyle.width || 60;
-            const selectedClass = this.selectedCol === col ? 'col-header-selected' : '';
-            html += '<div class="col-header-cell ' + selectedClass + '" data-col="' + col + '" style="width:' + colWidth + 'px; min-width:' + colWidth + 'px; max-width:' + colWidth + 'px;">' + col + '</div>';
+            const selectedClass = this.selectedCol === col ? 'super-zprint-col-header-selected' : '';
+            html += '<div class="super-zprint-col-header-cell ' + selectedClass + '" data-col="' + col + '" style="width:' + colWidth + 'px; min-width:' + colWidth + 'px; max-width:' + colWidth + 'px;">' + col + '</div>';
         }
         return html;
     }
@@ -398,7 +398,7 @@ class SuperPrintDesigner {
         for (let row = 1; row <= this.rows; row++) {
             const rowStyle = this.rowStyles[row] || {};
             const rowHeight = rowStyle.height || 20;
-            const selectedClass = this.selectedRow === row ? 'row-header-selected' : '';
+            const selectedClass = this.selectedRow === row ? 'super-zprint-row-header-selected' : '';
 
             // Row type indicator (scan first non-merged cell in row)
             let rowType = '';
@@ -412,14 +412,14 @@ class SuperPrintDesigner {
             let typeIndicator = '';
             let typeClass = '';
             if (rowType === 'Repeat Title Row') {
-                typeIndicator = '<span class="row-type-badge badge-repeat" title="' + __('Repeat Title Row') + '">T</span>';
-                typeClass = ' row-header-repeat-title';
+                typeIndicator = '<span class="super-zprint-row-type-badge super-zprint-badge-repeat" title="' + __('Repeat Title Row') + '">T</span>';
+                typeClass = ' super-zprint-row-header-repeat-title';
             } else if (rowType === 'Data-Driven Row') {
-                typeIndicator = '<span class="row-type-badge badge-data" title="' + __('Data-Driven Row') + '">D</span>';
-                typeClass = ' row-header-data-driven';
+                typeIndicator = '<span class="super-zprint-row-type-badge super-zprint-badge-data" title="' + __('Data-Driven Row') + '">D</span>';
+                typeClass = ' super-zprint-row-header-data-driven';
             }
 
-            html += '<div class="row-header-cell ' + selectedClass + typeClass + '" data-row="' + row + '" style="height:' + rowHeight + 'px; min-height:' + rowHeight + 'px; max-height:' + rowHeight + 'px; line-height:' + rowHeight + 'px;">' + typeIndicator + row + '</div>';
+            html += '<div class="super-zprint-row-header-cell ' + selectedClass + typeClass + '" data-row="' + row + '" style="height:' + rowHeight + 'px; min-height:' + rowHeight + 'px; max-height:' + rowHeight + 'px; line-height:' + rowHeight + 'px;">' + typeIndicator + row + '</div>';
         }
         return html;
     }
@@ -472,11 +472,11 @@ class SuperPrintDesigner {
 
                     let content = '';
                     if (cell_type === 'barcode' || cell_type === 'qrcode') {
-                        content = '<div class="cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + typeInfo.label + '</span></div>';
+                        content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + typeInfo.label + '</span></div>';
                     } else if (!hasValue) {
                         content = '';
                     } else {
-                        content = '<div class="cell-content">' + this.escapeHtml(cell_value) + '</div>';
+                        content = '<div class="super-zprint-cell-content">' + this.escapeHtml(cell_value) + '</div>';
                     }
 
                     const selectedClass = this.currentCell === cellId ? ' selected' : '';
@@ -533,12 +533,12 @@ class SuperPrintDesigner {
 
         // Delegated click events
         container.addEventListener('click', (e) => {
-            const colHeader = e.target.closest('.col-header-cell');
+            const colHeader = e.target.closest('.super-zprint-col-header-cell');
             if (colHeader) {
                 this.handleColClick(parseInt(colHeader.dataset.col));
                 return;
             }
-            const rowHeader = e.target.closest('.row-header-cell');
+            const rowHeader = e.target.closest('.super-zprint-row-header-cell');
             if (rowHeader) {
                 this.handleRowClick(parseInt(rowHeader.dataset.row));
                 return;
@@ -614,42 +614,42 @@ class SuperPrintDesigner {
         }
 
         let formHtml = '<form id="row-property-form" class="property-form">' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-expand"></i> ' + __('Row Dimensions') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-expand"></i> ' + __('Row Dimensions') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<div class="layout-controls">' +
-                        '<div class="layout-control-group">' +
+                    '<div class="super-zprint-layout-controls">' +
+                        '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px">' + __('Row Height') + ':</label>' +
-                            '<div class="number-spinner number-spinner-sm">' +
-                                '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="row-height" data-step="5">-</button>' +
-                                '<input type="number" id="row-height" class="form-control spin-input" value="' + (rowStyle.height || '') + '" min="1" max="500" step="1" placeholder="20">' +
-                                '<button type="button" class="btn btn-xs spin-btn spin-plus" data-target="row-height" data-step="5">+</button>' +
+                            '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-height" data-step="5">-</button>' +
+                                '<input type="number" id="row-height" class="form-control super-zprint-spin-input" value="' + (rowStyle.height || '') + '" min="1" max="500" step="1" placeholder="20">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-height" data-step="5">+</button>' +
                             '</div>' +
                         '</div>' +
-                        '<div class="layout-control-group">' +
+                        '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px">' + __('Font') + ':</label>' +
-                            '<div class="number-spinner number-spinner-sm">' +
-                                '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="row-font-size" data-step="1">-</button>' +
-                                '<input type="number" id="row-font-size" class="form-control spin-input" value="' + (rowStyle.font_size || '') + '" min="8" max="36" step="1" placeholder="12">' +
-                                '<button type="button" class="btn btn-xs spin-btn spin-plus" data-target="row-font-size" data-step="1">+</button>' +
+                            '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-font-size" data-step="1">-</button>' +
+                                '<input type="number" id="row-font-size" class="form-control super-zprint-spin-input" value="' + (rowStyle.font_size || '') + '" min="8" max="36" step="1" placeholder="12">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-font-size" data-step="1">+</button>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-bars"></i> ' + __('Text Alignment') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-bars"></i> ' + __('Text Alignment') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px;margin-bottom:4px">' + __('Vertical Align') + ':</label>' +
-                    '<div class="btn-group-wrap" style="margin-top:3px">' +
+                    '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
                         '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="top" title="' + __('Top Align') + '"><i class="fa fa-arrow-up"></i> ' + __('Top') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="middle" title="' + __('Center') + '"><i class="fa fa-arrows-v"></i> ' + __('Center') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="bottom" title="' + __('Bottom Align') + '"><i class="fa fa-arrow-down"></i> ' + __('Bottom') + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-tag"></i> ' + __('Row Type') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-tag"></i> ' + __('Row Type') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<select id="row-type-select" class="form-control">' +
                         '<option value="">' + __('Normal Row') + '</option>' +
@@ -658,8 +658,8 @@ class SuperPrintDesigner {
                     '</select>' +
                 '</div>' +
             '</div>' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-text-height"></i> ' + __('Row Display Effect') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-text-height"></i> ' + __('Row Display Effect') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<select id="row-display-select" class="form-control">' +
                         '<option value="">' + __('Auto Wrap') + '</option>' +
@@ -668,11 +668,11 @@ class SuperPrintDesigner {
                     '</select>' +
                 '</div>' +
             '</div>' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> ' + __('Row Style') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-paint-brush"></i> ' + __('Row Style') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
-                    '<textarea id="row-css-style" class="form-control css-editor" rows="2" placeholder="background-color: #f0f0f0;">' + cssPreview.trim() + '</textarea>' +
+                    '<textarea id="row-css-style" class="form-control super-zprint-css-editor" rows="2" placeholder="background-color: #f0f0f0;">' + cssPreview.trim() + '</textarea>' +
                 '</div>' +
             '</div>' +
         '</form>';
@@ -770,7 +770,7 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
         const table = container.querySelector('#spd-grid');
-        const rowHeaders = container.querySelectorAll('.row-header-cell');
+        const rowHeaders = container.querySelectorAll('.super-zprint-row-header-cell');
         if (!table || !rowHeaders.length) return;
         const tableRows = table.querySelectorAll('tr');
         tableRows.forEach((tr, idx) => {
@@ -809,37 +809,37 @@ class SuperPrintDesigner {
         }
 
         let formHtml = '<form id="col-property-form" class="property-form">' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-expand"></i> ' + __('Column Dimensions') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-expand"></i> ' + __('Column Dimensions') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<div class="layout-controls">' +
-                        '<div class="layout-control-group" style="flex:1">' +
+                    '<div class="super-zprint-layout-controls">' +
+                        '<div class="super-zprint-layout-control-group" style="flex:1">' +
                             '<label style="font-size:9px">' + __('Column Width') + ':</label>' +
-                            '<div class="number-spinner number-spinner-sm">' +
-                                '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="col-width" data-step="10">-</button>' +
-                                '<input type="number" id="col-width" class="form-control spin-input" value="' + (colStyle.width || '') + '" min="1" max="500" step="1" placeholder="60">' +
-                                '<button type="button" class="btn btn-xs spin-btn spin-plus" data-target="col-width" data-step="10">+</button>' +
+                            '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="col-width" data-step="10">-</button>' +
+                                '<input type="number" id="col-width" class="form-control super-zprint-spin-input" value="' + (colStyle.width || '') + '" min="1" max="500" step="1" placeholder="60">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="col-width" data-step="10">+</button>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-align-center"></i> ' + __('Text Alignment') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-align-center"></i> ' + __('Text Alignment') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px;margin-bottom:4px">' + __('Horizontal Align') + ':</label>' +
-                    '<div class="btn-group-wrap" style="margin-top:3px">' +
+                    '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
                         '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="left" title="' + __('Left Align') + '"><i class="fa fa-align-left"></i> ' + __('Left') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="center" title="' + __('Center') + '"><i class="fa fa-align-center"></i> ' + __('Center') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="right" title="' + __('Right Align') + '"><i class="fa fa-align-right"></i> ' + __('Right') + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="property-section">' +
-                '<div class="property-section-header"><i class="fa fa-paint-brush"></i> ' + __('Column Style') + '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-paint-brush"></i> ' + __('Column Style') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
-                    '<textarea id="col-css-style" class="form-control css-editor" rows="2" placeholder="text-align: center;">' + cssPreview.trim() + '</textarea>' +
+                    '<textarea id="col-css-style" class="form-control super-zprint-css-editor" rows="2" placeholder="text-align: center;">' + cssPreview.trim() + '</textarea>' +
                 '</div>' +
             '</div>' +
         '</form>';
@@ -907,12 +907,12 @@ class SuperPrintDesigner {
         const contentTabCls = activeTab === 'content' ? ' active' : '';
         const styleTabCls = activeTab === 'style' ? ' active' : '';
 
-        let formHtml = '<div class="prop-tabs">' +
-            '<div class="prop-tab' + contentTabCls + '" data-tab="content"><i class="fa fa-edit"></i> ' + __('Content') + '</div>' +
-            '<div class="prop-tab' + styleTabCls + '" data-tab="style"><i class="fa fa-paint-brush"></i> ' + __('Style') + '</div>' +
+        let formHtml = '<div class="super-zprint-prop-tabs">' +
+            '<div class="super-zprint-prop-tab' + contentTabCls + '" data-tab="content"><i class="fa fa-edit"></i> ' + __('Content') + '</div>' +
+            '<div class="super-zprint-prop-tab' + styleTabCls + '" data-tab="style"><i class="fa fa-paint-brush"></i> ' + __('Style') + '</div>' +
         '</div>' +
-        '<div class="prop-tab-contents">' +
-            '<div class="prop-tab-content' + contentTabCls + '" data-tab="content">' +
+        '<div class="super-zprint-prop-tab-contents">' +
+            '<div class="super-zprint-prop-tab-content' + contentTabCls + '" data-tab="content">' +
                 '<label>' + __('Type') + ':</label>' +
                 '<select id="prop-cell-type" class="form-control">' + typeOptions + '</select>' +
                 '<label>' + __('Value') + ':</label>' +
@@ -933,79 +933,79 @@ class SuperPrintDesigner {
                     '<p style="font-size:11px;color:#888;margin:4px 0;">' + __('QR code auto-fits cell dimensions (1:1)') + '</p>' +
                 '</div>' +
             '</div>' +
-            '<div class="prop-tab-content' + styleTabCls + '" data-tab="style">' +
-                '<div class="layout-controls">' +
-                    '<div class="layout-control-group">' +
+            '<div class="super-zprint-prop-tab-content' + styleTabCls + '" data-tab="style">' +
+                '<div class="super-zprint-layout-controls">' +
+                    '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Rowspan') + ':</label>' +
-                        '<div class="number-spinner">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-rowspan" data-step="1">-</button>' +
-                            '<input type="number" id="prop-rowspan" class="form-control spin-input" min="1" max="100" value="' + (cell.rowspan || 1) + '">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-plus" data-target="prop-rowspan" data-step="1">+</button>' +
+                        '<div class="super-zprint-number-spinner">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-rowspan" data-step="1">-</button>' +
+                            '<input type="number" id="prop-rowspan" class="form-control super-zprint-spin-input" min="1" max="100" value="' + (cell.rowspan || 1) + '">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-rowspan" data-step="1">+</button>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="layout-control-group">' +
+                    '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Colspan') + ':</label>' +
-                        '<div class="number-spinner">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-colspan" data-step="1">-</button>' +
-                            '<input type="number" id="prop-colspan" class="form-control spin-input" min="1" max="26" value="' + (cell.colspan || 1) + '">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-plus" data-target="prop-colspan" data-step="1">+</button>' +
+                        '<div class="super-zprint-number-spinner">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-colspan" data-step="1">-</button>' +
+                            '<input type="number" id="prop-colspan" class="form-control super-zprint-spin-input" min="1" max="26" value="' + (cell.colspan || 1) + '">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-colspan" data-step="1">+</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
-                '<div class="layout-controls">' +
-                    '<div class="layout-control-group">' +
+                '<div class="super-zprint-layout-controls">' +
+                    '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Font (px)') + ':</label>' +
-                        '<div class="number-spinner">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-font-size" data-step="1">-</button>' +
-                            '<input type="number" id="prop-font-size" class="form-control spin-input" value="' + this.extractFontSize(cell.css_style, row) + '" min="8" max="36">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-plus" data-target="prop-font-size" data-step="1">+</button>' +
+                        '<div class="super-zprint-number-spinner">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-font-size" data-step="1">-</button>' +
+                            '<input type="number" id="prop-font-size" class="form-control super-zprint-spin-input" value="' + this.extractFontSize(cell.css_style, row) + '" min="8" max="36">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-font-size" data-step="1">+</button>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="layout-control-group">' +
+                    '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Padding') + ':</label>' +
-                        '<div class="number-spinner">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-minus" data-target="prop-padding" data-step="1">-</button>' +
-                            '<input type="number" id="prop-padding" class="form-control spin-input" value="' + this.extractPadding(cell.css_style) + '" min="0" max="20">' +
-                            '<button type="button" class="btn btn-xs spin-btn spin-plus" data-target="prop-padding" data-step="1">+</button>' +
+                        '<div class="super-zprint-number-spinner">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-padding" data-step="1">-</button>' +
+                            '<input type="number" id="prop-padding" class="form-control super-zprint-spin-input" value="' + this.extractPadding(cell.css_style) + '" min="0" max="20">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-padding" data-step="1">+</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
-                '<div class="css-quick-buttons css-quick-compact">' +
+                '<div class="super-zprint-css-quick-buttons super-zprint-css-quick-compact">' +
                     '<label style="font-size:9px">' + __('Quick') + ':</label>' +
-                    '<div class="btn-group-wrap" style="margin-top:3px">' +
+                    '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:left" data-prop="text-align" title="' + __('Left Align') + '"><i class="fa fa-align-left"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:center" data-prop="text-align" title="' + __('Center') + '"><i class="fa fa-align-center"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:right" data-prop="text-align" title="' + __('Right Align') + '"><i class="fa fa-align-right"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-weight:bold" data-prop="font-weight" title="' + __('Bold') + '"><i class="fa fa-bold"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="' + __('Italic') + '"><i class="fa fa-italic"></i></button>' +
                     '</div>' +
-                    '<div class="btn-group-wrap" style="margin-top:3px">' +
-                        '<div class="color-picker-wrapper" title="' + __('Background Color') + '"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
-                        '<div class="color-picker-wrapper" title="' + __('Text Color') + '"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
+                    '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
+                        '<div class="super-zprint-color-picker-wrapper" title="' + __('Background Color') + '"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
+                        '<div class="super-zprint-color-picker-wrapper" title="' + __('Text Color') + '"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
                         '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="' + __('Default Style') + '" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">' + __('Default') + '</span></button>' +
                         '<button type="button" class="btn btn-xs btn-danger css-quick-btn" data-action="clear-css" title="' + __('Clear CSS') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-eraser"></i> ' + __('Clear') + '</button>' +
                     '</div>' +
                 '</div>' +
-                '<div class="border-settings" style="margin:6px 0;padding:6px;background:#f8f9fa;border-radius:4px;border:1px solid #e9ecef">' +
+                '<div class="super-zprint-border-settings" style="margin:6px 0;padding:6px;background:#f8f9fa;border-radius:4px;border:1px solid #e9ecef">' +
                     '<label style="font-size:9px;margin-bottom:4px">' + __('Border') + ':</label>' +
-                    '<div class="btn-group-wrap" style="margin-top:2px;gap:2px">' +
+                    '<div class="super-zprint-btn-group-wrap" style="margin-top:2px;gap:2px">' +
                         '<div class="border-width-selector" style="display:flex;align-items:center;gap:2px">' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn bw-active" data-width="1" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thin') + '</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="2" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Medium') + '</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="3" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thick') + '</button>' +
-                            '<button type="button" class="btn btn-xs btn-default border-width-btn" data-width="0" style="width:24px;height:20px;padding:0;font-size:8px">' + __('None') + '</button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn super-zprint-bw-active" data-width="1" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thin') + '</button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="2" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Medium') + '</button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="3" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thick') + '</button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="0" style="width:24px;height:20px;padding:0;font-size:8px">' + __('None') + '</button>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="btn-group-wrap" style="margin-top:4px;gap:2px">' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="top" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Top') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="bottom" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Bottom') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="left" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Left') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="right" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Right') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default border-side-btn" data-side="none" style="width:24px;height:20px;padding:0;font-size:8px">' + __('All') + '</button>' +
+                    '<div class="super-zprint-btn-group-wrap" style="margin-top:4px;gap:2px">' +
+                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="top" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Top') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="bottom" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Bottom') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="left" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Left') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="right" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Right') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="none" style="width:24px;height:20px;padding:0;font-size:8px">' + __('All') + '</button>' +
                     '</div>' +
                 '</div>' +
                 '<label>' + __('CSS') + ':</label>' +
-                '<textarea id="prop-css-style" class="form-control css-editor" rows="3">' + (cell.css_style || '') + '</textarea>' +
+                '<textarea id="prop-css-style" class="form-control super-zprint-css-editor" rows="3">' + (cell.css_style || '') + '</textarea>' +
             '</div>' +
         '</div>';
 
@@ -1085,12 +1085,12 @@ class SuperPrintDesigner {
         this.bindSpinnerButtons();
 
         // Tab switching
-        container.querySelectorAll('.prop-tab').forEach(tab => {
+        container.querySelectorAll('.super-zprint-prop-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
-                container.querySelectorAll('.prop-tab').forEach(t => t.classList.remove('active'));
-                container.querySelectorAll('.prop-tab-content').forEach(c => c.classList.remove('active'));
+                container.querySelectorAll('.super-zprint-prop-tab').forEach(t => t.classList.remove('active'));
+                container.querySelectorAll('.super-zprint-prop-tab-content').forEach(c => c.classList.remove('active'));
                 tab.classList.add('active');
-                const target = container.querySelector('.prop-tab-content[data-tab="' + tab.dataset.tab + '"]');
+                const target = container.querySelector('.super-zprint-prop-tab-content[data-tab="' + tab.dataset.tab + '"]');
                 if (target) target.classList.add('active');
                 this.lastActiveTab = tab.dataset.tab;
             });
@@ -1306,7 +1306,7 @@ class SuperPrintDesigner {
     bindSpinnerButtons() {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
-        container.querySelectorAll('.spin-btn').forEach(btn => {
+        container.querySelectorAll('.super-zprint-spin-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetId = btn.dataset.target;
@@ -1331,23 +1331,23 @@ class SuperPrintDesigner {
         if (!container) return;
         if (this.currentBorderWidth === undefined) this.currentBorderWidth = 1;
 
-        const widthBtns = container.querySelectorAll('.border-width-btn');
+        const widthBtns = container.querySelectorAll('.super-zprint-border-width-btn');
         widthBtns.forEach(btn => {
             const btnWidth = parseInt(btn.dataset.width);
-            if (btnWidth === this.currentBorderWidth) btn.classList.add('bw-active');
-            else btn.classList.remove('bw-active');
+            if (btnWidth === this.currentBorderWidth) btn.classList.add('super-zprint-bw-active');
+            else btn.classList.remove('super-zprint-bw-active');
         });
 
         widthBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                widthBtns.forEach(b => b.classList.remove('bw-active'));
-                btn.classList.add('bw-active');
+                widthBtns.forEach(b => b.classList.remove('super-zprint-bw-active'));
+                btn.classList.add('super-zprint-bw-active');
                 this.currentBorderWidth = parseInt(btn.dataset.width);
             });
         });
 
-        container.querySelectorAll('.border-side-btn').forEach(btn => {
+        container.querySelectorAll('.super-zprint-border-side-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.applySingleBorder(btn.dataset.side, this.currentBorderWidth);
