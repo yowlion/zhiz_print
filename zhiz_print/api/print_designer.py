@@ -617,24 +617,25 @@ def get_designer_html(design_name=None, rows=20, columns=15, font_family="Micros
     m_top, m_bottom, m_left, m_right = 10, 10, 15, 15
 
     if design_name:
-        doc = frappe.get_doc("Super Print Design", design_name)
-        rows = doc.rows or rows
-        columns = doc.columns or columns
-        font_family = doc.font_family or font_family
-        if doc.row_styles:
-            try:
-                rs = json.loads(doc.row_styles)
-            except Exception:
+        if frappe.db.exists("Super Print Design", design_name):
+            doc = frappe.get_doc("Super Print Design", design_name)
+            rows = doc.rows or rows
+            columns = doc.columns or columns
+            font_family = doc.font_family or font_family
+            if doc.row_styles:
+                try:
+                    rs = json.loads(doc.row_styles)
+                except Exception:
+                    rs = {}
+            else:
                 rs = {}
-        else:
-            rs = {}
-        if doc.col_styles:
-            try:
-                cs = json.loads(doc.col_styles)
-                col_styles = cs
-            except Exception:
-                pass
-        print_paper = doc.print_paper
+            if doc.col_styles:
+                try:
+                    cs = json.loads(doc.col_styles)
+                    col_styles = cs
+                except Exception:
+                    pass
+            print_paper = doc.print_paper
 
     if print_paper:
         paper = frappe.db.get_value("Super Print Paper", print_paper,
@@ -698,6 +699,8 @@ def load_design_data(design_name):
     with merge info resolved. Frontend can directly build its grid from this.
     """
     _check_license()
+    if not frappe.db.exists("Super Print Design", design_name):
+        return {"rows": 20, "columns": 15, "cells": []}
     doc = frappe.get_doc("Super Print Design", design_name)
 
     row_styles = json.loads(doc.row_styles) if doc.row_styles else {}

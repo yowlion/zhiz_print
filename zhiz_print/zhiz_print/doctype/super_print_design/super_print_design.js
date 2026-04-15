@@ -299,7 +299,7 @@ class SuperPrintDesigner {
         const r = await frappe.call({
             method: 'zhiz_print.api.print_designer.get_designer_html',
             args: {
-                design_name: this.frm.doc.name || null,
+                design_name: this.frm.doc.__islocal ? null : (this.frm.doc.name || null),
                 rows: this.rows,
                 columns: this.cols,
                 font_family: this.fontFamily,
@@ -1783,7 +1783,6 @@ frappe.ui.form.on('Super Print Design', {
     setup(frm) {
         setTimeout(() => {
             if (frm.page.sidebar) frm.page.sidebar.hide();
-            $('.page-head').hide();
         }, 300);
     },
 
@@ -1806,7 +1805,9 @@ frappe.ui.form.on('Super Print Design', {
 
         setTimeout(() => {
             if (frm.page.sidebar) frm.page.sidebar.hide();
-            $('.page-head').hide();
+            if (!frm.is_new()) {
+                $('.page-head').hide();
+            }
             // Limit header/footer Code field height
             const headerFooterFields = [
                 'page_header_left', 'page_header_center', 'page_header_right',
