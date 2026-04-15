@@ -35,6 +35,18 @@ MAX_OFFLINE_DAYS = 7
 _LOCAL_SIGN_SECRET = hashlib.sha256((API_SECRET + ":local_license_sign:v1").encode()).hexdigest()
 
 
+# ==================== Company Name ====================
+
+def _get_company_name():
+    """Get the default company name from system settings."""
+    company = frappe.defaults.get_user_default("company")
+    if not company:
+        companies = frappe.get_all("Company", limit=1)
+        if companies:
+            company = companies[0].name
+    return company or ""
+
+
 # ==================== Machine ID ====================
 
 def get_machine_id():
@@ -451,7 +463,7 @@ def create_trial_license():
         "expires_at": expires,
         "machine_id": machine_id,
         "site_name": site_name,
-        "company_name": "Trial",
+        "company_name": _get_company_name(),
     })
     _sign_local_license(doc)
     doc.insert(ignore_permissions=True)
@@ -493,7 +505,7 @@ def _sync_trial_from_server(license_key, machine_id, site_name):
         "expires_at": expires,
         "machine_id": machine_id,
         "site_name": site_name,
-        "company_name": "Trial",
+        "company_name": _get_company_name(),
     })
     _sign_local_license(doc)
     doc.insert(ignore_permissions=True)
@@ -567,6 +579,7 @@ def activate_license(license_key):
         "expires_at": expires,
         "machine_id": machine_id,
         "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
+        "company_name": _get_company_name(),
     })
     _sign_local_license(doc)
     doc.insert(ignore_permissions=True)

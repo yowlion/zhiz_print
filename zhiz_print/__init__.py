@@ -2,6 +2,6 @@
 # Copyright (c) 2026, Zhiz Print and contributors
 # For license information, please see license.txt
 
-__version__ = '15.02.26'
+__version__ = '15.02.27'
 
 required_apps = ["frappe"]
