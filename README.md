@@ -54,6 +54,9 @@ cd /home/frappe/frappe-bench
 # 克隆并指定目录名（仓库含编译产物，目录名必须为 zhiz_print）
 git clone git@gitee.com:gdzhiz/zhiz_print-dist.git apps/zhiz_print
 
+# 获取到正确的APP
+bench get-app zhiz_print ./apps/zhiz_print
+
 # 安装到站点
 bench --site <site-name> install-app zhiz_print
 ```

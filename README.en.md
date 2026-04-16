@@ -54,6 +54,9 @@ cd /home/frappe/frappe-bench
 # Clone and specify directory name (repo contains compiled artifacts, directory must be named zhiz_print)
 git clone git@gitee.com:gdzhiz/zhiz_print-dist.git apps/zhiz_print
 
+# Register the app correctly
+bench get-app zhiz_print ./apps/zhiz_print
+
 # Install to site
 bench --site <site-name> install-app zhiz_print
 ```
