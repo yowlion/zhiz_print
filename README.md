@@ -39,9 +39,11 @@
 
 | 版本 | x86_64 | aarch64 |
 |------|--------|---------|
-| Python 3.10 | .so | - |
+| Python 3.10 | .so | .so |
 | Python 3.11 | .so | .so |
-| Python 3.12 | .so | - |
+| Python 3.12 | .so | .so |
+| Python 3.13 | .so | .so |
+| Python 3.14 | .so | .so |
 
 Python 运行时自动加载匹配当前版本的 `.so` 文件，无需额外配置。
 
@@ -59,6 +61,10 @@ bench get-app zhiz_print ./apps/zhiz_print
 
 # 安装到站点
 bench --site <site-name> install-app zhiz_print
+
+# 构建资源
+bench build
+
 ```
 
 ## 依赖

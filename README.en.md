@@ -39,9 +39,11 @@ A custom print template designer built on the Frappe/ERPNext framework, providin
 
 | Version | x86_64 | aarch64 |
 |---------|--------|---------|
-| Python 3.10 | .so | - |
+| Python 3.10 | .so | .so |
 | Python 3.11 | .so | .so |
-| Python 3.12 | .so | - |
+| Python 3.12 | .so | .so |
+| Python 3.13 | .so | .so |
+| Python 3.14 | .so | .so |
 
 Python runtime automatically loads the matching `.so` file — no additional configuration needed.
 
