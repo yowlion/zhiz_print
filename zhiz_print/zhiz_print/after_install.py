@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-
 import json
 import os
-
 import frappe
 
 
@@ -19,7 +17,6 @@ def _install_presets():
     with open(preset_path, "r", encoding="utf-8") as f:
         presets = json.load(f)
 
-    # Create preset paper if not exists
     paper_data = presets.get("paper")
     if paper_data and not frappe.db.exists("Super Print Paper", paper_data["paper_name"]):
         paper = frappe.get_doc(paper_data)
@@ -27,7 +24,6 @@ def _install_presets():
         frappe.db.commit()
         frappe.clear_cache(doctype="Super Print Paper")
 
-    # Create preset design if not exists (skip license check during install)
     design_data = presets.get("design")
     if design_data and not frappe.db.exists("Super Print Design", design_data["design_name"]):
         design_data_copy = dict(design_data)
