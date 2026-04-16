@@ -26,6 +26,8 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def before_insert(self):
         """Check license before allowing new design creation."""
+        if frappe.flags.get("skip_zhiz_print_license"):
+            return
         from zhiz_print.api.license import check_license_valid
         valid, info = check_license_valid()
         if not valid:
@@ -39,6 +41,8 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def check_license_on_save(self):
         """Check license before saving design (both new and existing)."""
+        if frappe.flags.get("skip_zhiz_print_license"):
+            return
         from zhiz_print.api.license import check_license_valid
         valid, info = check_license_valid()
         if not valid:

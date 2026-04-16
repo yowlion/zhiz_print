@@ -31,3 +31,6 @@ page_js = {
 # Boot Session Hook
 # Inject zhiz_print settings into frappe.boot on page load, avoiding runtime API calls
 boot_session = "zhiz_print.api.print_setting.get_boot_settings"
+
+# After install - create preset papers and designs
+after_install = "zhiz_print.zhiz_print.after_install.after_install"

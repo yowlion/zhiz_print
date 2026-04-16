@@ -1806,7 +1806,7 @@ frappe.ui.form.on('Super Print Design', {
         setTimeout(() => {
             if (frm.page.sidebar) frm.page.sidebar.hide();
             if (!frm.is_new()) {
-                $('.page-head').hide();
+                $('.page-head .primary-action').hide();
             }
             // Limit header/footer Code field height
             const headerFooterFields = [
