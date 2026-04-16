@@ -78,9 +78,162 @@ bench --site <site-name> install-app zhiz_print
 
 在 **Zprint Setting** 的「PDF转换模式」中选择要使用的引擎。
 
-## 使用
+## 启用流程
 
 1. 进入 **Zprint Setting** 单文档，启用超级打印页面
 2. 在 **Super Print Paper** 中定义纸张尺寸
 3. 在 **Super Print Design** 中设计打印模板
 4. 打开任意文档点击打印，左侧显示自定义模板选择器
+
+---
+## 使用基础教程
+
+### 一、文档字段绑定
+
+在单元格的 `cell_value` 中，使用 `{doc.field_name}` 占位符绑定目标文档的字段值。
+
+**可用范围：** 目标文档（`target_doctype` 指定的 DocType）的所有字段。
+
+**语法：** `{doc.字段名}`
+
+**示例：** 假设 `target_doctype` 为 `Sales Invoice`，在单元格中写入：
+
+```
+发票编号：{doc.name}
+客户名称：{doc.customer}
+日期：{doc.posting_date}
+金额：{doc.grand_total}
+```
+
+打印时自动替换为实际文档的对应字段值。
+
+### 二、参数字段
+
+参数用于在打印前由用户填写，实现动态数据输入。参数在 `design_parameters` 子表中定义。
+
+#### 参数定义字段
+
+| 字段 | 说明 |
+|------|------|
+| Parameter ID (`param_name`) | 参数唯一标识，用于在查询代码和单元格中引用 |
+| Display Label (`param_label`) | 打印弹窗中显示的标签 |
+| Parameter Type (`param_type`) | 类型：`Data`、`Int`、`Float`、`Date`、`Link`、`Select` |
+| Default Value (`default_value`) | 默认值 |
+| Required (`reqd`) | 是否必填 |
+| Options (`options`) | Select 类型填选项（每行一个）；Link 类型填目标 DocType 名称 |
+
+#### 在单元格中引用参数
+
+使用 `{param.param_name}` 占位符：
+
+```
+备注：{param.remark}
+数量：{param.qty}
+```
+
+#### 示例：定义一个「备注」参数
+
+| Parameter ID | Display Label | Parameter Type | Default Value | Required | Options |
+|---|---|---|---|---|---|
+| remark | 备注 | Data | | 0 | |
+| qty | 数量 | Int | 1 | 1 | |
+| warehouse | 仓库 | Link | | 0 | Warehouse |
+
+打印时弹窗让用户填写，填入的值可在单元格中使用。
+
+### 三、子表字段（数据驱动行）
+
+子表字段用于打印文档的子表数据（如销售订单的明细行）。系统自动检测子表模式并展开行。
+
+#### 在单元格中绑定子表字段
+
+**语法：** `{doc.child_table_name.field_name}`
+
+**示例：** 假设 `Sales Invoice` 有子表 `items`：
+
+```
+{doc.items.item_code}
+{doc.items.qty}
+{doc.items.rate}
+{doc.items.amount}
+```
+
+#### 行为
+
+- 包含子表占位符的行会自动变为「数据驱动行」，根据子表数据条数自动复制该行
+- 每行对应子表的一条记录
+- 无需手动设置 `row_type`，系统自动检测
+
+#### 手动设置行类型
+
+在设计器中可设置行的 `row_type`：
+
+| 值 | 说明 |
+|---|---|
+| 空 / Normal Row | 普通行，不重复 |
+| Repeat Title Row | 标题行，每页自动重复（用于表头） |
+| Data-Driven Row | 数据驱动行，按数据条数自动展开 |
+
+#### 行显示效果 (`row_display`)
+
+| 值 | 说明 |
+|---|---|
+| 空 / Auto Wrap | 默认，文本自动换行，行高自适应 |
+| Fixed Height | 固定行高，超出部分隐藏 |
+| Auto Shrink Font | 自动缩小字号以适应固定行高 |
+
+### 四、单元格类型
+
+| cell_type | 说明 | 额外配置 |
+|-----------|------|---------|
+| `static` | 静态文本，支持 `{doc.*}` / `{param.*}` 占位符 | 无 |
+| `barcode` | 条形码（CODE128 / CODE39） | 设置 `barcode_format`、`barcode_width`、`barcode_height` |
+| `qrcode` | 二维码 | 设置 `barcode_width`、`barcode_height` |
+| `image` | 图片，`cell_value` 填图片 URL | 无 |
+
+### 五、页眉页脚
+
+在 Super Print Design 的 Header & Footer 区域，可分别设置左、中、右三个位置的页眉和页脚内容，支持 HTML。
+
+**页眉页脚占位符：**
+
+| 占位符 | 说明 | 示例输出 |
+|--------|------|---------|
+| `{page}` | 当前页码 | `1`、`2`、`3` |
+| `{pages}` | 总页数 | `5` |
+| `{now_date}` | 当前日期 | `2026-04-16` |
+| `{now_time}` | 当前时间 | `14:30:00` |
+| `{date_time}` | 当前日期时间 | `2026-04-16 14:30:00` |
+
+**文档字段占位符：** 页眉页脚中同样支持 `{doc.field_name}` 引用目标文档字段，例如 `{doc.name}` 显示单据编号。
+
+**示例：**
+
+页脚左侧显示单据编号：
+```html
+<span>{doc.name}</span>
+```
+
+页脚居中显示页码：
+```html
+<div style="text-align:center">第 {page} 页 / 共 {pages} 页</div>
+```
+
+页眉右侧显示打印时间：
+```html
+<div style="text-align:right">打印时间：{date_time}</div>
+```
+
+### 六、启用条件
+
+在 `Enable Condition` 字段中填写 eval 表达式，控制模板是否显示。留空则始终启用。
+
+**可用变量：** `doc`（目标文档）、`user`（当前用户名）
+
+**示例：**
+
+```
+doc.status=='Submitted'
+doc.docstatus==1
+doc.grand_total > 1000
+```
