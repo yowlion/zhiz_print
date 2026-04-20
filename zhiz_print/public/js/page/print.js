@@ -441,7 +441,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n' +
 			styleHtml +
-			'\n<style>\n@page { size: ' + (previewW / 4) + 'mm ' + (previewH / 4) + 'mm; margin: 0; }\n' +
+			'\n<style>\n@page { size: ' + (previewW / 4) + 'mm ' + (previewH / 4) + 'mm; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }\n' +
 			'* { box-sizing: border-box; }\nbody { margin: 0; padding: 0; }\n</style>\n' +
 			'</head>\n<body>\n' + pageEl.outerHTML + '\n</body>\n</html>';
 	}
@@ -556,9 +556,18 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		printFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
 		document.body.appendChild(printFrame);
 
+		// Inject explicit orientation for browser print dialog
+		let printHtml = this.current_preview_html;
+		const paperInfo = this.current_design_info;
+		if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
+			const orient = paperInfo.paper_width > paperInfo.paper_height ? 'landscape' : 'portrait';
+			const injectCss = '<style>@media print { @page { size: ' + orient + '; margin: 0; } }</style>';
+			printHtml = printHtml.replace('</head>', injectCss + '\n</head>');
+		}
+
 		const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
 		frameDoc.open();
-		frameDoc.write(this.current_preview_html);
+		frameDoc.write(printHtml);
 		frameDoc.close();
 
 		// Wait for content to load before calling print
