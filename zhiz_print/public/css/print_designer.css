@@ -114,7 +114,7 @@
 }
 
 /* ==================== Print Preview Area ==================== */
-.print-preview-wrapper {
+.super-print-layout .print-preview-wrapper {
 	display: flex;
 	justify-content: center;
 	align-items: flex-start;

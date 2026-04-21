@@ -48,8 +48,6 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		// Original logic
 		this.is_super_print_mode = false;
-		this.page && this.page.sidebar && this.page.sidebar.empty();
-		this.setup_sidebar();
 		this.setup_customize_dialog();
 
 		this.inner_msg = this.page.add_inner_message(`
