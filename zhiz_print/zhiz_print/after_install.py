@@ -45,7 +45,12 @@ def _install_presets():
 
 
 def _install_batch_print_page():
-    if not frappe.db.exists("Page", "batch-print"):
+    if frappe.db.exists("Page", "batch-print"):
+        return
+
+    developer_mode = frappe.conf.get("developer_mode")
+    frappe.conf.developer_mode = 1
+    try:
         page = frappe.get_doc({
             "doctype": "Page",
             "page_name": "batch-print",
@@ -57,3 +62,5 @@ def _install_batch_print_page():
         })
         page.insert(ignore_permissions=True)
         frappe.db.commit()
+    finally:
+        frappe.conf.developer_mode = developer_mode
