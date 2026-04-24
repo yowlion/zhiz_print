@@ -301,7 +301,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
             const pagesContainer = document.createElement("div");
             pagesContainer.className = "sp-pages-container";
             pagesContainer.style.cssText =
-                "transform:scale(" + scale + ");transform-origin:top center;display:flex;flex-direction:column;align-items:center;gap:20px;padding-bottom:20px;";
+                "transform:scale(" + scale + ");transform-origin:top center;display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:20px;";
 
             const pageWrappers = [];
 

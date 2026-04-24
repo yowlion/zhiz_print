@@ -264,3 +264,18 @@ License expired or not activated,许可证已过期或未激活
 Expires,过期时间
 "Not activated. Please refresh boot cache to get a trial license or purchase a full license.","未激活，请刷新启动缓存获取试用许可或购买正式许可。"
 Cannot create new print design,无法创建新的打印设计
+Batch Print,批量打印
+Batch Logs,批量日志
+records,条
+Print All,全部打印
+Export All PDF,批量导出PDF
+Export All Excel,批量导出Excel
+documents selected,个单据已选中
+docs,个单据
+documents failed to render,个单据渲染失败
+No documents selected for batch printing,未选择需要批量打印的单据
+Please select a template and wait for preview,请选择模板并等待预览完成
+Rendering batch preview...,正在渲染批量预览...
+All documents failed to render,所有单据渲染失败
+Batch Excel export failed,批量Excel导出失败
+Back to List,返回列表
