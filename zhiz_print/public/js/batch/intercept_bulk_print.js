@@ -51,11 +51,11 @@ frappe.provide('zhiz_print.batch');
                             callback: (r) => {
                                 if (r.message?.enabled && r.message?.designs?.length > 0) {
                                     const docnames = checked.map(d => d.name || d);
-                                    frappe.route_options = {
+                                    const params = new URLSearchParams({
                                         doctype: this.doctype,
-                                        docnames: docnames,
-                                    };
-                                    frappe.set_route('batch-print');
+                                        docnames: JSON.stringify(docnames),
+                                    });
+                                    window.location.href = '/app/batch-print?' + params.toString();
                                 } else {
                                     // No designs available, fallback to default
                                     origAction();

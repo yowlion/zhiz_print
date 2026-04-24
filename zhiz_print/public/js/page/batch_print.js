@@ -8,9 +8,25 @@ frappe.pages["batch-print"].on_page_load = function (wrapper) {
     const page = wrapper.page;
     page.set_title(__('Batch Print'));
 
-    const routeOpts = frappe.route_options || {};
-    const doctype = routeOpts.doctype;
-    const docnames = routeOpts.docnames;
+    // Read from URL query params (survives refresh) or route_options (from navigation)
+    const urlParams = new URLSearchParams(window.location.search);
+    let doctype = urlParams.get("doctype");
+    let docnames = urlParams.get("docnames");
+
+    if (!doctype || !docnames) {
+        const routeOpts = frappe.route_options || {};
+        doctype = doctype || routeOpts.doctype;
+        docnames = docnames || routeOpts.docnames;
+    }
+
+    // Parse docnames: JSON array or comma-separated
+    if (typeof docnames === "string") {
+        try {
+            docnames = JSON.parse(docnames);
+        } catch (e) {
+            docnames = docnames.split(",").map(s => s.trim()).filter(Boolean);
+        }
+    }
 
     if (!doctype || !docnames || !docnames.length) {
         page.main.html(
