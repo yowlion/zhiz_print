@@ -11,13 +11,16 @@ import json
 @frappe.whitelist()
 def check_batch_print_enabled(doctype):
     """Check if super print is enabled for a given doctype and return available designs."""
-    pd = (frappe.boot.zhiz_print or {}).get("print_designer", {})
-    if not pd or not pd.get("enabled"):
+    setting = frappe.get_single("Zprint Setting")
+    if not frappe.utils.cint(setting.get("enable_super_print_page")):
         return {"enabled": False, "designs": []}
 
-    enable_mode = pd.get("enable_mode")
+    enable_mode = setting.get("print_enable_mode") or "Enable for All"
     if enable_mode == "Enable for Specific":
-        enabled_doctypes = pd.get("enabled_doctypes", [])
+        enabled_doctypes = [
+            item.doctype_name for item in setting.get("print_enabled_doctypes", [])
+            if item.enabled and item.doctype_name
+        ]
         if doctype not in enabled_doctypes:
             return {"enabled": False, "designs": []}
 
