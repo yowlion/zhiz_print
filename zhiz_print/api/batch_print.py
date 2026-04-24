@@ -112,8 +112,11 @@ def batch_render_preview(doctype, docnames, design_name, params=None):
 
 @frappe.whitelist()
 def batch_generate_pdf(doctype, docnames, design_name, params=None):
-    """Generate merged PDF for multiple documents."""
-    from zhiz_print.api.print_designer import _check_license
+    """Generate merged PDF for multiple documents by concatenating HTML first."""
+    from zhiz_print.api.print_designer import (
+        _check_license, _render_print_html, _pdf_response,
+        _fix_merged_cell_borders_for_pdf, _prepare_html_for_wkhtmltopdf,
+    )
 
     _check_license()
 
@@ -126,95 +129,76 @@ def batch_generate_pdf(doctype, docnames, design_name, params=None):
             params = {}
 
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
-
-    pdf_bytes_list = []
     design = frappe.get_doc("Super Print Design", design_name)
+    success_count = 0
 
-    for docname in docnames:
+    # Render HTML for each doc and concatenate into one HTML document
+    html_parts = []
+    styles_collected = set()
+
+    for idx, docname in enumerate(docnames):
         try:
-            pdf_bytes = _generate_single_pdf(engine_mode, doctype, docname, design_name, params)
-            if pdf_bytes:
-                pdf_bytes_list.append(pdf_bytes)
-        except Exception as e:
-            frappe.log_error(f"Batch PDF failed for {doctype} {docname}: {e}")
+            html, _ = _render_print_html(doctype, docname, design_name, params)
+            # Extract body content
+            import re
+            body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
+            style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
 
-    if not pdf_bytes_list:
+            body_content = body_match.group(1) if body_match else html
+
+            # Add page break between documents
+            if idx < len(docnames) - 1:
+                body_content += '<div style="page-break-after:always"></div>'
+
+            # Collect unique styles
+            for s in style_matches:
+                if s not in styles_collected:
+                    styles_collected.add(s)
+
+            html_parts.append(body_content)
+            success_count += 1
+        except Exception as e:
+            frappe.log_error(f"Batch PDF render failed for {doctype} {docname}: {e}")
+
+    if success_count == 0:
         frappe.throw(_("All documents failed to generate PDF"))
 
-    if len(pdf_bytes_list) == 1:
-        merged_pdf = pdf_bytes_list[0]
-    else:
-        from PyPDF2 import PdfWriter, PdfReader
-        import io
+    # Build combined HTML
+    combined_html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n'
+    combined_html += "\n".join(styles_collected)
+    combined_html += '\n</head>\n<body>\n'
+    combined_html += "\n".join(html_parts)
+    combined_html += '\n</body>\n</html>'
 
-        writer = PdfWriter()
-        for pdf_bytes in pdf_bytes_list:
-            reader = PdfReader(io.BytesIO(pdf_bytes))
-            for page in reader.pages:
-                writer.add_page(page)
-        output = io.BytesIO()
-        writer.write(output)
-        merged_pdf = output.getvalue()
-
-    filename = f"batch-{doctype}-{len(pdf_bytes_list)}docs-{design.design_name}.pdf"
-    frappe.local.response.filename = filename
-    frappe.local.response.filecontent = merged_pdf
-    frappe.local.response.type = "pdf"
-
-
-def _generate_single_pdf(engine_mode, doctype, docname, design_name, params):
-    """Generate PDF for a single document and return bytes (not set response)."""
+    # Generate single PDF using the selected engine
     if engine_mode == "WeasyPrint":
-        return _generate_single_pdf_weasyprint(doctype, docname, design_name, params)
+        from weasyprint import HTML as WeasyHTML
+        combined_html = _fix_merged_cell_borders_for_pdf(combined_html)
+        pdf_bytes = WeasyHTML(string=combined_html).write_pdf()
     elif engine_mode == "Chromium":
-        return _generate_single_pdf_chromium(doctype, docname, design_name, params)
+        pdf_bytes = _generate_chromium_pdf(combined_html, design)
     else:
-        return _generate_single_pdf_wkhtmltopdf(doctype, docname, design_name, params)
+        import pdfkit
+        combined_html = _prepare_html_for_wkhtmltopdf(combined_html)
+        options = {
+            "quiet": "", "encoding": "UTF-8", "print-media-type": "",
+            "background": "", "images": "", "disable-smart-shrinking": "",
+            "margin-top": "0", "margin-bottom": "0",
+            "margin-left": "0", "margin-right": "0",
+        }
+        if design.print_paper:
+            paper = frappe.get_doc("Super Print Paper", design.print_paper)
+            options["page-width"] = f"{paper.width}mm"
+            options["page-height"] = f"{paper.height}mm"
+        pdf_bytes = pdfkit.from_string(combined_html, False, options=options)
+
+    _pdf_response(pdf_bytes, f"batch-{doctype}-{success_count}docs-{design.design_name}.pdf")
 
 
-def _generate_single_pdf_weasyprint(doctype, docname, design_name, params):
-    from weasyprint import HTML as WeasyHTML
-    from zhiz_print.api.print_designer import _render_print_html, _fix_merged_cell_borders_for_pdf
-
-    html, design = _render_print_html(doctype, docname, design_name, params)
-    html = _fix_merged_cell_borders_for_pdf(html)
-    return WeasyHTML(string=html).write_pdf()
-
-
-def _generate_single_pdf_wkhtmltopdf(doctype, docname, design_name, params):
-    import pdfkit
-    from zhiz_print.api.print_designer import _render_print_html, _prepare_html_for_wkhtmltopdf
-
-    html, design = _render_print_html(doctype, docname, design_name, params)
-    html = _prepare_html_for_wkhtmltopdf(html)
-
-    options = {
-        "quiet": "",
-        "encoding": "UTF-8",
-        "print-media-type": "",
-        "background": "",
-        "images": "",
-        "disable-smart-shrinking": "",
-        "margin-top": "0",
-        "margin-bottom": "0",
-        "margin-left": "0",
-        "margin-right": "0",
-    }
-    if design.print_paper:
-        paper = frappe.get_doc("Super Print Paper", design.print_paper)
-        options["page-width"] = f"{paper.width}mm"
-        options["page-height"] = f"{paper.height}mm"
-
-    return pdfkit.from_string(html, False, options=options)
-
-
-def _generate_single_pdf_chromium(doctype, docname, design_name, params):
+def _generate_chromium_pdf(html, design):
+    """Generate PDF via Chromium headless, return bytes."""
     import os
     import subprocess
-    import tempfile
-    from zhiz_print.api.print_designer import _render_print_html
-
-    html, design = _render_print_html(doctype, docname, design_name, params)
 
     chromium_cmd = None
     for cmd in ['/snap/bin/chromium', 'chromium-browser', 'chromium', 'google-chrome', 'google-chrome-stable']:
@@ -231,8 +215,8 @@ def _generate_single_pdf_chromium(doctype, docname, design_name, params):
 
     tmpdir = os.path.abspath(os.path.join(frappe.get_site_path(), 'public', 'files', 'pdf_debug'))
     os.makedirs(tmpdir, exist_ok=True)
-    html_path = os.path.join(tmpdir, f'chrome_batch_{docname}.html')
-    pdf_path = os.path.join(tmpdir, f'chrome_batch_{docname}.pdf')
+    html_path = os.path.join(tmpdir, 'chrome_batch_combined.html')
+    pdf_path = os.path.join(tmpdir, 'chrome_batch_output.pdf')
 
     with open(html_path, 'w', encoding='utf-8') as f:
         f.write(html)
@@ -241,12 +225,8 @@ def _generate_single_pdf_chromium(doctype, docname, design_name, params):
         os.remove(pdf_path)
 
     chrome_args = [
-        chromium_cmd,
-        '--headless=new',
-        '--disable-gpu',
-        '--no-sandbox',
-        '--print-to-pdf=' + pdf_path,
-        '--no-pdf-header-footer',
+        chromium_cmd, '--headless=new', '--disable-gpu', '--no-sandbox',
+        '--print-to-pdf=' + pdf_path, '--no-pdf-header-footer',
     ]
     if design.print_paper:
         paper = frappe.get_doc('Super Print Paper', design.print_paper)
@@ -256,10 +236,10 @@ def _generate_single_pdf_chromium(doctype, docname, design_name, params):
             'marginTop': 0, 'marginBottom': 0, 'marginLeft': 0, 'marginRight': 0,
         }))
     chrome_args.append('file://' + html_path)
-    subprocess.run(chrome_args, capture_output=True, text=True, timeout=30)
+    subprocess.run(chrome_args, capture_output=True, text=True, timeout=60)
 
     if not os.path.exists(pdf_path):
-        return None
+        frappe.throw(_("Chromium PDF generation failed"))
 
     with open(pdf_path, 'rb') as f:
         return f.read()
