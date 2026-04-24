@@ -1,1 +1,1 @@
-
+zhiz_print.zhiz_print.patches.install_batch_print_page

@@ -23,9 +23,15 @@ app_include_css = [
     f"/assets/zhiz_print/css/print_designer.css?v={app_version}",
 ]
 
+# Global JS loading (list view batch print interceptor)
+app_include_js = [
+    f"/assets/zhiz_print/js/batch/intercept_bulk_print.js?v={app_version}",
+]
+
 # Print page JS override
 page_js = {
-    "print": "public/js/page/print.js"
+    "print": "public/js/page/print.js",
+    "batch-print": "public/js/page/batch_print.js",
 }
 
 # Boot Session Hook

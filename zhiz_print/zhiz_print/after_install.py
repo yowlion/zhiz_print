@@ -7,6 +7,7 @@ import frappe
 
 def after_install():
     _install_presets()
+    _install_batch_print_page()
 
 
 def _install_presets():
@@ -41,3 +42,18 @@ def _install_presets():
             frappe.clear_cache(doctype="Super Print Design")
         finally:
             frappe.flags.skip_zhiz_print_license = False
+
+
+def _install_batch_print_page():
+    if not frappe.db.exists("Page", "batch-print"):
+        page = frappe.get_doc({
+            "doctype": "Page",
+            "page_name": "batch-print",
+            "title": "Batch Print",
+            "icon": "fa fa-print",
+            "module": "Zhiz Print",
+            "standard": "Yes",
+            "system_page": 1,
+        })
+        page.insert(ignore_permissions=True)
+        frappe.db.commit()

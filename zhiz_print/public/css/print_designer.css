@@ -246,3 +246,39 @@
 .super-zprint-border-settings .super-zprint-border-width-btn.super-zprint-bw-active { background:#2196f3; color:#fff; }
 .super-zprint-border-settings .super-zprint-border-side-btn:hover { background:#e3f2fd; }
 .super-zprint-css-editor { font-family:monospace; font-size:10px; }
+
+/* ==================== Batch Print Page ==================== */
+.sp-batch-doc-count {
+    display:inline-block; font-size:10px; font-weight:600; color:#2196f3;
+    background:#e3f2fd; padding:1px 6px; border-radius:3px; margin-left:5px;
+}
+.sp-batch-info-bar {
+    display:flex; align-items:center; gap:8px; padding:8px 16px;
+    background:#fff; border-bottom:1px solid #e0e0e0; font-size:12px; color:#666; flex-shrink:0;
+}
+.sp-batch-info-doctype { font-weight:600; color:#333; }
+.sp-batch-info-sep { color:#ccc; }
+.sp-batch-info-count { color:#2196f3; font-weight:500; }
+.sp-doc-separator {
+    width:100%; padding:8px 16px; background:#f0f4f8; color:#555;
+    font-size:12px; font-weight:600; text-align:center; margin:6px 0;
+    border-radius:4px; border:1px solid #d0dbe6;
+}
+.sp-batch-error-summary {
+    width:100%; padding:12px 16px; background:#fff3f3; border:1px solid #f5c6cb;
+    border-radius:4px; color:#721c24; font-size:12px; margin:10px 0;
+}
+.sp-batch-error-summary ul {
+    margin:5px 0 0 15px; font-size:11px; color:#a94442;
+}
+.sp-batch-error-summary li {
+    margin:2px 0;
+}
+.sp-batch-empty-state {
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:center; height:calc(100vh - 120px); color:#ccc;
+}
+.sp-log-docname {
+    font-size:10px; color:#888; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; max-width:160px;
+}
