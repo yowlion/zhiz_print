@@ -285,3 +285,8 @@ Unmerge Inherit,继承打散
 "Content is copied to every freed cell",继承打散：取消合并后内容复制到每个释放的单元格
 Unmerged with content inherited,已继承打散
 Unmerged, content kept in first cell,已左侧打散
+Format Painter,格式刷
+Select a cell first,请先选择一个单元格
+Format Painter activated,格式刷已激活
+Position,位置
+Width,粗细

@@ -296,6 +296,40 @@
 .super-zprint-css-quick-compact .super-zprint-btn-group-wrap .btn { width:28px; height:28px; padding:0; display:flex; align-items:center; justify-content:center; }
 .super-zprint-border-settings .super-zprint-border-width-btn.super-zprint-bw-active { background:#2196f3; color:#fff; }
 .super-zprint-border-settings .super-zprint-border-side-btn:hover { background:#e3f2fd; }
+.super-zprint-border-settings .super-zprint-border-side-btn.super-zprint-bs-active { background:#2196f3; color:#fff; }
+/* Border thickness icons */
+.border-icon-thin, .border-icon-medium, .border-icon-thick, .border-icon-none {
+    display: inline-block; width: 16px; height: 16px; position: relative;
+}
+.border-icon-thin::after {
+    content: ''; position: absolute; top: 50%; left: 2px; right: 2px;
+    height: 1px; background: #333; transform: translateY(-50%);
+}
+.border-icon-medium::after {
+    content: ''; position: absolute; top: 50%; left: 2px; right: 2px;
+    height: 3px; background: #333; transform: translateY(-50%);
+}
+.border-icon-thick::after {
+    content: ''; position: absolute; top: calc(50% - 2px); left: 2px; right: 2px;
+    height: 4px; background: #333;
+}
+.border-icon-none::after {
+    content: ''; position: absolute; top: 50%; left: 2px; right: 2px;
+    height: 1px; background: #333; transform: translateY(-50%) rotate(-45deg);
+}
+.border-icon-none::before {
+    content: ''; position: absolute; top: 50%; left: 2px; right: 2px;
+    height: 1px; background: #333; transform: translateY(-50%) rotate(45deg);
+}
+.super-zprint-bw-active .border-icon-thin::after,
+.super-zprint-bw-active .border-icon-medium::after,
+.super-zprint-bw-active .border-icon-thick::after,
+.super-zprint-bw-active .border-icon-none::after,
+.super-zprint-bw-active .border-icon-none::before { background: #fff; }
+/* Format Painter */
+#format-painter-btn { transition: all 0.15s; }
+#format-painter-btn:hover { background: #fff3e0 !important; border-color: #ff9800 !important; }
+.format-painter-cursor td { cursor: crosshair !important; }
 .super-zprint-css-editor { font-family:monospace; font-size:10px; }
 
 /* ==================== Batch Print Page ==================== */

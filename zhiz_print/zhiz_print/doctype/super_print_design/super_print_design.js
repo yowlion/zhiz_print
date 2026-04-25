@@ -9,6 +9,10 @@ class SuperPrintDesigner {
         this.grid = [];
         this.cellDataMap = {};
         this.selectedCells = [];
+        this.formatPainterActive = false;
+        this.formatPainterSourceCss = null;
+        this.formatPainterPainting = false;
+        this.formatPainterLastPainted = null;
 
         this.rows = frm.doc.rows || 20;
         this.cols = frm.doc.columns || 15;
@@ -108,6 +112,10 @@ class SuperPrintDesigner {
         this.grid = Array(this.rows).fill().map(() => Array(this.cols).fill(null));
     }
 
+    getDefaultCellCss() {
+        return 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
+    }
+
     isMergedMark(value) {
         if (!value) return false;
         const str = value.toString().trim();
@@ -123,7 +131,7 @@ class SuperPrintDesigner {
     loadExistingDesign(serverData) {
         this.initGrid();
         this.cellDataMap = {};
-        const defaultCellStyle = 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
+        const defaultCellStyle = this.getDefaultCellCss();
 
         if (serverData) {
             // Use server-parsed data
@@ -546,8 +554,41 @@ class SuperPrintDesigner {
                 return;
             }
             const cell = e.target.closest('.spd-cell');
-            if (cell) this.handleCellClick(cell.dataset.cellId);
+            if (cell) {
+                if (this.formatPainterActive) {
+                    this.paintFormatToCell(cell.dataset.cellId);
+                    return;
+                }
+                this.handleCellClick(cell.dataset.cellId);
+            }
         });
+
+        // Format painter: drag painting
+        container.addEventListener('mousedown', (e) => {
+            if (!this.formatPainterActive) return;
+            const cell = e.target.closest('.spd-cell');
+            if (!cell) return;
+            e.preventDefault();
+            this.formatPainterPainting = true;
+            this.formatPainterLastPainted = null;
+            this.paintFormatToCell(cell.dataset.cellId);
+        });
+        container.addEventListener('mousemove', (e) => {
+            if (!this.formatPainterActive || !this.formatPainterPainting) return;
+            const cell = e.target.closest('.spd-cell');
+            if (cell) this.paintFormatToCell(cell.dataset.cellId);
+        });
+        this._fpMouseUp = () => {
+            if (!this.formatPainterActive || !this.formatPainterPainting) return;
+            this.formatPainterPainting = false;
+            this.formatPainterLastPainted = null;
+            this.refreshGrid();
+        };
+        document.addEventListener('mouseup', this._fpMouseUp);
+        this._fpEsc = (e) => {
+            if (e.key === 'Escape' && this.formatPainterActive) this.deactivateFormatPainter();
+        };
+        document.addEventListener('keydown', this._fpEsc);
 
         setTimeout(() => {
             this.alignRowHeaders();
@@ -969,8 +1010,6 @@ class SuperPrintDesigner {
                             '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-font-size" data-step="1">+</button>' +
                         '</div>' +
                     '</div>' +
-                '</div>' +
-                '<div class="super-zprint-layout-controls">' +
                     '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Padding') + ':</label>' +
                         '<div class="super-zprint-number-spinner">' +
@@ -994,24 +1033,29 @@ class SuperPrintDesigner {
                         '<div class="super-zprint-color-picker-wrapper" title="' + __('Text Color') + '"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
                         '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="' + __('Default Style') + '" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">' + __('Default') + '</span></button>' +
                         '<button type="button" class="btn btn-xs btn-danger css-quick-btn" data-action="clear-css" title="' + __('Clear CSS') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-eraser"></i> ' + __('Clear') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" id="format-painter-btn" data-action="format-painter" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="super-zprint-border-settings" style="margin:6px 0;padding:6px;background:#f8f9fa;border-radius:4px;border:1px solid #e9ecef">' +
                     '<label style="font-size:9px;margin-bottom:4px">' + __('Border') + ':</label>' +
-                    '<div class="super-zprint-btn-group-wrap" style="margin-top:2px;gap:2px">' +
-                        '<div class="border-width-selector" style="display:flex;align-items:center;gap:2px">' +
-                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn super-zprint-bw-active" data-width="1" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thin') + '</button>' +
-                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="2" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Medium') + '</button>' +
-                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="3" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Thick') + '</button>' +
-                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="0" style="width:24px;height:20px;padding:0;font-size:8px">' + __('None') + '</button>' +
+                    '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">' +
+                        '<span style="font-size:8px;color:#888;min-width:28px">' + __('Position') + ':</span>' +
+                        '<div class="super-zprint-btn-group-wrap" style="gap:2px">' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn super-zprint-bs-active" data-side="top" title="' + __('Top') + '" style="width:24px;height:22px;padding:0"><i class="fa fa-arrow-up"></i></button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="bottom" title="' + __('Bottom') + '" style="width:24px;height:22px;padding:0"><i class="fa fa-arrow-down"></i></button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="left" title="' + __('Left') + '" style="width:24px;height:22px;padding:0"><i class="fa fa-arrow-left"></i></button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="right" title="' + __('Right') + '" style="width:24px;height:22px;padding:0"><i class="fa fa-arrow-right"></i></button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="all" title="' + __('All') + '" style="width:24px;height:22px;padding:0"><i class="fa fa-border-all"></i></button>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="super-zprint-btn-group-wrap" style="margin-top:4px;gap:2px">' +
-                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="top" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Top') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="bottom" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Bottom') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="left" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Left') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="right" style="width:24px;height:20px;padding:0;font-size:8px">' + __('Right') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default super-zprint-border-side-btn" data-side="none" style="width:24px;height:20px;padding:0;font-size:8px">' + __('All') + '</button>' +
+                    '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">' +
+                        '<span style="font-size:8px;color:#888;min-width:28px">' + __('Width') + ':</span>' +
+                        '<div class="super-zprint-btn-group-wrap" style="gap:2px">' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn super-zprint-bw-active" data-width="1" title="' + __('Thin') + ' (1px)" style="width:24px;height:22px;padding:0"><span class="border-icon-thin"></span></button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="2" title="' + __('Medium') + ' (2px)" style="width:24px;height:22px;padding:0"><span class="border-icon-medium"></span></button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="3" title="' + __('Thick') + ' (3px)" style="width:24px;height:22px;padding:0"><span class="border-icon-thick"></span></button>' +
+                            '<button type="button" class="btn btn-xs btn-default super-zprint-border-width-btn" data-width="0" title="' + __('None') + '" style="width:24px;height:22px;padding:0"><span class="border-icon-none"></span></button>' +
+                        '</div>' +
                     '</div>' +
                 '</div>' +
                 '<label>' + __('CSS') + ':</label>' +
@@ -1171,7 +1215,7 @@ class SuperPrintDesigner {
                         cell_id: newCellId, row: row, col: c + 1,
                         rowspan: 1, colspan: 1, cell_type: 'static',
                         cell_value: '',
-                        css_style: 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;'
+                        css_style: this.getDefaultCellCss()
                     };
                     this.grid[startRow][c] = newCell;
                     this.cellDataMap[newCellId] = newCell;
@@ -1225,7 +1269,7 @@ class SuperPrintDesigner {
                             cell_id: newCellId, row: r + 1, col: c + 1,
                             rowspan: 1, colspan: 1, cell_type: 'static',
                             cell_value: '',
-                            css_style: 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;'
+                            css_style: this.getDefaultCellCss()
                         };
                         this.grid[r][c] = newCell;
                         this.cellDataMap[newCellId] = newCell;
@@ -1281,6 +1325,71 @@ class SuperPrintDesigner {
         this.refreshGrid();
         this.renderCellProperties(this.currentCell);
         frappe.show_alert({ message: inherit ? __('Unmerged with content inherited') : __('Unmerged, content kept in first cell'), indicator: 'green' });
+    }
+
+    toggleFormatPainter() {
+        if (this.formatPainterActive) {
+            this.deactivateFormatPainter();
+        } else {
+            this.activateFormatPainter();
+        }
+    }
+
+    activateFormatPainter() {
+        if (!this.currentCell) {
+            frappe.show_alert({ message: __('Select a cell first'), indicator: 'yellow' });
+            return;
+        }
+        const [row, col] = this.parseCellId(this.currentCell);
+        const cell = this.grid[row - 1]?.[col - 1];
+        if (!cell || cell._merged) return;
+
+        this.formatPainterActive = true;
+        this.formatPainterSourceCss = cell.css_style || '';
+        this.formatPainterPainting = false;
+        this.formatPainterLastPainted = null;
+
+        const container = document.getElementById(this.designContainerId);
+        const btn = container?.querySelector('#format-painter-btn');
+        if (btn) {
+            btn.style.background = '#ff9800';
+            btn.style.color = '#fff';
+            btn.style.borderColor = '#ff9800';
+        }
+        const grid = container?.querySelector('#spd-grid');
+        if (grid) grid.classList.add('format-painter-cursor');
+        frappe.show_alert({ message: __('Format Painter activated'), indicator: 'blue' });
+    }
+
+    deactivateFormatPainter() {
+        this.formatPainterActive = false;
+        this.formatPainterSourceCss = null;
+        this.formatPainterPainting = false;
+        this.formatPainterLastPainted = null;
+
+        const container = document.getElementById(this.designContainerId);
+        const btn = container?.querySelector('#format-painter-btn');
+        if (btn) {
+            btn.style.background = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+        }
+        const grid = container?.querySelector('#spd-grid');
+        if (grid) grid.classList.remove('format-painter-cursor');
+    }
+
+    paintFormatToCell(cellId) {
+        if (!this.formatPainterActive || !this.formatPainterSourceCss) return;
+        if (cellId === this.formatPainterLastPainted) return;
+        this.formatPainterLastPainted = cellId;
+
+        const [row, col] = this.parseCellId(cellId);
+        const cell = this.grid[row - 1]?.[col - 1];
+        if (!cell || cell._merged) return;
+
+        cell.css_style = this.formatPainterSourceCss;
+        this.cellDataMap[cellId] = cell;
+        this.frm.dirty();
     }
 
     setColorProperty(prop, color) {
@@ -1386,12 +1495,30 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
         if (this.currentBorderWidth === undefined) this.currentBorderWidth = 1;
+        if (this.currentBorderSide === undefined) this.currentBorderSide = 'all';
 
         const widthBtns = container.querySelectorAll('.super-zprint-border-width-btn');
+        const sideBtns = container.querySelectorAll('.super-zprint-border-side-btn');
+
         widthBtns.forEach(btn => {
             const btnWidth = parseInt(btn.dataset.width);
             if (btnWidth === this.currentBorderWidth) btn.classList.add('super-zprint-bw-active');
             else btn.classList.remove('super-zprint-bw-active');
+        });
+
+        sideBtns.forEach(btn => {
+            if (btn.dataset.side === this.currentBorderSide) btn.classList.add('super-zprint-bs-active');
+            else btn.classList.remove('super-zprint-bs-active');
+        });
+
+        sideBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                sideBtns.forEach(b => b.classList.remove('super-zprint-bs-active'));
+                btn.classList.add('super-zprint-bs-active');
+                this.currentBorderSide = btn.dataset.side;
+                this.applySingleBorder(this.currentBorderSide, this.currentBorderWidth);
+            });
         });
 
         widthBtns.forEach(btn => {
@@ -1400,13 +1527,7 @@ class SuperPrintDesigner {
                 widthBtns.forEach(b => b.classList.remove('super-zprint-bw-active'));
                 btn.classList.add('super-zprint-bw-active');
                 this.currentBorderWidth = parseInt(btn.dataset.width);
-            });
-        });
-
-        container.querySelectorAll('.super-zprint-border-side-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.applySingleBorder(btn.dataset.side, this.currentBorderWidth);
+                this.applySingleBorder(this.currentBorderSide, this.currentBorderWidth);
             });
         });
     }
@@ -1427,11 +1548,11 @@ class SuperPrintDesigner {
             cssPairs['border-left'] = borderValue;
         }
 
-        const sideNames = { top: __('Top'), bottom: __('Bottom'), left: __('Left'), right: __('Right'), none: __('All') };
+        const sideNames = { top: __('Top'), bottom: __('Bottom'), left: __('Left'), right: __('Right'), all: __('All') };
         const allSides = ['top', 'right', 'bottom', 'left'];
         const borderVal = width > 0 ? width + 'px solid black' : '1px solid transparent';
 
-        if (side === 'none') {
+        if (side === 'all') {
             // "All" button: apply current width to all four sides
             allSides.forEach(s => { cssPairs['border-' + s] = borderVal; });
             const newCss = Object.entries(cssPairs).map(([k, v]) => k + ':' + v).join('; ');
@@ -1479,7 +1600,7 @@ class SuperPrintDesigner {
                     if (paddingInput) paddingInput.value = 0;
                     this.updateCellProperty('css_style', '');
                 } else if (action === 'default-css') {
-                    const defaultCss = 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
+                    const defaultCss = this.getDefaultCellCss();
                     const cssEditor = container.querySelector('#prop-css-style');
                     if (cssEditor) cssEditor.value = defaultCss;
                     const bgPicker = container.querySelector('#bg-color-picker');
@@ -1492,6 +1613,8 @@ class SuperPrintDesigner {
                     if (paddingInput) paddingInput.value = 0;
                     this.updateCellProperty('css_style', defaultCss);
                     frappe.show_alert({ message: __('Default style restored'), indicator: 'green' });
+                } else if (action === 'format-painter') {
+                    this.toggleFormatPainter();
                 } else if (cssProp) {
                     this.toggleCssProperty(cssProp);
                 }
@@ -1604,7 +1727,7 @@ class SuperPrintDesigner {
     createBlankItem(row, col) {
         return {
             cell_id: 'R' + row + 'C' + col, row, col, rowspan: 1, colspan: 1,
-            cell_type: 'static', cell_value: '', css_style: 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;'
+            cell_type: 'static', cell_value: '', css_style: this.getDefaultCellCss()
         };
     }
 
@@ -1621,7 +1744,7 @@ class SuperPrintDesigner {
         this.cellDataMap = {};
         this.rowStyles = {};
         this.colStyles = {};
-        const defaultCss = 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
+        const defaultCss = this.getDefaultCellCss();
         for (let r = 1; r <= this.rows; r++) {
             for (let c = 1; c <= this.cols; c++) {
                 const id = 'R' + r + 'C' + c;
