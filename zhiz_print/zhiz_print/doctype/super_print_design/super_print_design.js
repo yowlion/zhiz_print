@@ -530,6 +530,8 @@ class SuperPrintDesigner {
         container.querySelector('#spd-repeat-title-btn')?.addEventListener('click', () => this.setRowType('Repeat Title Row'));
         container.querySelector('#spd-data-driven-btn')?.addEventListener('click', () => this.setRowType('Data-Driven Row'));
         container.querySelector('#spd-normal-row-btn')?.addEventListener('click', () => this.setRowType(''));
+        container.querySelector('#btn-unmerge-left')?.addEventListener('click', () => this._doUnmerge(false));
+        container.querySelector('#btn-unmerge-inherit')?.addEventListener('click', () => this._doUnmerge(true));
 
         // Delegated click events
         container.addEventListener('click', (e) => {
@@ -894,6 +896,12 @@ class SuperPrintDesigner {
         const cell = this.grid[row - 1]?.[col - 1];
         if (!cell || cell._merged) return;
 
+        const isMerged = cell.rowspan > 1 || cell.colspan > 1;
+        const btnLeft = container.querySelector('#btn-unmerge-left');
+        const btnInherit = container.querySelector('#btn-unmerge-inherit');
+        if (btnLeft) btnLeft.style.display = isMerged ? 'inline-block' : 'none';
+        if (btnInherit) btnInherit.style.display = isMerged ? 'inline-block' : 'none';
+
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
             titleElement.innerHTML = '<i class="fa fa-cog"></i> ' + __('Cell Properties') + ' <small style="color:#6c757d;font-weight:normal">(' + cellId + ')</small>';
@@ -960,10 +968,6 @@ class SuperPrintDesigner {
                             '<input type="number" id="prop-font-size" class="form-control super-zprint-spin-input" value="' + this.extractFontSize(cell.css_style, row) + '" min="8" max="36">' +
                             '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-font-size" data-step="1">+</button>' +
                         '</div>' +
-                    '</div>' +
-                    '<div class="super-zprint-layout-control-group" id="unmerge-btn-group" style="display:' + ((cell.rowspan > 1 || cell.colspan > 1) ? 'flex' : 'none') + ';gap:4px;align-items:center;">' +
-                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-left" title="' + __('Content stays in first cell, others become empty') + '">' + __('Unmerge Left') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-inherit" title="' + __('Content is copied to every freed cell') + '">' + __('Unmerge Inherit') + '</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="super-zprint-layout-controls">' +
@@ -1376,14 +1380,6 @@ class SuperPrintDesigner {
                 }
             });
         });
-        const btnLeft = container.querySelector('#btn-unmerge-left');
-        if (btnLeft) {
-            btnLeft.addEventListener('click', () => this._doUnmerge(false));
-        }
-        const btnInherit = container.querySelector('#btn-unmerge-inherit');
-        if (btnInherit) {
-            btnInherit.addEventListener('click', () => this._doUnmerge(true));
-        }
     }
 
     bindBorderButtons() {

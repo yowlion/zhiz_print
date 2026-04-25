@@ -15,6 +15,8 @@
                 <option value="{{ f.value }}" {% if f.value == font_family %}selected{% endif %}>{{ f.label }}</option>
                 {% endfor %}
             </select>
+            <button class="btn btn-default btn-sm" id="btn-unmerge-left" style="display:none;" title="{{ _('Content stays in first cell, others become empty') }}"><i class="fa fa-expand"></i> <small style="font-size:9px">{{ _("Unmerge Left") }}</small></button>
+            <button class="btn btn-default btn-sm" id="btn-unmerge-inherit" style="display:none;" title="{{ _('Content is copied to every freed cell') }}"><i class="fa fa-clone"></i> <small style="font-size:9px">{{ _("Unmerge Inherit") }}</small></button>
         </div>
         <div class="spd-controls spd-row-type-controls" style="display:none">
             <button class="btn btn-default btn-sm" id="spd-repeat-title-btn" title="{{ _('Set Repeat Title Row') }}">
