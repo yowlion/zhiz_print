@@ -942,6 +942,7 @@ class SuperPrintDesigner {
                             '<input type="number" id="prop-rowspan" class="form-control super-zprint-spin-input" min="1" max="100" value="' + (cell.rowspan || 1) + '">' +
                             '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-rowspan" data-step="1">+</button>' +
                         '</div>' +
+                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-left" style="margin-top:2px;display:' + ((cell.rowspan > 1) ? 'inline-block' : 'none') + ';" title="' + __('Content stays in first cell, others become empty') + '">' + __('Unmerge Left') + '</button>' +
                     '</div>' +
                     '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Colspan') + ':</label>' +
@@ -950,10 +951,7 @@ class SuperPrintDesigner {
                             '<input type="number" id="prop-colspan" class="form-control super-zprint-spin-input" min="1" max="26" value="' + (cell.colspan || 1) + '">' +
                             '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-colspan" data-step="1">+</button>' +
                         '</div>' +
-                    '</div>' +
-                    '<div class="super-zprint-layout-control-group" id="unmerge-btn-group" style="display:' + ((cell.rowspan > 1 || cell.colspan > 1) ? 'flex' : 'none') + ';gap:4px;align-items:center;">' +
-                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-left" title="' + __('Content stays in first cell, others become empty') + '">' + __('Unmerge Left') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-inherit" title="' + __('Content is copied to every freed cell') + '">' + __('Unmerge Inherit') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-inherit" style="margin-top:2px;display:' + ((cell.colspan > 1) ? 'inline-block' : 'none') + ';" title="' + __('Content is copied to every freed cell') + '">' + __('Unmerge Inherit') + '</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="super-zprint-layout-controls">' +
