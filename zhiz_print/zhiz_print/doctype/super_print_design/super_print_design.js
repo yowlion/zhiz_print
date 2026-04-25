@@ -1229,20 +1229,19 @@ class SuperPrintDesigner {
         this.cellDataMap[this.currentCell] = cell;
     }
 
-    _createFreedCell(row, col, inheritFrom) {
+    _createFreedCell(row, col, sourceCell, copyContent) {
         const newCellId = 'R' + row + 'C' + col;
-        const baseStyle = 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
         const newCell = {
             cell_id: newCellId, row: row, col: col,
             rowspan: 1, colspan: 1, cell_type: 'static',
-            cell_value: inheritFrom ? inheritFrom.cell_value : '',
-            css_style: inheritFrom ? inheritFrom.css_style : baseStyle
+            cell_value: copyContent ? sourceCell.cell_value : '',
+            css_style: sourceCell.css_style || ''
         };
-        if (inheritFrom) {
-            newCell.cell_type = inheritFrom.cell_type || 'static';
-            if (inheritFrom.barcode_format) newCell.barcode_format = inheritFrom.barcode_format;
-            if (inheritFrom.barcode_width) newCell.barcode_width = inheritFrom.barcode_width;
-            if (inheritFrom.barcode_height) newCell.barcode_height = inheritFrom.barcode_height;
+        if (copyContent) {
+            newCell.cell_type = sourceCell.cell_type || 'static';
+            if (sourceCell.barcode_format) newCell.barcode_format = sourceCell.barcode_format;
+            if (sourceCell.barcode_width) newCell.barcode_width = sourceCell.barcode_width;
+            if (sourceCell.barcode_height) newCell.barcode_height = sourceCell.barcode_height;
         }
         return newCell;
     }
@@ -1261,7 +1260,7 @@ class SuperPrintDesigner {
             for (let c = startCol; c < startCol + oldColspan; c++) {
                 if (r === startRow && c === startCol) continue;
                 if (r < this.rows && c < this.cols) {
-                    const newCell = this._createFreedCell(r + 1, c + 1, inherit ? cell : null);
+                    const newCell = this._createFreedCell(r + 1, c + 1, cell, inherit);
                     this.grid[r][c] = newCell;
                     this.cellDataMap[newCell.cell_id] = newCell;
                 }
