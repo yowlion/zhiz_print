@@ -951,6 +951,10 @@ class SuperPrintDesigner {
                             '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-colspan" data-step="1">+</button>' +
                         '</div>' +
                     '</div>' +
+                    '<div class="super-zprint-layout-control-group" id="unmerge-btn-group" style="display:' + ((cell.rowspan > 1 || cell.colspan > 1) ? 'flex' : 'none') + ';gap:4px;align-items:center;">' +
+                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-left" title="' + __('Content stays in first cell, others become empty') + '">' + __('Unmerge Left') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default" id="btn-unmerge-inherit" title="' + __('Content is copied to every freed cell') + '">' + __('Unmerge Inherit') + '</button>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="super-zprint-layout-controls">' +
                     '<div class="super-zprint-layout-control-group">' +
@@ -1227,6 +1231,53 @@ class SuperPrintDesigner {
         this.cellDataMap[this.currentCell] = cell;
     }
 
+    _createFreedCell(row, col, inheritFrom) {
+        const newCellId = 'R' + row + 'C' + col;
+        const baseStyle = 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
+        const newCell = {
+            cell_id: newCellId, row: row, col: col,
+            rowspan: 1, colspan: 1, cell_type: 'static',
+            cell_value: inheritFrom ? inheritFrom.cell_value : '',
+            css_style: inheritFrom ? inheritFrom.css_style : baseStyle
+        };
+        if (inheritFrom) {
+            newCell.cell_type = inheritFrom.cell_type || 'static';
+            if (inheritFrom.barcode_format) newCell.barcode_format = inheritFrom.barcode_format;
+            if (inheritFrom.barcode_width) newCell.barcode_width = inheritFrom.barcode_width;
+            if (inheritFrom.barcode_height) newCell.barcode_height = inheritFrom.barcode_height;
+        }
+        return newCell;
+    }
+
+    _doUnmerge(inherit) {
+        if (!this.currentCell) return;
+        const cell = this.cellDataMap[this.currentCell];
+        if (!cell || (cell.rowspan <= 1 && cell.colspan <= 1)) return;
+
+        const startRow = cell.row - 1;
+        const startCol = cell.col - 1;
+        const oldRowspan = cell.rowspan;
+        const oldColspan = cell.colspan;
+
+        for (let r = startRow; r < startRow + oldRowspan; r++) {
+            for (let c = startCol; c < startCol + oldColspan; c++) {
+                if (r === startRow && c === startCol) continue;
+                if (r < this.rows && c < this.cols) {
+                    const newCell = this._createFreedCell(r + 1, c + 1, inherit ? cell : null);
+                    this.grid[r][c] = newCell;
+                    this.cellDataMap[newCell.cell_id] = newCell;
+                }
+            }
+        }
+
+        cell.rowspan = 1;
+        cell.colspan = 1;
+        this.cellDataMap[this.currentCell] = cell;
+        this.refreshGrid();
+        this.renderCellProperties(this.currentCell);
+        frappe.show_alert({ message: inherit ? __('Unmerged with content inherited') : __('Unmerged, content kept in first cell'), indicator: 'green' });
+    }
+
     setColorProperty(prop, color) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
@@ -1324,6 +1375,14 @@ class SuperPrintDesigner {
                 }
             });
         });
+        const btnLeft = container.querySelector('#btn-unmerge-left');
+        if (btnLeft) {
+            btnLeft.addEventListener('click', () => this._doUnmerge(false));
+        }
+        const btnInherit = container.querySelector('#btn-unmerge-inherit');
+        if (btnInherit) {
+            btnInherit.addEventListener('click', () => this._doUnmerge(true));
+        }
     }
 
     bindBorderButtons() {

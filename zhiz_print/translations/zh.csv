@@ -279,3 +279,9 @@ Rendering batch preview...,正在渲染批量预览...
 All documents failed to render,所有单据渲染失败
 Batch Excel export failed,批量Excel导出失败
 Back to List,返回列表
+Unmerge Left,左侧打散
+Unmerge Inherit,继承打散
+"Content stays in first cell, others become empty",左侧打散：取消合并后内容保留在第一个单元格，其余单元格为空
+"Content is copied to every freed cell",继承打散：取消合并后内容复制到每个释放的单元格
+Unmerged with content inherited,已继承打散
+Unmerged, content kept in first cell,已左侧打散
