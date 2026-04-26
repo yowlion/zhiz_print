@@ -293,3 +293,7 @@ Width,粗细
 Zoom Out,缩小
 Zoom In,放大
 Reset Zoom,恢复缩放
+Insert Row,插入行
+Insert Column,插入列
+Row {0} inserted,第 {0} 行已插入
+Column {0} inserted,第 {0} 列已插入

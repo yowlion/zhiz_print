@@ -525,6 +525,8 @@ class SuperPrintDesigner {
         if (!container) return;
 
         container.querySelector('#spd-apply-grid')?.addEventListener('click', () => this.applyGridSize());
+        container.querySelector('#spd-insert-row-btn')?.addEventListener('click', () => this.insertRowAt(this.selectedRow));
+        container.querySelector('#spd-insert-col-btn')?.addEventListener('click', () => this.insertColAt(this.selectedCol));
         container.querySelector('#spd-font')?.addEventListener('change', (e) => {
             this.fontFamily = e.target.value;
             this.frm.set_value('font_family', this.fontFamily);
@@ -623,6 +625,10 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         const typeControls = container?.querySelector('.spd-row-type-controls');
         if (typeControls) typeControls.style.display = '';
+        const insertRowBtn = container?.querySelector('#spd-insert-row-btn');
+        const insertColBtn = container?.querySelector('#spd-insert-col-btn');
+        if (insertRowBtn) insertRowBtn.style.display = '';
+        if (insertColBtn) insertColBtn.style.display = 'none';
         this.renderRowProperties(row);
         this.refreshGrid();
     }
@@ -635,6 +641,10 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         container?.querySelector('.spd-row-type-controls')?.style && (container.querySelector('.spd-row-type-controls').style.display = 'none');
         this.selectedCells = [];
+        const insertRowBtn = container?.querySelector('#spd-insert-row-btn');
+        const insertColBtn = container?.querySelector('#spd-insert-col-btn');
+        if (insertRowBtn) insertRowBtn.style.display = 'none';
+        if (insertColBtn) insertColBtn.style.display = '';
         this.renderColProperties(col);
         this.refreshGrid();
     }
@@ -1951,6 +1961,203 @@ class SuperPrintDesigner {
     refreshParamsList(dialog) {
         this.showParamsDialog();
         dialog.hide();
+    }
+
+    insertRowAt(row) {
+        if (!row || row < 1 || row > this.rows) return;
+        const insertIdx = row - 1;
+
+        // Phase 1: Find masters that span across insertion point and expand their rowspan
+        const expandedMasters = new Set();
+        for (let c = 0; c < this.cols; c++) {
+            const cell = this.grid[insertIdx]?.[c];
+            if (cell?._merged) {
+                const masterId = cell.master_cell_id;
+                if (expandedMasters.has(masterId)) continue;
+                const masterCell = this.cellDataMap[masterId];
+                if (masterCell && masterCell.row - 1 < insertIdx && (masterCell.row - 1 + masterCell.rowspan) > insertIdx) {
+                    masterCell.rowspan += 1;
+                    expandedMasters.add(masterId);
+                }
+            } else if (cell && !cell._merged && cell.rowspan > 1 && cell.row - 1 < insertIdx && (cell.row - 1 + cell.rowspan) > insertIdx) {
+                cell.rowspan += 1;
+                expandedMasters.add(cell.cell_id);
+            }
+        }
+
+        // Phase 2: Build new grid with one extra row
+        const newGrid = [];
+        const defaultCss = this.getDefaultCellCss();
+        for (let r = 0; r < this.rows + 1; r++) {
+            if (r < insertIdx) {
+                newGrid[r] = this.grid[r];
+            } else if (r === insertIdx) {
+                // New blank row
+                const newRow = [];
+                for (let c = 0; c < this.cols; c++) {
+                    const id = 'R' + row + 'C' + (c + 1);
+                    const data = { cell_id: id, row: row, col: c + 1, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
+                    newRow.push(data);
+                    this.cellDataMap[id] = data;
+                }
+                newGrid[r] = newRow;
+            } else {
+                // Shift old row r-1 to r, update master cell positions
+                const oldRow = this.grid[r - 1];
+                const shiftedRow = [];
+                for (let c = 0; c < this.cols; c++) {
+                    const cell = oldRow[c];
+                    if (cell && !cell._merged && !expandedMasters.has(cell.cell_id)) {
+                        // Shift master cell row
+                        cell.row += 1;
+                        const oldId = cell.cell_id;
+                        cell.cell_id = 'R' + cell.row + 'C' + cell.col;
+                        delete this.cellDataMap[oldId];
+                        this.cellDataMap[cell.cell_id] = cell;
+                        shiftedRow.push(cell);
+                    } else if (cell && !cell._merged && expandedMasters.has(cell.cell_id)) {
+                        // Expanded master — stays in place (row unchanged)
+                        shiftedRow.push(cell);
+                    } else {
+                        // _merged marker or null, will be rebuilt
+                        shiftedRow.push(null);
+                    }
+                }
+                newGrid[r] = shiftedRow;
+            }
+        }
+        this.grid = newGrid;
+
+        // Phase 3: Re-apply merged markers for all masters
+        for (const [cellId, masterCell] of Object.entries(this.cellDataMap)) {
+            if (masterCell.rowspan > 1 || masterCell.colspan > 1) {
+                const startRow = masterCell.row - 1;
+                const startCol = masterCell.col - 1;
+                for (let mr = startRow; mr < startRow + masterCell.rowspan; mr++) {
+                    for (let mc = startCol; mc < startCol + masterCell.colspan; mc++) {
+                        if (mr === startRow && mc === startCol) continue;
+                        if (mr < this.rows + 1 && mc < this.cols) {
+                            this.grid[mr][mc] = { _merged: true, master_cell_id: cellId };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update rowStyles keys (shift down)
+        const newRowStyles = {};
+        for (const [key, val] of Object.entries(this.rowStyles)) {
+            const r = parseInt(key);
+            if (r >= row) {
+                newRowStyles[r + 1] = val;
+            } else {
+                newRowStyles[r] = val;
+            }
+        }
+        this.rowStyles = newRowStyles;
+
+        this.rows += 1;
+        this.frm.set_value('rows', this.rows);
+        this.refreshGrid();
+        this.frm.dirty();
+        frappe.show_alert({ message: __('Row {0} inserted').replace('{0}', row), indicator: 'green' });
+    }
+
+    insertColAt(col) {
+        if (!col || col < 1 || col > this.cols) return;
+        const insertIdx = col - 1;
+
+        // Phase 1: Find masters that span across insertion point and expand their colspan
+        const expandedMasters = new Set();
+        for (let r = 0; r < this.rows; r++) {
+            const cell = this.grid[r][insertIdx];
+            if (cell?._merged) {
+                const masterId = cell.master_cell_id;
+                if (expandedMasters.has(masterId)) continue;
+                const masterCell = this.cellDataMap[masterId];
+                if (masterCell && masterCell.col - 1 < insertIdx && (masterCell.col - 1 + masterCell.colspan) > insertIdx) {
+                    masterCell.colspan += 1;
+                    expandedMasters.add(masterId);
+                }
+            } else if (cell && !cell._merged && cell.colspan > 1 && cell.col - 1 < insertIdx && (cell.col - 1 + cell.colspan) > insertIdx) {
+                cell.colspan += 1;
+                expandedMasters.add(cell.cell_id);
+            }
+        }
+
+        // Phase 2: Expand each grid row by 1 column, shift cells right, insert new cells
+        const defaultCss = this.getDefaultCellCss();
+        for (let r = 0; r < this.rows; r++) {
+            const oldRow = this.grid[r];
+            const newRow = new Array(this.cols + 1).fill(null);
+
+            // Place cells: anything at col < insertIdx stays, insertIdx gets new cell, col >= insertIdx shifts right
+            for (let c = 0; c < this.cols; c++) {
+                const cell = oldRow[c];
+                if (c < insertIdx) {
+                    newRow[c] = cell;
+                } else {
+                    // c >= insertIdx: shift to c+1 unless this is an expanded master staying at its position
+                    if (cell && !cell._merged && expandedMasters.has(cell.cell_id) && cell.col - 1 === insertIdx) {
+                        // Expanded master stays at insertIdx
+                        newRow[insertIdx] = cell;
+                    } else if (cell && !cell._merged) {
+                        // Shift this master cell's position right
+                        cell.col += 1;
+                        const oldId = cell.cell_id;
+                        cell.cell_id = 'R' + cell.row + 'C' + cell.col;
+                        delete this.cellDataMap[oldId];
+                        this.cellDataMap[cell.cell_id] = cell;
+                        newRow[c + 1] = cell;
+                    }
+                    // _merged cells are skipped, will be rebuilt
+                }
+            }
+
+            // Insert blank cell at insertIdx if not occupied by expanded master
+            if (!newRow[insertIdx]) {
+                const id = 'R' + (r + 1) + 'C' + col;
+                const data = { cell_id: id, row: r + 1, col: col, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
+                newRow[insertIdx] = data;
+                this.cellDataMap[id] = data;
+            }
+
+            this.grid[r] = newRow;
+        }
+
+        // Phase 3: Re-apply merged markers for all masters
+        for (const [cellId, masterCell] of Object.entries(this.cellDataMap)) {
+            if (masterCell.rowspan > 1 || masterCell.colspan > 1) {
+                const startRow = masterCell.row - 1;
+                const startCol = masterCell.col - 1;
+                for (let mr = startRow; mr < startRow + masterCell.rowspan; mr++) {
+                    for (let mc = startCol; mc < startCol + masterCell.colspan; mc++) {
+                        if (mr === startRow && mc === startCol) continue;
+                        if (mr < this.rows && mc < this.cols + 1) {
+                            this.grid[mr][mc] = { _merged: true, master_cell_id: cellId };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update colStyles keys (shift right)
+        const newColStyles = {};
+        for (const [key, val] of Object.entries(this.colStyles)) {
+            const c = parseInt(key);
+            if (c >= col) {
+                newColStyles[c + 1] = val;
+            } else {
+                newColStyles[c] = val;
+            }
+        }
+        this.colStyles = newColStyles;
+
+        this.cols += 1;
+        this.frm.set_value('columns', this.cols);
+        this.refreshGrid();
+        this.frm.dirty();
+        frappe.show_alert({ message: __('Column {0} inserted').replace('{0}', col), indicator: 'green' });
     }
 
     bindPropertyEvents() { /* handled in bindEvents */ }
