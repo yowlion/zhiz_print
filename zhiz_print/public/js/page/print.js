@@ -175,25 +175,25 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	adjust_zoom(delta) {
 		const newZoom = Math.max(10, Math.min(500, (this.user_zoom || 100) + delta));
 		this.set_zoom(newZoom);
-	},
+	}
 
 	set_zoom(value) {
 		this.user_zoom = Math.max(10, Math.min(500, value));
 		const input = document.getElementById('sp-zoom-input');
 		if (input) input.value = this.user_zoom;
 		this.apply_zoom();
-	},
+	}
 
 	reset_zoom() {
 		this.set_zoom(100);
-	},
+	}
 
 	apply_zoom() {
 		const container = document.querySelector('.sp-pages-container');
 		if (!container || !this.base_scale) return;
 		const finalScale = this.base_scale * (this.user_zoom / 100);
 		container.style.transform = 'scale(' + finalScale + ')';
-	},
+	}
 
 	// ==================== Menu Override ====================
 
