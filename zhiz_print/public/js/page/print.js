@@ -558,8 +558,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		let printHtml = this.current_preview_html;
 		const paperInfo = this.current_design_info;
 		if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
-			const orient = paperInfo.paper_width > paperInfo.paper_height ? 'landscape' : 'portrait';
-			const injectCss = '<style>@media print { @page { size: ' + orient + '; margin: 0; } }</style>';
+			const injectCss = '<style>@media print { @page { size: ' + paperInfo.paper_width + 'mm ' + paperInfo.paper_height + 'mm; margin: 0; } }</style>';
 			printHtml = printHtml.replace('</head>', injectCss + '\n</head>');
 		}
 
