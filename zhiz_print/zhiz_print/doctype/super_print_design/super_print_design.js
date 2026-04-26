@@ -794,9 +794,14 @@ class SuperPrintDesigner {
         if (fontInput) fontInput.addEventListener('change', (e) => {
             this.updateRowStyle(row, 'font_size', parseInt(e.target.value) || undefined);
         });
-        if (cssInput) cssInput.addEventListener('change', (e) => {
-            this.updateRowStyle(row, 'css_style', e.target.value);
-        });
+        if (cssInput) {
+            cssInput.addEventListener('input', (e) => {
+                this.updateRowStyle(row, 'css_style', e.target.value);
+            });
+            cssInput.addEventListener('change', (e) => {
+                this.updateRowStyle(row, 'css_style', e.target.value);
+            });
+        }
 
         // Row type selection
         const rowTypeSelect = container.querySelector('#row-type-select');
@@ -1084,6 +1089,9 @@ class SuperPrintDesigner {
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="' + __('Italic') + '"><i class="fa fa-italic"></i></button>' +
                     '</div>' +
                     '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
+                        '<button type="button" class="btn btn-xs btn-default cell-valign-btn" data-valign="top" title="' + __('Top') + '"><i class="fa fa-arrow-up"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default cell-valign-btn" data-valign="middle" title="' + __('Center') + '"><i class="fa fa-arrows-v"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default cell-valign-btn" data-valign="bottom" title="' + __('Bottom') + '"><i class="fa fa-arrow-down"></i></button>' +
                         '<div class="super-zprint-color-picker-wrapper" title="' + __('Background Color') + '"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
                         '<div class="super-zprint-color-picker-wrapper" title="' + __('Text Color') + '"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
                         '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="' + __('Default Style') + '" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">' + __('Default') + '</span></button>' +
@@ -1192,6 +1200,15 @@ class SuperPrintDesigner {
         this.bindCssQuickButtons(cell);
         this.bindBorderButtons();
         this.bindSpinnerButtons();
+
+        // Cell vertical alignment buttons
+        container.querySelectorAll('.cell-valign-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const newCss = this.setCssProperty(cell.css_style || '', 'vertical-align', btn.dataset.valign);
+                this.updateCellProperty('css_style', newCss);
+            });
+        });
 
         // Tab switching
         container.querySelectorAll('.super-zprint-prop-tab').forEach(tab => {
