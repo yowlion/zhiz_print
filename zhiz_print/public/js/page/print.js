@@ -152,7 +152,49 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		if (pd?.allow_export_excel !== false) {
 			this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
 		}
+
+		// Zoom controls
+		const $toolbar = $(this.page.inner_toolbar);
+		$toolbar.append(`
+			<div class="sp-zoom-controls" style="display:inline-flex;align-items:center;gap:2px;margin-left:12px;padding-left:12px;border-left:1px solid #d0d0d0;">
+				<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-out" title="${__('Zoom Out')}"><i class="fa fa-minus"></i></button>
+				<input type="number" id="sp-zoom-input" class="form-control" style="width:50px;height:24px;text-align:center;font-size:11px;padding:0 2px;" min="10" max="500" value="100">
+				<span style="font-size:11px;color:#888;">%</span>
+				<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-in" title="${__('Zoom In')}"><i class="fa fa-plus"></i></button>
+				<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-reset" title="${__('Reset Zoom')}"><i class="fa fa-expand"></i></button>
+			</div>
+		`);
+		$toolbar.find('#sp-zoom-in').on('click', () => this.adjust_zoom(10));
+		$toolbar.find('#sp-zoom-out').on('click', () => this.adjust_zoom(-10));
+		$toolbar.find('#sp-zoom-reset').on('click', () => this.reset_zoom());
+		$toolbar.find('#sp-zoom-input').on('change', (e) => this.set_zoom(parseInt(e.target.value) || 100));
 	}
+
+
+	// ==================== Zoom Controls ====================
+
+	adjust_zoom(delta) {
+		const newZoom = Math.max(10, Math.min(500, (this.user_zoom || 100) + delta));
+		this.set_zoom(newZoom);
+	},
+
+	set_zoom(value) {
+		this.user_zoom = Math.max(10, Math.min(500, value));
+		const input = document.getElementById('sp-zoom-input');
+		if (input) input.value = this.user_zoom;
+		this.apply_zoom();
+	},
+
+	reset_zoom() {
+		this.set_zoom(100);
+	},
+
+	apply_zoom() {
+		const container = document.querySelector('.sp-pages-container');
+		if (!container || !this.base_scale) return;
+		const finalScale = this.base_scale * (this.user_zoom / 100);
+		container.style.transform = 'scale(' + finalScale + ')';
+	},
 
 	// ==================== Menu Override ====================
 
@@ -335,6 +377,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				const mRight = (margin_right || 0) * PX_PER_MM;
 				const containerWidth = area.offsetWidth - 40;
 				const scale = Math.min(1, containerWidth / previewW);
+				this.base_scale = scale;
+				if (!this.user_zoom) this.user_zoom = 100;
+				const finalScale = scale * (this.user_zoom / 100);
 
 				// Parse .print-page elements in HTML and render page by page
 				const parser = new DOMParser();
@@ -344,7 +389,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				area.innerHTML = '';
 				const pagesContainer = document.createElement('div');
 				pagesContainer.className = 'sp-pages-container';
-				pagesContainer.style.cssText = 'transform:scale(' + scale + ');transform-origin:top center;display:flex;flex-direction:column;align-items:center;gap:20px;padding-bottom:20px;';
+				pagesContainer.style.cssText = 'transform:scale(' + finalScale + ');transform-origin:top center;display:flex;flex-direction:column;align-items:center;gap:20px;padding-bottom:20px;';
 
 				// Build all page structures first, mount to DOM, then write iframe content
 				const pageWrappers = [];
