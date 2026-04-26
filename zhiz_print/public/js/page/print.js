@@ -155,15 +155,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		// Zoom controls
 		const $toolbar = $(this.page.inner_toolbar);
-		$toolbar.append(`
-			<div class="sp-zoom-controls" style="display:inline-flex;align-items:center;gap:2px;margin-left:12px;padding-left:12px;border-left:1px solid #d0d0d0;">
-				<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-out" title="${__('Zoom Out')}"><i class="fa fa-minus"></i></button>
-				<input type="number" id="sp-zoom-input" class="form-control" style="width:50px;height:24px;text-align:center;font-size:11px;padding:0 2px;" min="10" max="500" value="100">
-				<span style="font-size:11px;color:#888;">%</span>
-				<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-in" title="${__('Zoom In')}"><i class="fa fa-plus"></i></button>
-				<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-reset" title="${__('Reset Zoom')}"><i class="fa fa-expand"></i></button>
-			</div>
-		`);
+		const zoomHtml = '<div class="sp-zoom-controls" style="display:inline-flex;align-items:center;gap:2px;margin-left:12px;padding-left:12px;border-left:1px solid #d0d0d0;">'
+			+ '<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-out" title="' + __('Zoom Out') + '"><i class="fa fa-minus"></i></button>'
+			+ '<input type="number" id="sp-zoom-input" class="form-control" style="width:50px;height:24px;text-align:center;font-size:11px;padding:0 2px;" min="10" max="500" value="100">'
+			+ '<span style="font-size:11px;color:#888;">%</span>'
+			+ '<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-in" title="' + __('Zoom In') + '"><i class="fa fa-plus"></i></button>'
+			+ '<button class="btn btn-xs btn-default sp-zoom-btn" id="sp-zoom-reset" title="' + __('Reset Zoom') + '"><i class="fa fa-expand"></i></button>'
+			+ '</div>';
+		$toolbar.append(zoomHtml);
 		$toolbar.find('#sp-zoom-in').on('click', () => this.adjust_zoom(10));
 		$toolbar.find('#sp-zoom-out').on('click', () => this.adjust_zoom(-10));
 		$toolbar.find('#sp-zoom-reset').on('click', () => this.reset_zoom());
