@@ -526,7 +526,9 @@ class SuperPrintDesigner {
 
         container.querySelector('#spd-apply-grid')?.addEventListener('click', () => this.applyGridSize());
         container.querySelector('#spd-insert-row-btn')?.addEventListener('click', () => this.insertRowAt(this.selectedRow));
+        container.querySelector('#spd-delete-row-btn')?.addEventListener('click', () => this.deleteRowAt(this.selectedRow));
         container.querySelector('#spd-insert-col-btn')?.addEventListener('click', () => this.insertColAt(this.selectedCol));
+        container.querySelector('#spd-delete-col-btn')?.addEventListener('click', () => this.deleteColAt(this.selectedCol));
         container.querySelector('#spd-font')?.addEventListener('change', (e) => {
             this.fontFamily = e.target.value;
             this.frm.set_value('font_family', this.fontFamily);
@@ -607,6 +609,10 @@ class SuperPrintDesigner {
         this.currentCell = cellId;
         const container = document.getElementById(this.designContainerId);
         container?.querySelector('.spd-row-type-controls')?.style && (container.querySelector('.spd-row-type-controls').style.display = 'none');
+        ['spd-insert-row-btn', 'spd-delete-row-btn', 'spd-insert-col-btn', 'spd-delete-col-btn'].forEach(id => {
+            const btn = container?.querySelector('#' + id);
+            if (btn) btn.style.display = 'none';
+        });
         const [row, col] = this.parseCellId(cellId);
         const cell = this.grid[row - 1]?.[col - 1];
 
@@ -626,9 +632,13 @@ class SuperPrintDesigner {
         const typeControls = container?.querySelector('.spd-row-type-controls');
         if (typeControls) typeControls.style.display = '';
         const insertRowBtn = container?.querySelector('#spd-insert-row-btn');
+        const deleteRowBtn = container?.querySelector('#spd-delete-row-btn');
         const insertColBtn = container?.querySelector('#spd-insert-col-btn');
+        const deleteColBtn = container?.querySelector('#spd-delete-col-btn');
         if (insertRowBtn) insertRowBtn.style.display = '';
+        if (deleteRowBtn) deleteRowBtn.style.display = '';
         if (insertColBtn) insertColBtn.style.display = 'none';
+        if (deleteColBtn) deleteColBtn.style.display = 'none';
         this.renderRowProperties(row);
         this.refreshGrid();
     }
@@ -642,9 +652,13 @@ class SuperPrintDesigner {
         container?.querySelector('.spd-row-type-controls')?.style && (container.querySelector('.spd-row-type-controls').style.display = 'none');
         this.selectedCells = [];
         const insertRowBtn = container?.querySelector('#spd-insert-row-btn');
+        const deleteRowBtn = container?.querySelector('#spd-delete-row-btn');
         const insertColBtn = container?.querySelector('#spd-insert-col-btn');
+        const deleteColBtn = container?.querySelector('#spd-delete-col-btn');
         if (insertRowBtn) insertRowBtn.style.display = 'none';
+        if (deleteRowBtn) deleteRowBtn.style.display = 'none';
         if (insertColBtn) insertColBtn.style.display = '';
+        if (deleteColBtn) deleteColBtn.style.display = '';
         this.renderColProperties(col);
         this.refreshGrid();
     }
@@ -2124,7 +2138,189 @@ class SuperPrintDesigner {
         if (colsInput) colsInput.value = this.cols;
     }
 
-    
+    deleteRowAt(row) {
+        if (!row || row < 1 || row > this.rows) return;
+        if (this.rows <= 1) {
+            frappe.show_alert({ message: __('Cannot delete the last row'), indicator: 'red' });
+            return;
+        }
+        const deleteIdx = row - 1;
+
+        // Check: if any master cell starts at this row and has rowspan > 1, shrink rowspan
+        // If any master cell spans across this row (starts above, ends at or below), shrink rowspan
+        // If any master cell is entirely below, shift up
+        const oldRows = this.rows;
+        const oldCols = this.cols;
+        const masters = [];
+        for (const [cellId, cell] of Object.entries(this.cellDataMap)) {
+            if (cell._merged) continue;
+            const endRow = cell.row + cell.rowspan - 1;
+            let newRow = cell.row;
+            let newRowspan = cell.rowspan;
+
+            if (cell.row === row && cell.row === endRow) {
+                // Single-row cell at the deleted row — skip it entirely
+                continue;
+            }
+            if (cell.row <= row && endRow >= row) {
+                // Merge spans across or touches the deleted row — shrink rowspan
+                newRowspan -= 1;
+            }
+            if (cell.row > row) {
+                // Entirely below — shift up
+                newRow -= 1;
+            }
+            masters.push({ ...cell, newRow, newRowspan });
+        }
+
+        this.rows = oldRows - 1;
+        this.grid = Array.from({ length: this.rows }, () => Array(oldCols).fill(null));
+        this.cellDataMap = {};
+
+        for (const m of masters) {
+            m.row = m.newRow;
+            m.rowspan = m.newRowspan;
+            delete m.newRow;
+            delete m.newRowspan;
+            if (m.rowspan < 1) m.rowspan = 1;
+            const newId = 'R' + m.row + 'C' + m.col;
+            m.cell_id = newId;
+            this.cellDataMap[newId] = m;
+            this.grid[m.row - 1][m.col - 1] = m;
+        }
+
+        const defaultCss = this.getDefaultCellCss();
+        for (let r = 1; r <= this.rows; r++) {
+            for (let c = 1; c <= oldCols; c++) {
+                if (!this.grid[r - 1][c - 1]) {
+                    const id = 'R' + r + 'C' + c;
+                    const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
+                    this.grid[r - 1][c - 1] = data;
+                    this.cellDataMap[id] = data;
+                }
+            }
+        }
+
+        for (const [cellId, master] of Object.entries(this.cellDataMap)) {
+            if (master.rowspan > 1 || master.colspan > 1) {
+                for (let mr = master.row; mr < master.row + master.rowspan; mr++) {
+                    for (let mc = master.col; mc < master.col + master.colspan; mc++) {
+                        if (mr === master.row && mc === master.col) continue;
+                        if (mr <= this.rows && mc <= this.cols) {
+                            this.grid[mr - 1][mc - 1] = { _merged: true, master_cell_id: cellId };
+                        }
+                    }
+                }
+            }
+        }
+
+        const newRowStyles = {};
+        for (const [key, val] of Object.entries(this.rowStyles)) {
+            const r = parseInt(key);
+            if (r === row) continue;
+            if (r > row) { newRowStyles[r - 1] = val; }
+            else { newRowStyles[r] = val; }
+        }
+        this.rowStyles = newRowStyles;
+
+        this.selectedRow = null;
+        this.frm.set_value('rows', this.rows);
+        this._updateToolbarInputs();
+        this.refreshGrid();
+        this.frm.dirty();
+        frappe.show_alert({ message: __('Row {0} deleted').replace('{0}', row), indicator: 'green' });
+    }
+
+    deleteColAt(col) {
+        if (!col || col < 1 || col > this.cols) return;
+        if (this.cols <= 1) {
+            frappe.show_alert({ message: __('Cannot delete the last column'), indicator: 'red' });
+            return;
+        }
+        const deleteIdx = col - 1;
+
+        const oldRows = this.rows;
+        const oldCols = this.cols;
+        const masters = [];
+        for (const [cellId, cell] of Object.entries(this.cellDataMap)) {
+            if (cell._merged) continue;
+            const endCol = cell.col + cell.colspan - 1;
+            let newCol = cell.col;
+            let newColspan = cell.colspan;
+
+            if (cell.col === col && cell.col === endCol) {
+                // Single-col cell at the deleted column — skip it
+                continue;
+            }
+            if (cell.col <= col && endCol >= col) {
+                // Merge spans across or touches the deleted column — shrink colspan
+                newColspan -= 1;
+            }
+            if (cell.col > col) {
+                // Entirely to the right — shift left
+                newCol -= 1;
+            }
+            masters.push({ ...cell, newCol, newColspan });
+        }
+
+        this.cols = oldCols - 1;
+        this.grid = Array.from({ length: oldRows }, () => Array(this.cols).fill(null));
+        this.cellDataMap = {};
+
+        for (const m of masters) {
+            m.col = m.newCol;
+            m.colspan = m.newColspan;
+            delete m.newCol;
+            delete m.newColspan;
+            if (m.colspan < 1) m.colspan = 1;
+            const newId = 'R' + m.row + 'C' + m.col;
+            m.cell_id = newId;
+            this.cellDataMap[newId] = m;
+            this.grid[m.row - 1][m.col - 1] = m;
+        }
+
+        const defaultCss = this.getDefaultCellCss();
+        for (let r = 1; r <= oldRows; r++) {
+            for (let c = 1; c <= this.cols; c++) {
+                if (!this.grid[r - 1][c - 1]) {
+                    const id = 'R' + r + 'C' + c;
+                    const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
+                    this.grid[r - 1][c - 1] = data;
+                    this.cellDataMap[id] = data;
+                }
+            }
+        }
+
+        for (const [cellId, master] of Object.entries(this.cellDataMap)) {
+            if (master.rowspan > 1 || master.colspan > 1) {
+                for (let mr = master.row; mr < master.row + master.rowspan; mr++) {
+                    for (let mc = master.col; mc < master.col + master.colspan; mc++) {
+                        if (mr === master.row && mc === master.col) continue;
+                        if (mr <= this.rows && mc <= this.cols) {
+                            this.grid[mr - 1][mc - 1] = { _merged: true, master_cell_id: cellId };
+                        }
+                    }
+                }
+            }
+        }
+
+        const newColStyles = {};
+        for (const [key, val] of Object.entries(this.colStyles)) {
+            const c = parseInt(key);
+            if (c === col) continue;
+            if (c > col) { newColStyles[c - 1] = val; }
+            else { newColStyles[c] = val; }
+        }
+        this.colStyles = newColStyles;
+
+        this.selectedCol = null;
+        this.frm.set_value('columns', this.cols);
+        this._updateToolbarInputs();
+        this.refreshGrid();
+        this.frm.dirty();
+        frappe.show_alert({ message: __('Column {0} deleted').replace('{0}', col), indicator: 'green' });
+    }
+
     bindPropertyEvents() { /* handled in bindEvents */ }
 }
 

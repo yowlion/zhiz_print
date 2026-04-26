@@ -297,3 +297,9 @@ Insert Row,插入行
 Insert Column,插入列
 Row {0} inserted,第 {0} 行已插入
 Column {0} inserted,第 {0} 列已插入
+Delete Row,删除行
+Delete Column,删除列
+Row {0} deleted,第 {0} 行已删除
+Column {0} deleted,第 {0} 列已删除
+Cannot delete the last row,无法删除最后一行
+Cannot delete the last column,无法删除最后一列
