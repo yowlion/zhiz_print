@@ -1085,13 +1085,13 @@ class SuperPrintDesigner {
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:left" data-prop="text-align" title="' + __('Left Align') + '"><i class="fa fa-align-left"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:center" data-prop="text-align" title="' + __('Center') + '"><i class="fa fa-align-center"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="text-align:right" data-prop="text-align" title="' + __('Right Align') + '"><i class="fa fa-align-right"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-weight:bold" data-prop="font-weight" title="' + __('Bold') + '"><i class="fa fa-bold"></i></button>' +
-                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="' + __('Italic') + '"><i class="fa fa-italic"></i></button>' +
-                    '</div>' +
-                    '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
                         '<button type="button" class="btn btn-xs btn-default cell-valign-btn" data-valign="top" title="' + __('Top') + '"><i class="fa fa-arrow-up"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default cell-valign-btn" data-valign="middle" title="' + __('Center') + '"><i class="fa fa-arrows-v"></i></button>' +
                         '<button type="button" class="btn btn-xs btn-default cell-valign-btn" data-valign="bottom" title="' + __('Bottom') + '"><i class="fa fa-arrow-down"></i></button>' +
+                    '</div>' +
+                    '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-weight:bold" data-prop="font-weight" title="' + __('Bold') + '"><i class="fa fa-bold"></i></button>' +
+                        '<button type="button" class="btn btn-xs btn-default css-quick-btn" data-css="font-style:italic" data-prop="font-style" title="' + __('Italic') + '"><i class="fa fa-italic"></i></button>' +
                         '<div class="super-zprint-color-picker-wrapper" title="' + __('Background Color') + '"><i class="fa fa-fill-drip"></i><input type="color" id="bg-color-picker" value="#ffffff"></div>' +
                         '<div class="super-zprint-color-picker-wrapper" title="' + __('Text Color') + '"><i class="fa fa-font"></i><input type="color" id="text-color-picker" value="#000000"></div>' +
                         '<button type="button" class="btn btn-xs css-quick-btn" data-action="default-css" title="' + __('Default Style') + '" style="width:auto;padding:0 6px;font-size:9px;background:#28a745;color:#fff;border-color:#28a745"><i class="fa fa-undo" style="color:#fff"></i> <span style="color:#fff">' + __('Default') + '</span></button>' +
