@@ -482,8 +482,8 @@ class SuperPrintDesigner {
                     let cellStyle = 'line-height:1;';
                     let fontSize = rowStyle.font_size || this.fontSize;
                     cellStyle += 'font-size:' + fontSize + 'px;';
-                    if (css_style) cellStyle += css_style;
                     if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
+                    if (css_style) cellStyle += css_style;
 
                     // Auto Shrink Font preview
                     if (rowDisplay === 'Auto Shrink Font' && cell_value) {
@@ -521,9 +521,9 @@ class SuperPrintDesigner {
                 } else {
                     let cellStyle = 'line-height:1;';
                     if (rowStyle.font_size) cellStyle += 'font-size:' + rowStyle.font_size + 'px;';
+                    if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
                     const colStyle = this.colStyles[col] || {};
                     if (colStyle.css_style) cellStyle += colStyle.css_style;
-                    if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
                     html += '<td class="spd-cell empty' + colSelectedClass + '" data-cell-id="' + cellId + '" data-row="' + row + '" data-col="' + col + '" style="' + cellStyle + '"></td>';
                     occupied[row][col] = true;
                 }
