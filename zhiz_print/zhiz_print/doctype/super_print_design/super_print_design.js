@@ -1967,97 +1967,73 @@ class SuperPrintDesigner {
         if (!row || row < 1 || row > this.rows) return;
         const insertIdx = row - 1;
 
-        // Phase 1: Find masters that span across insertion point and expand their rowspan
-        const expandedMasters = new Set();
-        for (let c = 0; c < this.cols; c++) {
-            const cell = this.grid[insertIdx]?.[c];
-            if (cell?._merged) {
-                const masterId = cell.master_cell_id;
-                if (expandedMasters.has(masterId)) continue;
-                const masterCell = this.cellDataMap[masterId];
-                if (masterCell && masterCell.row - 1 < insertIdx && (masterCell.row - 1 + masterCell.rowspan) > insertIdx) {
-                    masterCell.rowspan += 1;
-                    expandedMasters.add(masterId);
-                }
-            } else if (cell && !cell._merged && cell.rowspan > 1 && cell.row - 1 < insertIdx && (cell.row - 1 + cell.rowspan) > insertIdx) {
-                cell.rowspan += 1;
-                expandedMasters.add(cell.cell_id);
+        const oldRows = this.rows;
+        const oldCols = this.cols;
+        const masters = [];
+        for (const [cellId, cell] of Object.entries(this.cellDataMap)) {
+            if (cell._merged) continue;
+            const endRow = cell.row + cell.rowspan - 1;
+            let newRow = cell.row;
+            let newRowspan = cell.rowspan;
+            if (endRow >= insertIdx + 1 && cell.row <= insertIdx + 1) {
+                newRowspan += 1;
             }
+            if (cell.row > insertIdx + 1) {
+                newRow += 1;
+            }
+            masters.push({ ...cell, newRow, newRowspan });
         }
 
-        // Phase 2: Build new grid with one extra row
-        const newGrid = [];
+        this.rows = oldRows + 1;
+        this.grid = Array.from({ length: this.rows }, () => Array(oldCols).fill(null));
+        this.cellDataMap = {};
+
+        for (const m of masters) {
+            m.row = m.newRow;
+            m.rowspan = m.newRowspan;
+            delete m.newRow;
+            delete m.newRowspan;
+            const newId = 'R' + m.row + 'C' + m.col;
+            m.cell_id = newId;
+            this.cellDataMap[newId] = m;
+            this.grid[m.row - 1][m.col - 1] = m;
+        }
+
         const defaultCss = this.getDefaultCellCss();
-        for (let r = 0; r < this.rows + 1; r++) {
-            if (r < insertIdx) {
-                newGrid[r] = this.grid[r];
-            } else if (r === insertIdx) {
-                // New blank row
-                const newRow = [];
-                for (let c = 0; c < this.cols; c++) {
-                    const id = 'R' + row + 'C' + (c + 1);
-                    const data = { cell_id: id, row: row, col: c + 1, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
-                    newRow.push(data);
+        for (let r = 1; r <= this.rows; r++) {
+            for (let c = 1; c <= oldCols; c++) {
+                if (!this.grid[r - 1][c - 1]) {
+                    const id = 'R' + r + 'C' + c;
+                    const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
+                    this.grid[r - 1][c - 1] = data;
                     this.cellDataMap[id] = data;
                 }
-                newGrid[r] = newRow;
-            } else {
-                // Shift old row r-1 to r, update master cell positions
-                const oldRow = this.grid[r - 1];
-                const shiftedRow = [];
-                for (let c = 0; c < this.cols; c++) {
-                    const cell = oldRow[c];
-                    if (cell && !cell._merged && !expandedMasters.has(cell.cell_id)) {
-                        // Shift master cell row
-                        cell.row += 1;
-                        const oldId = cell.cell_id;
-                        cell.cell_id = 'R' + cell.row + 'C' + cell.col;
-                        delete this.cellDataMap[oldId];
-                        this.cellDataMap[cell.cell_id] = cell;
-                        shiftedRow.push(cell);
-                    } else if (cell && !cell._merged && expandedMasters.has(cell.cell_id)) {
-                        // Expanded master — stays in place (row unchanged)
-                        shiftedRow.push(cell);
-                    } else {
-                        // _merged marker or null, will be rebuilt
-                        shiftedRow.push(null);
-                    }
-                }
-                newGrid[r] = shiftedRow;
             }
         }
-        this.grid = newGrid;
 
-        // Phase 3: Re-apply merged markers for all masters
-        for (const [cellId, masterCell] of Object.entries(this.cellDataMap)) {
-            if (masterCell.rowspan > 1 || masterCell.colspan > 1) {
-                const startRow = masterCell.row - 1;
-                const startCol = masterCell.col - 1;
-                for (let mr = startRow; mr < startRow + masterCell.rowspan; mr++) {
-                    for (let mc = startCol; mc < startCol + masterCell.colspan; mc++) {
-                        if (mr === startRow && mc === startCol) continue;
-                        if (mr < this.rows + 1 && mc < this.cols) {
-                            this.grid[mr][mc] = { _merged: true, master_cell_id: cellId };
+        for (const [cellId, master] of Object.entries(this.cellDataMap)) {
+            if (master.rowspan > 1 || master.colspan > 1) {
+                for (let mr = master.row; mr < master.row + master.rowspan; mr++) {
+                    for (let mc = master.col; mc < master.col + master.colspan; mc++) {
+                        if (mr === master.row && mc === master.col) continue;
+                        if (mr <= this.rows && mc <= this.cols) {
+                            this.grid[mr - 1][mc - 1] = { _merged: true, master_cell_id: cellId };
                         }
                     }
                 }
             }
         }
 
-        // Update rowStyles keys (shift down)
         const newRowStyles = {};
         for (const [key, val] of Object.entries(this.rowStyles)) {
             const r = parseInt(key);
-            if (r >= row) {
-                newRowStyles[r + 1] = val;
-            } else {
-                newRowStyles[r] = val;
-            }
+            if (r >= row) { newRowStyles[r + 1] = val; }
+            else { newRowStyles[r] = val; }
         }
         this.rowStyles = newRowStyles;
 
-        this.rows += 1;
         this.frm.set_value('rows', this.rows);
+        this._updateToolbarInputs();
         this.refreshGrid();
         this.frm.dirty();
         frappe.show_alert({ message: __('Row {0} inserted').replace('{0}', row), indicator: 'green' });
@@ -2067,99 +2043,88 @@ class SuperPrintDesigner {
         if (!col || col < 1 || col > this.cols) return;
         const insertIdx = col - 1;
 
-        // Phase 1: Find masters that span across insertion point and expand their colspan
-        const expandedMasters = new Set();
-        for (let r = 0; r < this.rows; r++) {
-            const cell = this.grid[r][insertIdx];
-            if (cell?._merged) {
-                const masterId = cell.master_cell_id;
-                if (expandedMasters.has(masterId)) continue;
-                const masterCell = this.cellDataMap[masterId];
-                if (masterCell && masterCell.col - 1 < insertIdx && (masterCell.col - 1 + masterCell.colspan) > insertIdx) {
-                    masterCell.colspan += 1;
-                    expandedMasters.add(masterId);
-                }
-            } else if (cell && !cell._merged && cell.colspan > 1 && cell.col - 1 < insertIdx && (cell.col - 1 + cell.colspan) > insertIdx) {
-                cell.colspan += 1;
-                expandedMasters.add(cell.cell_id);
+        const oldRows = this.rows;
+        const oldCols = this.cols;
+        const masters = [];
+        for (const [cellId, cell] of Object.entries(this.cellDataMap)) {
+            if (cell._merged) continue;
+            const endCol = cell.col + cell.colspan - 1;
+            let newCol = cell.col;
+            let newColspan = cell.colspan;
+            if (endCol >= insertIdx + 1 && cell.col <= insertIdx + 1) {
+                newColspan += 1;
             }
+            if (cell.col > insertIdx + 1) {
+                newCol += 1;
+            }
+            masters.push({ ...cell, newCol, newColspan });
         }
 
-        // Phase 2: Expand each grid row by 1 column, shift cells right, insert new cells
+        this.cols = oldCols + 1;
+        this.grid = Array.from({ length: oldRows }, () => Array(this.cols).fill(null));
+        this.cellDataMap = {};
+
+        for (const m of masters) {
+            m.col = m.newCol;
+            m.colspan = m.newColspan;
+            delete m.newCol;
+            delete m.newColspan;
+            const newId = 'R' + m.row + 'C' + m.col;
+            m.cell_id = newId;
+            this.cellDataMap[newId] = m;
+            this.grid[m.row - 1][m.col - 1] = m;
+        }
+
         const defaultCss = this.getDefaultCellCss();
-        for (let r = 0; r < this.rows; r++) {
-            const oldRow = this.grid[r];
-            const newRow = new Array(this.cols + 1).fill(null);
-
-            // Place cells: anything at col < insertIdx stays, insertIdx gets new cell, col >= insertIdx shifts right
-            for (let c = 0; c < this.cols; c++) {
-                const cell = oldRow[c];
-                if (c < insertIdx) {
-                    newRow[c] = cell;
-                } else {
-                    // c >= insertIdx: shift to c+1 unless this is an expanded master staying at its position
-                    if (cell && !cell._merged && expandedMasters.has(cell.cell_id) && cell.col - 1 === insertIdx) {
-                        // Expanded master stays at insertIdx
-                        newRow[insertIdx] = cell;
-                    } else if (cell && !cell._merged) {
-                        // Shift this master cell's position right
-                        cell.col += 1;
-                        const oldId = cell.cell_id;
-                        cell.cell_id = 'R' + cell.row + 'C' + cell.col;
-                        delete this.cellDataMap[oldId];
-                        this.cellDataMap[cell.cell_id] = cell;
-                        newRow[c + 1] = cell;
-                    }
-                    // _merged cells are skipped, will be rebuilt
+        for (let r = 1; r <= oldRows; r++) {
+            for (let c = 1; c <= this.cols; c++) {
+                if (!this.grid[r - 1][c - 1]) {
+                    const id = 'R' + r + 'C' + c;
+                    const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
+                    this.grid[r - 1][c - 1] = data;
+                    this.cellDataMap[id] = data;
                 }
             }
-
-            // Insert blank cell at insertIdx if not occupied by expanded master
-            if (!newRow[insertIdx]) {
-                const id = 'R' + (r + 1) + 'C' + col;
-                const data = { cell_id: id, row: r + 1, col: col, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
-                newRow[insertIdx] = data;
-                this.cellDataMap[id] = data;
-            }
-
-            this.grid[r] = newRow;
         }
 
-        // Phase 3: Re-apply merged markers for all masters
-        for (const [cellId, masterCell] of Object.entries(this.cellDataMap)) {
-            if (masterCell.rowspan > 1 || masterCell.colspan > 1) {
-                const startRow = masterCell.row - 1;
-                const startCol = masterCell.col - 1;
-                for (let mr = startRow; mr < startRow + masterCell.rowspan; mr++) {
-                    for (let mc = startCol; mc < startCol + masterCell.colspan; mc++) {
-                        if (mr === startRow && mc === startCol) continue;
-                        if (mr < this.rows && mc < this.cols + 1) {
-                            this.grid[mr][mc] = { _merged: true, master_cell_id: cellId };
+        for (const [cellId, master] of Object.entries(this.cellDataMap)) {
+            if (master.rowspan > 1 || master.colspan > 1) {
+                for (let mr = master.row; mr < master.row + master.rowspan; mr++) {
+                    for (let mc = master.col; mc < master.col + master.colspan; mc++) {
+                        if (mr === master.row && mc === master.col) continue;
+                        if (mr <= this.rows && mc <= this.cols) {
+                            this.grid[mr - 1][mc - 1] = { _merged: true, master_cell_id: cellId };
                         }
                     }
                 }
             }
         }
 
-        // Update colStyles keys (shift right)
         const newColStyles = {};
         for (const [key, val] of Object.entries(this.colStyles)) {
             const c = parseInt(key);
-            if (c >= col) {
-                newColStyles[c + 1] = val;
-            } else {
-                newColStyles[c] = val;
-            }
+            if (c >= col) { newColStyles[c + 1] = val; }
+            else { newColStyles[c] = val; }
         }
         this.colStyles = newColStyles;
 
-        this.cols += 1;
         this.frm.set_value('columns', this.cols);
+        this._updateToolbarInputs();
         this.refreshGrid();
         this.frm.dirty();
         frappe.show_alert({ message: __('Column {0} inserted').replace('{0}', col), indicator: 'green' });
     }
 
+    _updateToolbarInputs() {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        const rowsInput = container.querySelector('#spd-rows');
+        const colsInput = container.querySelector('#spd-cols');
+        if (rowsInput) rowsInput.value = this.rows;
+        if (colsInput) colsInput.value = this.cols;
+    }
+
+    
     bindPropertyEvents() { /* handled in bindEvents */ }
 }
 
@@ -2191,9 +2156,6 @@ frappe.ui.form.on('Super Print Design', {
 
         setTimeout(() => {
             if (frm.page.sidebar) frm.page.sidebar.hide();
-            if (!frm.is_new()) {
-                $('.page-head .primary-action').hide();
-            }
             // Limit header/footer Code field height
             const headerFooterFields = [
                 'page_header_left', 'page_header_center', 'page_header_right',
