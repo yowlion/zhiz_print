@@ -449,8 +449,16 @@ class SuperPrintDesigner {
 
         for (let row = 1; row <= this.rows; row++) {
             const rowStyle = this.rowStyles[row] || {};
+            // Extract vertical-align from row css — only works on <td>, not <tr>
+            let rowCss = rowStyle.css_style || '';
+            let rowVa = '';
+            const vaMatch = rowCss.match(/vertical-align\s*:\s*(top|middle|bottom)/);
+            if (vaMatch) {
+                rowVa = vaMatch[1];
+                rowCss = rowCss.replace(/vertical-align\s*:\s*\w+\s*;?/, '').trim();
+            }
             let rowStyleAttr = 'height:' + (rowStyle.height || 20) + 'px;';
-            if (rowStyle.css_style) rowStyleAttr += rowStyle.css_style;
+            if (rowCss) rowStyleAttr += rowCss;
             // Row display effect
             const firstCellInRow = this.grid[row - 1]?.[0];
             const rowDisplay = firstCellInRow?.row_display || '';
@@ -472,8 +480,23 @@ class SuperPrintDesigner {
                     const cs = colspan > 1 ? ' colspan="' + colspan + '"' : '';
 
                     let cellStyle = 'line-height:1;';
-                    if (rowStyle.font_size) cellStyle += 'font-size:' + rowStyle.font_size + 'px;';
+                    let fontSize = rowStyle.font_size || this.fontSize;
+                    cellStyle += 'font-size:' + fontSize + 'px;';
                     if (css_style) cellStyle += css_style;
+                    if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
+
+                    // Auto Shrink Font preview
+                    if (rowDisplay === 'Auto Shrink Font' && cell_value) {
+                        let cellH = 0;
+                        for (let rr = row; rr < row + rowspan; rr++) cellH += (this.rowStyles[rr]?.height || 20);
+                        let cellW = 0;
+                        for (let cc = col; cc < col + colspan; cc++) cellW += (this.colStyles[cc]?.width || 60);
+                        const shrunk = this._estimateFontSize(cell_value, cellW, cellH, fontSize);
+                        if (shrunk < fontSize) {
+                            cellStyle = cellStyle.replace('font-size:' + fontSize + 'px;', 'font-size:' + shrunk + 'px;');
+                        }
+                        cellStyle += 'overflow:hidden;';
+                    }
 
                     const typeInfo = this.cellTypes.find(t => t.value === cell_type) || this.cellTypes[0];
                     const hasValue = cell_value && cell_value.trim();
@@ -500,6 +523,7 @@ class SuperPrintDesigner {
                     if (rowStyle.font_size) cellStyle += 'font-size:' + rowStyle.font_size + 'px;';
                     const colStyle = this.colStyles[col] || {};
                     if (colStyle.css_style) cellStyle += colStyle.css_style;
+                    if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
                     html += '<td class="spd-cell empty' + colSelectedClass + '" data-cell-id="' + cellId + '" data-row="' + row + '" data-col="' + col + '" style="' + cellStyle + '"></td>';
                     occupied[row][col] = true;
                 }
@@ -2162,6 +2186,19 @@ class SuperPrintDesigner {
         const colsInput = container.querySelector('#spd-cols');
         if (rowsInput) rowsInput.value = this.rows;
         if (colsInput) colsInput.value = this.cols;
+    }
+
+    _estimateFontSize(text, cellW, cellH, baseFontSize) {
+        if (!text) return baseFontSize;
+        const charCount = text.length;
+        if (charCount === 0) return baseFontSize;
+        const avgCharW = baseFontSize * 0.7;
+        const charsPerLine = Math.max(1, cellW / avgCharW);
+        const linesNeeded = Math.max(1, charCount / charsPerLine);
+        const totalHeight = linesNeeded * baseFontSize * 1.2;
+        if (totalHeight <= cellH) return baseFontSize;
+        const ratio = cellH / totalHeight;
+        return Math.max(6, Math.floor(baseFontSize * ratio));
     }
 
     deleteRowAt(row) {

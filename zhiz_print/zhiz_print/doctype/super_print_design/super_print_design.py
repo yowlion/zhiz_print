@@ -636,9 +636,18 @@ class SuperPrintDesign(frappe.model.document.Document):
         row_style = row_styles.get(str(row_num), {})
         row_display = (row_display_map or {}).get(row_num, '')
 
+        # Extract vertical-align from row css_style — it only works on <td>, not <tr>
+        row_css = row_style.get('css_style', '') or ''
+        row_va = ''
+        import re as _re
+        va_match = _re.search(r'vertical-align\s*:\s*(top|middle|bottom)', row_css)
+        if va_match:
+            row_va = va_match.group(1)
+            row_css = _re.sub(r'vertical-align\s*:\s*\w+\s*;?', '', row_css).strip()
+
         row_style_attr = f'height:{row_style.get("height", 20)}px;'
-        if row_style.get('css_style'):
-            row_style_attr += row_style['css_style']
+        if row_css:
+            row_style_attr += row_css
 
         # Row display effect
         if row_display == 'Fixed Height':
@@ -678,6 +687,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                 style_attr += f'font-size:{font_size}px;'
                 if cell_data.get('css_style'):
                     style_attr += cell_data['css_style']
+                # Apply row-level vertical-align to each td
+                if row_va:
+                    style_attr += f'vertical-align:{row_va};'
 
                 # Get cell value
                 cell_value = cell_data.get('cell_value', '')
@@ -778,6 +790,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                 col_style = col_styles.get(str(col), {})
                 if col_style.get('css_style'):
                     empty_style += col_style['css_style']
+                if row_va:
+                    empty_style += f'vertical-align:{row_va};'
                 # Empty cell also checks merge borders
                 if col > 1:
                     left_merged = cell_grid[grid_row][grid_col - 1] if grid_row < len(
