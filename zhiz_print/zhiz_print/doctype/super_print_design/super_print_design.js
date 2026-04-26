@@ -586,6 +586,13 @@ class SuperPrintDesigner {
             if (!this.formatPainterActive || !this.formatPainterPainting) return;
             this.formatPainterPainting = false;
             this.formatPainterLastPainted = null;
+            // Clear painted highlights then full refresh
+            const container = document.getElementById(this.designContainerId);
+            if (container) {
+                container.querySelectorAll('.spd-cell.fp-painted').forEach(el => {
+                    el.classList.remove('fp-painted');
+                });
+            }
             this.refreshGrid();
         };
         document.addEventListener('mouseup', this._fpMouseUp);
@@ -1405,15 +1412,34 @@ class SuperPrintDesigner {
     paintFormatToCell(cellId) {
         if (!this.formatPainterActive || !this.formatPainterSourceCss) return;
         if (cellId === this.formatPainterLastPainted) return;
-        this.formatPainterLastPainted = cellId;
 
         const [row, col] = this.parseCellId(cellId);
         const cell = this.grid[row - 1]?.[col - 1];
         if (!cell || cell._merged) return;
 
+        // Apply style to data model
         cell.css_style = this.formatPainterSourceCss;
         this.cellDataMap[cellId] = cell;
         this.frm.dirty();
+
+        // Visual feedback: apply style directly to the DOM cell element + painted highlight
+        const container = document.getElementById(this.designContainerId);
+        if (container) {
+            const td = container.querySelector('.spd-cell[data-cell-id="' + cellId + '"]');
+            if (td) {
+                // Remove highlight from previously painted cells
+                container.querySelectorAll('.spd-cell.fp-painted').forEach(el => {
+                    el.classList.remove('fp-painted');
+                });
+                // Apply the actual CSS style to the cell so user sees the change
+                let cellStyle = 'line-height:1;';
+                if (this.formatPainterSourceCss) cellStyle += this.formatPainterSourceCss;
+                td.setAttribute('style', cellStyle);
+                td.classList.add('fp-painted');
+            }
+        }
+
+        this.formatPainterLastPainted = cellId;
     }
 
     setColorProperty(prop, color) {

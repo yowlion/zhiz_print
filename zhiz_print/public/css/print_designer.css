@@ -330,6 +330,7 @@
 #format-painter-btn { transition: all 0.15s; }
 #format-painter-btn:hover { background: #fff3e0 !important; border-color: #ff9800 !important; }
 .format-painter-cursor td { cursor: crosshair !important; }
+.spd-cell.fp-painted { outline: 2px solid #2196f3 !important; outline-offset: -2px; transition: outline 0.1s; }
 .super-zprint-css-editor { font-family:monospace; font-size:10px; }
 
 /* ==================== Batch Print Page ==================== */
