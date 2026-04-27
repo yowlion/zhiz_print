@@ -29,7 +29,6 @@
     "table_css",
     "row_styles",
     "col_styles",
-    "design_queries",
     "section_header_footer",
     "section_page_header",
     "page_header_left",
@@ -46,7 +45,8 @@
     "items_tab",
     "design_items",
     "params_tab",
-    "design_parameters"
+    "design_parameters",
+    "design_queries"
   ],
   "fields": [
     {
@@ -125,12 +125,6 @@
       "fieldtype": "Section Break",
       "label": "Grid Settings",
       "collapsible": 1
-    },
-    {
-      "fieldname": "design_queries",
-      "fieldtype": "Table",
-      "label": "Query Definition",
-      "options": "Super Print Design Query"
     },
     {
       "default": "20",
@@ -287,11 +281,17 @@
       "fieldtype": "Table",
       "label": "Print Parameters",
       "options": "Super Print Design Parameter"
+    },
+    {
+      "fieldname": "design_queries",
+      "fieldtype": "Table",
+      "label": "Query Definition",
+      "options": "Super Print Design Query"
     }
   ],
   "index_web_pages_for_search": 0,
   "links": [],
-  "modified": "2026-04-09 10:00:00.000000",
+  "modified": "2026-04-27 10:00:00.000000",
   "modified_by": "Administrator",
   "module": "Zhiz Print",
   "name": "Super Print Design",

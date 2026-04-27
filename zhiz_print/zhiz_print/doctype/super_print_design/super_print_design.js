@@ -1805,6 +1805,11 @@ class SuperPrintDesigner {
                 page_footer_center: this.pageFooterCenter,
                 page_footer_right: this.pageFooterRight,
                 cells: cells,
+                design_queries: (this.frm.doc.design_queries || []).map(q => ({
+                    query_name: q.query_name,
+                    query_code: q.query_code || '',
+                    parameters: q.parameters || ''
+                })),
             },
             freeze: true,
             callback: (r) => {
@@ -2149,23 +2154,21 @@ class SuperPrintDesigner {
                 }
 
                 if (isEdit) {
-                    values.doctype = 'Super Print Design Query';
-                    queries[editIndex] = values;
+                    Object.assign(queries[editIndex], {
+                        query_name: values.query_name,
+                        query_code: values.query_code,
+                        parameters: values.parameters,
+                    });
                 } else {
                     const existingNames = queries.map(q => q.query_name);
                     if (existingNames.includes(values.query_name)) {
                         frappe.msgprint(__('Query name already exists'));
                         return;
                     }
-                    if (!this.frm.doc.design_queries) {
-                        this.frm.doc.design_queries = [];
-                    }
-                    this.frm.doc.design_queries.push({
-                        query_name: values.query_name,
-                        query_code: values.query_code,
-                        parameters: values.parameters,
-                        doctype: 'Super Print Design Query'
-                    });
+                    const row = frappe.model.add_child(this.frm.doc, 'Super Print Design Query', 'design_queries');
+                    row.query_name = values.query_name;
+                    row.query_code = values.query_code;
+                    row.parameters = values.parameters;
                 }
                 this.refreshQueryList(parentDialog);
                 this.frm.dirty();
@@ -2731,6 +2734,16 @@ frappe.ui.form.on('Super Print Design', {
     onload(frm) {
         if (frm.is_new()) {
             frm.set_df_property('design_view_tab', 'hidden', 1);
+        }
+    },
+
+    before_save(frm) {
+        // Ensure design_queries child table data is properly synced
+        if (frm.doc.design_queries && frm.doc.design_queries.length > 0) {
+            const grid_field = frm.get_field('design_queries');
+            if (grid_field) {
+                grid_field.grid && grid_field.grid.refresh();
+            }
         }
     },
 

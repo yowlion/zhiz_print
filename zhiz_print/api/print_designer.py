@@ -531,7 +531,7 @@ def get_print_log_list(doctype, docname):
 def save_design(design_name, rows, columns, row_styles, col_styles, font_family,
                 font_size, page_header_left, page_header_center, page_header_right,
                 page_footer_left, page_footer_center, page_footer_right,
-                cells=None):
+                cells=None, design_queries=None):
     """Save design grid data from frontend.
 
     Frontend sends only non-merged cells. Backend validate_cells() will
@@ -544,6 +544,8 @@ def save_design(design_name, rows, columns, row_styles, col_styles, font_family,
         col_styles = json.loads(col_styles)
     if isinstance(cells, str):
         cells = json.loads(cells)
+    if isinstance(design_queries, str):
+        design_queries = json.loads(design_queries)
 
     doc = frappe.get_doc("Super Print Design", design_name)
 
@@ -562,6 +564,16 @@ def save_design(design_name, rows, columns, row_styles, col_styles, font_family,
 
     # Clear existing items
     doc.design_items = []
+
+    # Clear and rebuild design_queries
+    doc.design_queries = []
+    if design_queries:
+        for q in design_queries:
+            doc.append("design_queries", {
+                "query_name": q.get("query_name", ""),
+                "query_code": q.get("query_code", ""),
+                "parameters": q.get("parameters", ""),
+            })
 
     # Build flat items from cells (only non-merged cells from frontend)
     if cells:
