@@ -29,10 +29,7 @@
     "table_css",
     "row_styles",
     "col_styles",
-    "section_query",
-    "query_code",
-    "column_break_query",
-    "query_parameters",
+    "design_queries",
     "section_header_footer",
     "section_page_header",
     "page_header_left",
@@ -130,27 +127,10 @@
       "collapsible": 1
     },
     {
-      "fieldname": "query_code",
-      "fieldtype": "Code",
-      "label": "Query Code",
-      "options": "Python",
-      "description": "Python code, assign query result to variable 'result'"
-    },
-    {
-      "fieldname": "column_break_query",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "query_parameters",
-      "fieldtype": "Small Text",
-      "label": "Query Parameters",
-      "description": "One parameter per line, format: key=value"
-    },
-    {
-      "fieldname": "section_query",
-      "fieldtype": "Section Break",
-      "label": "Query Code",
-      "collapsible": 1
+      "fieldname": "design_queries",
+      "fieldtype": "Table",
+      "label": "Query Definition",
+      "options": "Super Print Design Query"
     },
     {
       "default": "20",

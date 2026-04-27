@@ -164,21 +164,23 @@ class SuperPrintDesign(frappe.model.document.Document):
                 except Exception:
                     pass
 
-            # Execute query
+            # Execute queries from child table
             query_results = {}
-            if self.query_code:
+            for q in self.design_queries:
+                if not q.query_code:
+                    continue
                 try:
                     result = self.execute_query(
-                        self.query_code, self.query_parameters,
+                        q.query_code, q.parameters,
                         doc_name, self.target_doctype, params
                     )
-                    query_results['main'] = {
+                    query_results[q.query_name] = {
                         'data': result,
-                        'is_iterable': True
+                        'is_iterable': bool(q.is_iterable)
                     }
                 except Exception as e:
-                    frappe.log_error(frappe.get_traceback(), 'Query execution failed')
-                    query_results['main'] = {'data': [], 'is_iterable': False}
+                    frappe.log_error(frappe.get_traceback(), 'Query execution failed: {0}'.format(q.query_name))
+                    query_results[q.query_name] = {'data': [], 'is_iterable': False}
 
             html = self.build_preview_html(
                 query_results, doc_name, doc, params=params)

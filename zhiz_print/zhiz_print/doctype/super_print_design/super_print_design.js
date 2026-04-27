@@ -561,7 +561,7 @@ class SuperPrintDesigner {
         });
         container.querySelector('#spd-clear-btn')?.addEventListener('click', () => this.clearDesign());
         container.querySelector('#spd-save-btn')?.addEventListener('click', () => this.saveDesign());
-        container.querySelector('#spd-query-btn')?.addEventListener('click', () => this.showQueryDialog());
+        container.querySelector('#spd-query-btn')?.addEventListener('click', () => this.showQueryDefinitionDialog());
         container.querySelector('#spd-params-btn')?.addEventListener('click', () => this.showParamsDialog());
         container.querySelector('#spd-repeat-title-btn')?.addEventListener('click', () => this.setRowType('Repeat Title Row'));
         container.querySelector('#spd-data-driven-btn')?.addEventListener('click', () => this.setRowType('Data-Driven Row'));
@@ -1027,6 +1027,8 @@ class SuperPrintDesigner {
                 '<label>' + __('Value') + ':</label>' +
                 '<textarea id="prop-cell-value" class="form-control" rows="2"></textarea>' +
                 '<div id="query-group" style="display:none">' +
+                    '<label>' + __('Bound Query') + ':</label>' +
+                    '<select id="prop-query-name" class="form-control"><option value="">--</option>' + queryOptions + '</select>' +
                     '<label>' + __('Data Key') + ':</label>' +
                     '<input id="prop-data-key" class="form-control" placeholder="' + __('e.g. item_code') + '">' +
                 '</div>' +
@@ -1137,6 +1139,7 @@ class SuperPrintDesigner {
         const setValue = (id, val) => { const el = container.querySelector('#' + id); if (el) el.value = val || ''; };
         setValue('prop-cell-type', cell.cell_type);
         setValue('prop-cell-value', cell.cell_value);
+        setValue('prop-query-name', cell.query_name);
         setValue('prop-data-key', cell.data_key);
         setValue('prop-barcode-format', cell.barcode_format || 'CODE128');
         setValue('prop-barcode-width', cell.barcode_width || 100);
@@ -1153,9 +1156,6 @@ class SuperPrintDesigner {
         if (queryGroup) queryGroup.style.display = (cellType === 'data_query') ? 'block' : 'none';
         if (barcodeGroup) barcodeGroup.style.display = (cellType === 'barcode') ? 'block' : 'none';
         if (qrcodeGroup) qrcodeGroup.style.display = (cellType === 'qrcode') ? 'block' : 'none';
-        if (cellType === 'data_query') {
-            this.updateCellProperty('query_name', 'main');
-        }
     }
 
     bindPropertyFormEvents(cell) {
@@ -1180,6 +1180,9 @@ class SuperPrintDesigner {
         });
         container.querySelector('#prop-data-key')?.addEventListener('change', (e) => {
             this.updateCellProperty('data_key', e.target.value);
+        });
+        container.querySelector('#prop-query-name')?.addEventListener('change', (e) => {
+            this.updateCellProperty('query_name', e.target.value);
         });
         container.querySelector('#prop-barcode-format')?.addEventListener('change', (e) => {
             this.updateCellProperty('barcode_format', e.target.value);
@@ -1742,10 +1745,11 @@ class SuperPrintDesigner {
     }
 
     generateQueryOptions() {
-        if (this.frm.doc.query_code) {
-            return '<option value="main">' + __('Main Query') + '</option>';
-        }
-        return '';
+        const queries = this.frm.doc.design_queries || [];
+        if (!queries.length) return '';
+        return queries.map(q =>
+            '<option value="' + q.query_name + '">' + __(q.query_name) + '</option>'
+        ).join('');
     }
 
     saveDesign() {
@@ -1955,27 +1959,181 @@ class SuperPrintDesigner {
     }
 
     // Query definition dialog
-    showQueryDialog() {
+    showQueryDefinitionDialog() {
+        const queries = this.frm.doc.design_queries || [];
         const dialog = new frappe.ui.Dialog({
             title: __('Query Definition'),
+            size: 'large',
+        });
+        let bodyHtml = '<div style="margin-bottom:10px">' +
+            '<button class="btn btn-primary btn-sm btn-add-query"><i class="fa fa-plus"></i> ' + __('Add Query') + '</button>' +
+        '</div>';
+        if (queries.length === 0) {
+            bodyHtml += '<p class="text-muted text-center" style="padding:20px">' + __('No query definitions') + '</p>';
+        } else {
+            bodyHtml += '<table class="table table-bordered table-sm" style="font-size:12px">' +
+                '<thead><tr><th>' + __('Name') + '</th><th>' + __('Iterable') + '</th><th style="width:120px">' + __('Actions') + '</th></tr></thead><tbody>';
+            queries.forEach((q, i) => {
+                bodyHtml += '<tr>' +
+                    '<td>' + frappe.utils.escape_html(q.query_name) + '</td>' +
+                    '<td>' + (q.is_iterable ? '<i class="fa fa-check text-success"></i>' : '-') + '</td>' +
+                    '<td>' +
+                        '<button class="btn btn-xs btn-default edit-query" data-idx="' + i + '"><i class="fa fa-edit"></i></button> ' +
+                        '<button class="btn btn-xs btn-default preview-query" data-idx="' + i + '"><i class="fa fa-eye"></i></button> ' +
+                        '<button class="btn btn-xs btn-danger delete-query" data-idx="' + i + '"><i class="fa fa-trash"></i></button>' +
+                    '</td></tr>';
+            });
+            bodyHtml += '</tbody></table>';
+        }
+        dialog.$body.html(bodyHtml);
+
+        dialog.$body.find('.btn-add-query').on('click', () => {
+            this.showQueryEditDialog(dialog, -1);
+        });
+        dialog.$body.find('.edit-query').on('click', (e) => {
+            const idx = parseInt($(e.currentTarget).data('idx'));
+            this.showQueryEditDialog(dialog, idx);
+        });
+        dialog.$body.find('.preview-query').on('click', (e) => {
+            const idx = parseInt($(e.currentTarget).data('idx'));
+            this.previewQueryByIndex(idx);
+        });
+        dialog.$body.find('.delete-query').on('click', (e) => {
+            const idx = parseInt($(e.currentTarget).data('idx'));
+            frappe.confirm(__('Are you sure you want to delete this query?'), () => {
+                this.frm.doc.design_queries.splice(idx, 1);
+                this.refreshQueryList(dialog);
+                this.frm.dirty();
+            });
+        });
+        dialog.show();
+    }
+
+    showQueryEditDialog(parentDialog, editIndex) {
+        const queries = this.frm.doc.design_queries || [];
+        const isEdit = editIndex >= 0;
+        const existing = isEdit ? queries[editIndex] : {};
+
+        const editDialog = new frappe.ui.Dialog({
+            title: isEdit ? __('Edit Query') : __('Add Query'),
             fields: [
+                { fieldname: 'query_name', label: __('Query Name'), fieldtype: 'Data', reqd: 1,
+                  default: existing.query_name || '',
+                  description: __('English letters, digits and underscores only, must start with a letter') },
+                { fieldname: 'is_iterable', label: __('Iterable'), fieldtype: 'Check', default: existing.is_iterable || 0,
+                  description: __('When checked, the query result list will drive automatic row duplication in the template') },
                 { fieldname: 'query_code', label: __('Python Query Code'), fieldtype: 'Code', options: 'Python',
-                  default: this.frm.doc.query_code || '',
+                  default: existing.query_code || '',
                   description: __('Assign query result to variable result') },
-                { fieldname: 'query_parameters', label: __('Query Parameters'), fieldtype: 'Small Text',
-                  default: this.frm.doc.query_parameters || '',
-                  description: __('One parameter per line, format: key=value') }
+                { fieldname: 'parameters', label: __('Query Parameters'), fieldtype: 'Code', options: 'Python',
+                  default: existing.parameters || '',
+                  description: __('One parameter per line, format: key=value') },
             ],
             primary_action_label: __('Save'),
             primary_action: (values) => {
-                this.frm.set_value('query_code', values.query_code);
-                this.frm.set_value('query_parameters', values.query_parameters);
+                if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(values.query_name)) {
+                    frappe.msgprint(__('Query name must start with a letter and contain only letters, digits and underscores'));
+                    return;
+                }
+                if (!isEdit) {
+                    const dup = (this.frm.doc.design_queries || []).some(q => q.query_name === values.query_name);
+                    if (dup) {
+                        frappe.msgprint(__('Query name already exists'));
+                        return;
+                    }
+                    if (!this.frm.doc.design_queries) this.frm.doc.design_queries = [];
+                    this.frm.doc.design_queries.push({
+                        doctype: 'Super Print Design Query',
+                        query_name: values.query_name,
+                        is_iterable: values.is_iterable ? 1 : 0,
+                        query_code: values.query_code,
+                        parameters: values.parameters,
+                    });
+                } else {
+                    queries[editIndex].query_name = values.query_name;
+                    queries[editIndex].is_iterable = values.is_iterable ? 1 : 0;
+                    queries[editIndex].query_code = values.query_code;
+                    queries[editIndex].parameters = values.parameters;
+                }
+                this.refreshQueryList(parentDialog);
                 this.frm.dirty();
                 frappe.show_alert({ message: __('Query definition updated (save document to take effect)'), indicator: 'green' });
-                dialog.hide();
+                editDialog.hide();
+            },
+        });
+        editDialog.show();
+    }
+
+    refreshQueryList(dialog) {
+        const queries = this.frm.doc.design_queries || [];
+        let bodyHtml = '<div style="margin-bottom:10px">' +
+            '<button class="btn btn-primary btn-sm btn-add-query"><i class="fa fa-plus"></i> ' + __('Add Query') + '</button>' +
+        '</div>';
+        if (queries.length === 0) {
+            bodyHtml += '<p class="text-muted text-center" style="padding:20px">' + __('No query definitions') + '</p>';
+        } else {
+            bodyHtml += '<table class="table table-bordered table-sm" style="font-size:12px">' +
+                '<thead><tr><th>' + __('Name') + '</th><th>' + __('Iterable') + '</th><th style="width:120px">' + __('Actions') + '</th></tr></thead><tbody>';
+            queries.forEach((q, i) => {
+                bodyHtml += '<tr>' +
+                    '<td>' + frappe.utils.escape_html(q.query_name) + '</td>' +
+                    '<td>' + (q.is_iterable ? '<i class="fa fa-check text-success"></i>' : '-') + '</td>' +
+                    '<td>' +
+                        '<button class="btn btn-xs btn-default edit-query" data-idx="' + i + '"><i class="fa fa-edit"></i></button> ' +
+                        '<button class="btn btn-xs btn-default preview-query" data-idx="' + i + '"><i class="fa fa-eye"></i></button> ' +
+                        '<button class="btn btn-xs btn-danger delete-query" data-idx="' + i + '"><i class="fa fa-trash"></i></button>' +
+                    '</td></tr>';
+            });
+            bodyHtml += '</tbody></table>';
+        }
+        dialog.$body.html(bodyHtml);
+        dialog.$body.find('.btn-add-query').on('click', () => this.showQueryEditDialog(dialog, -1));
+        dialog.$body.find('.edit-query').on('click', (e) => this.showQueryEditDialog(dialog, parseInt($(e.currentTarget).data('idx'))));
+        dialog.$body.find('.preview-query').on('click', (e) => this.previewQueryByIndex(parseInt($(e.currentTarget).data('idx'))));
+        dialog.$body.find('.delete-query').on('click', (e) => {
+            const idx = parseInt($(e.currentTarget).data('idx'));
+            frappe.confirm(__('Are you sure you want to delete this query?'), () => {
+                this.frm.doc.design_queries.splice(idx, 1);
+                this.refreshQueryList(dialog);
+                this.frm.dirty();
+            });
+        });
+    }
+
+    previewQueryByIndex(index) {
+        const queries = this.frm.doc.design_queries || [];
+        const q = queries[index];
+        if (!q || !q.query_code) {
+            frappe.msgprint(__('No query code to preview'));
+            return;
+        }
+        const previewDialog = new frappe.ui.Dialog({
+            title: __('Preview Query') + ': ' + q.query_name,
+            size: 'large',
+        });
+        previewDialog.$body.html('<div class="text-center" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px">' + __('Loading...') + '</p></div>');
+        previewDialog.show();
+
+        frappe.call({
+            method: 'zhiz_print.utils.query_executor.execute_query_code',
+            args: { query_code: q.query_code, parameters: q.parameters || '' },
+            callback: (r) => {
+                let resultStr = '';
+                if (r.exc) {
+                    resultStr = '<div class="alert alert-danger">' + frappe.utils.escape_html(r.exc) + '</div>';
+                } else {
+                    const data = r.message || [];
+                    resultStr = '<pre style="max-height:400px;overflow:auto;font-size:11px;background:#f8f9fa;padding:10px;border-radius:4px">' +
+                        frappe.utils.escape_html(JSON.stringify(data, null, 2)).substring(0, 5000) +
+                        (JSON.stringify(data).length > 5000 ? '\n... (truncated)' : '') +
+                    '</pre>';
+                }
+                previewDialog.$body.html(resultStr);
+            },
+            error: (r) => {
+                previewDialog.$body.html('<div class="alert alert-danger">' + __('Query execution failed') + '</div>');
             }
         });
-        dialog.show();
     }
 
     // Parameter definition dialog

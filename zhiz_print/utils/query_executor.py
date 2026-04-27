@@ -11,7 +11,8 @@ MERGED_PREFIX = "||MERGED::"
 MERGED_SUFFIX = "||"
 
 
-def execute_query_code(query_code, filters=None, format_result=True):
+@frappe.whitelist()
+def execute_query_code(query_code, filters=None, parameters=None, format_result=True):
 	"""Safely execute Python query code"""
 	from frappe.utils.safe_exec import safe_exec, get_safe_globals
 
@@ -23,13 +24,16 @@ def execute_query_code(query_code, filters=None, format_result=True):
 	})
 
 	params = {}
+	if parameters:
+		params = parse_parameters(parameters)
 	if filters:
 		if isinstance(filters, str):
 			try:
 				filters = json.loads(filters)
 			except (json.JSONDecodeError, TypeError):
 				filters = {}
-		params = filters if isinstance(filters, dict) else {}
+		if isinstance(filters, dict):
+			params.update(filters)
 
 	_locals = {'result': None, 'filters': params}
 
