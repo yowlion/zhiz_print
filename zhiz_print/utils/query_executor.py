@@ -21,6 +21,8 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		'frappe': frappe,
 		'_dict': frappe._dict,
 		'json': json,
+		'qb': frappe.qb,
+		'DocType': frappe.qb.DocType,
 	})
 
 	params = {}
@@ -41,7 +43,7 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		safe_exec(query_code, _globals, _locals)
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), 'Print query execution failed')
-		frappe.throw(_('Query execution failed: {0}').format(str(e)))
+		frappe.throw('Query execution failed: {0}'.format(str(e)))
 
 	result = _locals.get('result')
 	if format_result and result is not None:
