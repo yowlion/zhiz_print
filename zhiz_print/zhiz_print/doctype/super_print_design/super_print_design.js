@@ -1763,21 +1763,20 @@ class SuperPrintDesigner {
         }
 
         // Collect only non-merged cells — backend validate_cells() handles merge markers
-        const cells = [];
+        const designItems = [];
         for (let row = 1; row <= this.rows; row++) {
             for (let col = 1; col <= this.cols; col++) {
                 const cell = this.grid[row - 1]?.[col - 1];
                 if (!cell) {
-                    // Empty cell
-                    cells.push(this.createBlankItem(row, col));
+                    designItems.push(this.createBlankItem(row, col));
                 } else if (cell._merged) {
-                    // Skip merged cells — backend will generate markers automatically
                     continue;
                 } else {
-                    cells.push({
+                    designItems.push({
                         cell_id: cell.cell_id, row, col,
                         rowspan: cell.rowspan || 1, colspan: cell.colspan || 1,
                         cell_type: cell.cell_type || 'static', cell_value: cell.cell_value || '',
+                        cell_options: cell.cell_options || '',
                         css_style: cell.css_style || '', query_name: cell.query_name || '',
                         data_key: cell.data_key || '', barcode_format: cell.barcode_format || 'CODE128',
                         barcode_width: cell.barcode_width || 100, barcode_height: cell.barcode_height || 40,
@@ -1787,40 +1786,26 @@ class SuperPrintDesigner {
             }
         }
 
-        // Send to backend API
-        frappe.call({
-            method: 'zhiz_print.api.print_designer.save_design',
-            args: {
-                design_name: this.frm.doc.name,
-                rows: this.rows,
-                columns: this.cols,
-                row_styles: JSON.stringify(this.rowStyles),
-                col_styles: JSON.stringify(this.colStyles),
-                font_family: this.fontFamily,
-                font_size: this.fontSize,
-                page_header_left: this.pageHeaderLeft,
-                page_header_center: this.pageHeaderCenter,
-                page_header_right: this.pageHeaderRight,
-                page_footer_left: this.pageFooterLeft,
-                page_footer_center: this.pageFooterCenter,
-                page_footer_right: this.pageFooterRight,
-                cells: cells,
-                design_queries: (this.frm.doc.design_queries || []).map(q => ({
-                    query_name: q.query_name,
-                    query_code: q.query_code || '',
-                    parameters: q.parameters || ''
-                })),
-            },
-            freeze: true,
-            callback: (r) => {
-                if (r.message && r.message.success) {
-                    frappe.show_alert({
-                        message: __('Design saved') + ', ' + r.message.item_count + ' ' + __('cells'),
-                        indicator: 'green'
-                    });
-                    this.frm.reload_doc();
-                }
-            }
+        // Use frm.set_value + frm.save() like zhiz_qm
+        this.frm.set_value('rows', this.rows);
+        this.frm.set_value('columns', this.cols);
+        this.frm.set_value('row_styles', JSON.stringify(this.rowStyles));
+        this.frm.set_value('col_styles', JSON.stringify(this.colStyles));
+        this.frm.set_value('font_family', this.fontFamily);
+        this.frm.set_value('font_size', this.fontSize);
+        this.frm.set_value('page_header_left', this.pageHeaderLeft);
+        this.frm.set_value('page_header_center', this.pageHeaderCenter);
+        this.frm.set_value('page_header_right', this.pageHeaderRight);
+        this.frm.set_value('page_footer_left', this.pageFooterLeft);
+        this.frm.set_value('page_footer_center', this.pageFooterCenter);
+        this.frm.set_value('page_footer_right', this.pageFooterRight);
+        this.frm.set_value('design_items', designItems);
+
+        this.frm.save().then(() => {
+            frappe.show_alert({
+                message: __('Design saved') + ', ' + designItems.length + ' ' + __('cells'),
+                indicator: 'green'
+            });
         });
     }
 
@@ -2154,24 +2139,19 @@ class SuperPrintDesigner {
                 }
 
                 if (isEdit) {
-                    Object.assign(queries[editIndex], {
-                        query_name: values.query_name,
-                        query_code: values.query_code,
-                        parameters: values.parameters,
-                    });
+                    queries[editIndex] = values;
                 } else {
                     const existingNames = queries.map(q => q.query_name);
                     if (existingNames.includes(values.query_name)) {
                         frappe.msgprint(__('Query name already exists'));
                         return;
                     }
-                    const row = frappe.model.add_child(this.frm.doc, 'Super Print Design Query', 'design_queries');
-                    row.query_name = values.query_name;
-                    row.query_code = values.query_code;
-                    row.parameters = values.parameters;
+                    if (!this.frm.doc.design_queries) {
+                        this.frm.doc.design_queries = [];
+                    }
+                    this.frm.doc.design_queries.push(values);
                 }
                 this.refreshQueryList(parentDialog);
-                this.frm.dirty();
                 editDialog.hide();
                 frappe.show_alert({ message: isEdit ? __('Query updated') : __('Query added'), indicator: 'green' });
             }
@@ -2734,16 +2714,6 @@ frappe.ui.form.on('Super Print Design', {
     onload(frm) {
         if (frm.is_new()) {
             frm.set_df_property('design_view_tab', 'hidden', 1);
-        }
-    },
-
-    before_save(frm) {
-        // Ensure design_queries child table data is properly synced
-        if (frm.doc.design_queries && frm.doc.design_queries.length > 0) {
-            const grid_field = frm.get_field('design_queries');
-            if (grid_field) {
-                grid_field.grid && grid_field.grid.refresh();
-            }
         }
     },
 
