@@ -65,7 +65,6 @@ Parameter Type,参数类型
 Default Value,默认值
 Options / Target DocType,选项/目标单据类型
 Query Name,查询名称
-Iterable,可迭代
 Python Code,Python代码
 Parameter Mapping,参数映射
 Parameters,参数
@@ -122,7 +121,6 @@ Field name bound to query result,绑定到查询结果的字段名
 Empty or Normal Row is default; Repeat Title Row repeats on every page; Data-Driven Row auto-expands based on data,空或普通行为默认；重复标题行在每页重复；数据驱动行根据数据自动扩展
 Empty or Auto Wrap is default (text wraps row height grows); Fixed Height locks height and hides overflow; Auto Shrink Font scales font to fit,空或自动换行为默认（文字换行，行高增长）；固定行高锁定高度并隐藏溢出；自动缩小字体缩放字体以适应
 "For Select type, enter options (one per line); for Link type, enter the target DocType name",Select类型请输入选项（每行一个）；Link类型请输入目标单据类型名称
-"When checked, the query result list will drive automatic row duplication in the template",勾选后查询结果列表将驱动模板中的自动行复制
 Assign the query result to variable 'result',将查询结果赋值给变量result
 Static Text,静态文本
 Data Query,数据查询
@@ -318,3 +316,7 @@ Executing query...,正在执行查询...
 Query returned empty result,查询返回空结果
 Query execution failed,查询执行失败
 Please enter query code first,请先输入查询代码
+Add Query,添加查询
+Edit Query,编辑查询
+Update,更新
+Add,添加

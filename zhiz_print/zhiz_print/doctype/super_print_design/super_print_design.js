@@ -2149,20 +2149,23 @@ class SuperPrintDesigner {
                 }
 
                 if (isEdit) {
-                    queries[editIndex].query_name = values.query_name;
-                    queries[editIndex].query_code = values.query_code;
-                    queries[editIndex].parameters = values.parameters;
+                    values.doctype = 'Super Print Design Query';
+                    queries[editIndex] = values;
                 } else {
                     const existingNames = queries.map(q => q.query_name);
                     if (existingNames.includes(values.query_name)) {
                         frappe.msgprint(__('Query name already exists'));
                         return;
                     }
-                    const row = frappe.model.add_child(this.frm.doc, 'Super Print Design Query', 'design_queries');
-                    row.query_name = values.query_name;
-                    row.is_iterable = 1;
-                    row.query_code = values.query_code;
-                    row.parameters = values.parameters;
+                    if (!this.frm.doc.design_queries) {
+                        this.frm.doc.design_queries = [];
+                    }
+                    this.frm.doc.design_queries.push({
+                        query_name: values.query_name,
+                        query_code: values.query_code,
+                        parameters: values.parameters,
+                        doctype: 'Super Print Design Query'
+                    });
                 }
                 this.refreshQueryList(parentDialog);
                 this.frm.dirty();
