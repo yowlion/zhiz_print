@@ -303,3 +303,18 @@ Row {0} deleted,第 {0} 行已删除
 Column {0} deleted,第 {0} 列已删除
 Cannot delete the last row,无法删除最后一行
 Cannot delete the last column,无法删除最后一列
+Preview Result,预览结果
+No query definitions,暂无查询定义
+Are you sure you want to delete this query?,确定要删除此查询吗？
+Query deleted,查询已删除
+Query added,查询已添加
+Query updated,查询已更新
+Query name already exists,查询名称已存在
+Query name must start with a letter and contain only letters digits and underscores,查询名称必须以字母开头且只包含字母数字和下划线
+No query code defined,未定义查询代码
+Query not found,查询未找到
+Preview Query,预览查询
+Executing query...,正在执行查询...
+Query returned empty result,查询返回空结果
+Query execution failed,查询执行失败
+Please enter query code first,请先输入查询代码

@@ -1967,7 +1967,6 @@ class SuperPrintDesigner {
             queryListHtml = queries.map((query, index) => {
                 return '<tr data-index="' + index + '">' +
                     '<td style="padding:8px;border:1px solid #dee2e6;">' + frappe.utils.escape_html(query.query_name || '') + '</td>' +
-                    '<td style="padding:8px;border:1px solid #dee2e6;">' + (query.is_iterable ? '<i class="fa fa-check text-success"></i> ' + __('Yes') : __('No')) + '</td>' +
                     '<td style="padding:8px;border:1px solid #dee2e6;text-align:center;">' +
                         '<button type="button" class="btn btn-xs btn-default btn-edit-query" data-index="' + index + '" title="' + __('Edit') + '"><i class="fa fa-edit"></i></button>' +
                     '</td>' +
@@ -1980,7 +1979,7 @@ class SuperPrintDesigner {
                 '</tr>';
             }).join('');
         } else {
-            queryListHtml = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#6c757d;">' + __('No query definitions') + '</td></tr>';
+            queryListHtml = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#6c757d;">' + __('No query definitions') + '</td></tr>';
         }
 
         const dialogContent = '<div class="query-definition-dialog">' +
@@ -1989,10 +1988,9 @@ class SuperPrintDesigner {
             '</div>' +
             '<table class="table table-bordered" style="margin-bottom:0;">' +
                 '<thead><tr style="background:#f8f9fa;">' +
-                    '<th style="padding:8px;border:1px solid #dee2e6;width:30%;">' + __('Query Name') + '</th>' +
-                    '<th style="padding:8px;border:1px solid #dee2e6;width:20%;">' + __('Iterable') + '</th>' +
-                    '<th style="padding:8px;border:1px solid #dee2e6;width:15%;">' + __('Edit') + '</th>' +
-                    '<th style="padding:8px;border:1px solid #dee2e6;width:15%;">' + __('Preview') + '</th>' +
+                    '<th style="padding:8px;border:1px solid #dee2e6;width:40%;">' + __('Query Name') + '</th>' +
+                    '<th style="padding:8px;border:1px solid #dee2e6;width:20%;">' + __('Edit') + '</th>' +
+                    '<th style="padding:8px;border:1px solid #dee2e6;width:20%;">' + __('Preview') + '</th>' +
                     '<th style="padding:8px;border:1px solid #dee2e6;width:20%;">' + __('Delete') + '</th>' +
                 '</tr></thead>' +
                 '<tbody id="query-list-body">' + queryListHtml + '</tbody>' +
@@ -2106,7 +2104,7 @@ class SuperPrintDesigner {
     showQueryEditDialog(parentDialog, editIndex) {
         const queries = this.frm.doc.design_queries || [];
         const isEdit = editIndex >= 0;
-        const query = isEdit ? queries[editIndex] : { query_name: '', query_code: '', parameters: '', is_iterable: 0 };
+        const query = isEdit ? queries[editIndex] : { query_name: '', query_code: '', parameters: '' };
 
         const editDialog = new frappe.ui.Dialog({
             title: isEdit ? __('Edit Query') : __('Add Query'),
@@ -2118,13 +2116,6 @@ class SuperPrintDesigner {
                     reqd: 1,
                     default: query.query_name,
                     description: __('English letters, digits and underscores only, must start with a letter')
-                },
-                {
-                    fieldname: 'is_iterable',
-                    label: __('Iterable'),
-                    fieldtype: 'Check',
-                    default: query.is_iterable || 0,
-                    description: __('When checked, the query result list will drive automatic row duplication in the template')
                 },
                 {
                     fieldname: 'query_code',
@@ -2159,7 +2150,6 @@ class SuperPrintDesigner {
 
                 if (isEdit) {
                     queries[editIndex].query_name = values.query_name;
-                    queries[editIndex].is_iterable = values.is_iterable ? 1 : 0;
                     queries[editIndex].query_code = values.query_code;
                     queries[editIndex].parameters = values.parameters;
                 } else {
@@ -2168,16 +2158,11 @@ class SuperPrintDesigner {
                         frappe.msgprint(__('Query name already exists'));
                         return;
                     }
-                    if (!this.frm.doc.design_queries) {
-                        this.frm.doc.design_queries = [];
-                    }
-                    this.frm.doc.design_queries.push({
-                        doctype: 'Super Print Design Query',
-                        query_name: values.query_name,
-                        is_iterable: values.is_iterable ? 1 : 0,
-                        query_code: values.query_code,
-                        parameters: values.parameters,
-                    });
+                    const row = frappe.model.add_child(this.frm.doc, 'Super Print Design Query', 'design_queries');
+                    row.query_name = values.query_name;
+                    row.is_iterable = 1;
+                    row.query_code = values.query_code;
+                    row.parameters = values.parameters;
                 }
                 this.refreshQueryList(parentDialog);
                 this.frm.dirty();
@@ -2193,23 +2178,11 @@ class SuperPrintDesigner {
             this.previewQueryResult(editDialog);
         });
 
-        // Layout: query_name + is_iterable on same row, query_code + parameters on same row
+        // Layout: query_code + parameters on same row
         setTimeout(() => {
             const $form = editDialog.$wrapper.find('.form-layout');
 
-            // Row 1: query_name + is_iterable
-            const $queryName = $form.find('[data-fieldname="query_name"]').closest('.frappe-control');
-            const $isIterable = $form.find('[data-fieldname="is_iterable"]').closest('.frappe-control');
-
-            if ($queryName.length && $isIterable.length) {
-                const $row1 = $('<div class="query-edit-row" style="display:flex;gap:15px;margin-bottom:0;"></div>');
-                $queryName.before($row1);
-                $queryName.css({ flex: '6', 'min-width': '0' });
-                $isIterable.css({ flex: '4', 'min-width': '0' });
-                $row1.append($queryName).append($isIterable);
-            }
-
-            // Row 2: query_code + parameters
+            // Row: query_code + parameters
             const $queryCode = $form.find('[data-fieldname="query_code"]').closest('.frappe-control');
             const $parameters = $form.find('[data-fieldname="parameters"]').closest('.frappe-control');
 
@@ -2283,7 +2256,6 @@ class SuperPrintDesigner {
             let queryListHtml = queries.map((query, index) => {
                 return '<tr data-index="' + index + '">' +
                     '<td style="padding:8px;border:1px solid #dee2e6;">' + frappe.utils.escape_html(query.query_name || '') + '</td>' +
-                    '<td style="padding:8px;border:1px solid #dee2e6;">' + (query.is_iterable ? '<i class="fa fa-check text-success"></i> ' + __('Yes') : __('No')) + '</td>' +
                     '<td style="padding:8px;border:1px solid #dee2e6;text-align:center;">' +
                         '<button type="button" class="btn btn-xs btn-default btn-edit-query" data-index="' + index + '" title="' + __('Edit') + '"><i class="fa fa-edit"></i></button>' +
                     '</td>' +
@@ -2314,7 +2286,7 @@ class SuperPrintDesigner {
                 });
             });
         } else {
-            tbody.html('<tr><td colspan="5" style="padding:20px;text-align:center;color:#6c757d;">' + __('No query definitions') + '</td></tr>');
+            tbody.html('<tr><td colspan="4" style="padding:20px;text-align:center;color:#6c757d;">' + __('No query definitions') + '</td></tr>');
         }
     }
 
