@@ -17,8 +17,21 @@ PRODUCT_CODE = "zhiz_print"
 API_SECRET = "1e4266377127627a8782327e4d7054bcf8862e6ebd94c3885d14decfcf4ef21d"
 LICENSE_CACHE_KEY = "zhiz_print:license_status"
 LICENSE_CACHE_TTL = 86400
+LICENSE_REMOTE_VALIDATE_INTERVAL = 3600
+LICENSE_LAST_REMOTE_KEY = "zhiz_print:last_remote_validate"
 MAX_OFFLINE_DAYS = 7
 _LOCAL_SIGN_SECRET = hashlib.sha256((API_SECRET + ":local_license_sign:v1").encode()).hexdigest()
+
+
+def _can_remote_validate():
+    last_remote = frappe.cache().get_value(LICENSE_LAST_REMOTE_KEY)
+    if not last_remote:
+        return True
+    return (time.time() - float(last_remote)) >= LICENSE_REMOTE_VALIDATE_INTERVAL
+
+
+def _mark_remote_validated():
+    frappe.cache().set_value(LICENSE_LAST_REMOTE_KEY, str(time.time()), expires_in_sec=LICENSE_CACHE_TTL)
 
 
 def _get_company_name():
@@ -211,12 +224,16 @@ def check_license_valid():
         offline_days = (now - last_validated).days
 
     try:
-        remote_result = _call_license_api("validate", {
-            "license_key": lic.license_key,
-            "machine_id": get_machine_id(),
-            "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
-            "company_name": _get_company_name(),
-        })
+        remote_result = None
+        if _can_remote_validate():
+            remote_result = _call_license_api("validate", {
+                "license_key": lic.license_key,
+                "machine_id": get_machine_id(),
+                "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
+                "company_name": _get_company_name(),
+            })
+            if remote_result and remote_result.get("valid"):
+                _mark_remote_validated()
 
         if remote_result and remote_result.get("valid"):
             new_hash = _compute_license_hash(
@@ -583,6 +600,9 @@ def _sync_license_from_server(lic):
     if not lic.get("license_key"):
         return
 
+    if not _can_remote_validate():
+        return
+
     try:
         result = _call_license_api("validate", {
             "license_key": lic.get("license_key"),
@@ -597,6 +617,7 @@ def _sync_license_from_server(lic):
         return
 
     if result.get("valid"):
+        _mark_remote_validated()
         new_status = "Active"
         new_expires = result.get("expires_at") or lic.get("expires_at")
         now = frappe.utils.now_datetime()
