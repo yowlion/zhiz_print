@@ -44,6 +44,17 @@ def _get_company_name():
 
 
 def get_machine_id():
+    # Priority: /etc/machine-id (stable across app reinstalls, set at OS install)
+    for path in ["/etc/machine-id", "/var/lib/dbus/machine-id"]:
+        try:
+            with open(path, "r") as f:
+                mid = f.read().strip()
+            if mid:
+                return hashlib.sha256(mid.encode()).hexdigest()[:32]
+        except Exception:
+            pass
+
+    # Fallback: board_uuid + MAC + hostname (less stable, but works on all platforms)
     parts = []
     try:
         with open("/sys/class/dmi/id/board_uuid", "r") as f:
@@ -671,10 +682,23 @@ def get_license_info_for_boot():
         limit=1,
     )
     if not licenses:
+        # Try to recover license from server by machine_id before falling back to trial
         try:
-            create_trial_license()
+            _recover_license_by_machine()
         except Exception:
             pass
+        # Re-check after recovery attempt
+        licenses = frappe.get_all(
+            "Zprint License",
+            fields=["name", "license_key", "plan", "status", "expires_at", "machine_id"],
+            order_by="activated_at desc",
+            limit=1,
+        )
+        if not licenses:
+            try:
+                create_trial_license()
+            except Exception:
+                pass
     else:
         _sync_license_from_server(licenses[0])
         remaining = frappe.get_all("Zprint License", limit=1)
@@ -695,3 +719,44 @@ def get_license_info_for_boot():
     info["trial"] = bool(trial_licenses)
 
     return info
+
+
+def _recover_license_by_machine():
+    """Try to recover a paid license from server by matching machine_id.
+    Called when local has no license records (e.g. after app reinstall on same hardware).
+    """
+    machine_id = get_machine_id()
+    site_name = frappe.local.site if hasattr(frappe.local, "site") else ""
+
+    result = _call_license_api("lookup_by_machine", {
+        "product_code": PRODUCT_CODE,
+        "machine_id": machine_id,
+        "site_name": site_name,
+    })
+
+    if not result or not result.get("valid") or not result.get("found"):
+        return
+
+    license_key = result.get("license_key")
+    if not license_key:
+        return
+
+    now = frappe.utils.now_datetime()
+    expires_at = result.get("expires_at")
+    expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 365)
+
+    doc = frappe.get_doc({
+        "doctype": "Zprint License",
+        "license_key": license_key,
+        "plan": result.get("plan", "Standard"),
+        "status": "Active",
+        "activated_at": result.get("activated_at") or now,
+        "expires_at": expires,
+        "machine_id": machine_id,
+        "site_name": site_name,
+        "company_name": _get_company_name(),
+    })
+    _sign_local_license(doc)
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+    frappe.cache().delete_value(LICENSE_CACHE_KEY)
