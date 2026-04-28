@@ -197,89 +197,7 @@ class SuperPrintDesign(frappe.model.document.Document):
         - Right side: doc.field for direct field → inject .where(key == value)
         - Right side: doc.childtable.field for child table → inject .where(key.isin([values]))
         """
-        params = parse_parameters(parameters)
-
-        # Build where clauses from parameters
-        where_clauses = []
-        if doc_name and doc_type:
-            try:
-                doc = frappe.get_doc(doc_type, doc_name)
-                for key, val in list(params.items()):
-                    if not val.startswith('doc.'):
-                        if '.' in key:
-                            escaped = val.replace('\\', '\\\\').replace('"', '\\"')
-                            where_clauses.append('query = query.where({0} == "{1}")'.format(key, escaped))
-                        continue
-
-                    field_path = val[4:]  # strip 'doc.'
-
-                    # doc.childtable.field pattern
-                    if '.' in field_path:
-                        parts = field_path.split('.', 1)
-                        child_table_name = parts[0]
-                        child_field = parts[1]
-
-                        child_rows = getattr(doc, child_table_name, None)
-                        if child_rows is None:
-                            continue
-
-                        # If current_row_index is specified, take that specific row
-                        if current_row_index is not None and 0 <= current_row_index < len(child_rows):
-                            v = getattr(child_rows[current_row_index], child_field, None)
-                            if v is not None:
-                                if isinstance(v, str):
-                                    escaped = v.replace('\\', '\\\\').replace('"', '\\"')
-                                    where_clauses.append('query = query.where({0} == "{1}")'.format(key, escaped))
-                                else:
-                                    where_clauses.append('query = query.where({0} == {1})'.format(key, v))
-                        else:
-                            # No specific row — collect all values, use .isin()
-                            values = []
-                            for row in child_rows:
-                                v = getattr(row, child_field, None)
-                                if v is not None:
-                                    values.append(v)
-                            if not values:
-                                continue
-                            str_values = ['"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"' if isinstance(v, str) else str(v) for v in values]
-                            where_clauses.append('query = query.where({0}.isin([{1}]))'.format(key, ', '.join(str_values)))
-
-                    # doc.field pattern (direct field)
-                    else:
-                        if hasattr(doc, field_path):
-                            actual_value = getattr(doc, field_path)
-                            if actual_value is not None:
-                                if isinstance(actual_value, str):
-                                    escaped = actual_value.replace('\\', '\\\\').replace('"', '\\"')
-                                    where_clauses.append('query = query.where({0} == "{1}")'.format(key, escaped))
-                                else:
-                                    where_clauses.append('query = query.where({0} == {1})'.format(key, actual_value))
-            except Exception:
-                pass
-
-        # Remove where-clause params from filters to avoid double-processing
-        for key in [k for k, v in params.items() if '.' in k or v.startswith('doc.')]:
-            del params[key]
-
-        # Handle legacy {{doc.field}} params
-        if doc_name and doc_type:
-            params = replace_dynamic_params(params, doc_name, doc_type)
-
-        # Inject user parameters
-        if user_params and isinstance(user_params, dict):
-            params.update(user_params)
-
-        # Inject where clauses into query code before query.run()
-        modified_code = query_code
-        if where_clauses:
-            where_inject = '\n'.join(where_clauses) + '\n'
-            modified_code = re.sub(
-                r'(result\s*=\s*query\.run\()',
-                where_inject + r'\1',
-                modified_code
-            )
-
-        return execute_query_code(modified_code, filters=params, format_result=True)
+        return _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, current_row_index, user_params)
 
     # ==================== Placeholder Replacement ====================
 
@@ -1096,10 +1014,82 @@ def preview_query_with_doc(query_code, parameters=None, target_doctype=None, doc
     if not query_code or not query_code.strip():
         frappe.throw('Query code is required')
 
-    design = SuperPrintDesign()
-    return design.execute_query(
-        query_code=query_code,
-        parameters=parameters,
-        doc_name=doc_name,
-        doc_type=target_doctype,
-    )
+    return _execute_query_with_doc_context(query_code, parameters, target_doctype, doc_name)
+
+
+def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, current_row_index=None, user_params=None):
+    """Execute query with parameter injection as .where() clauses (standalone, no Document instance needed)."""
+    params = parse_parameters(parameters)
+
+    where_clauses = []
+    if doc_name and doc_type:
+        try:
+            doc = frappe.get_doc(doc_type, doc_name)
+            for key, val in list(params.items()):
+                if not val.startswith('doc.'):
+                    if '.' in key:
+                        escaped = val.replace('\\', '\\\\').replace('"', '\\"')
+                        where_clauses.append('query = query.where({0} == "{1}")'.format(key, escaped))
+                    continue
+
+                field_path = val[4:]
+
+                if '.' in field_path:
+                    parts = field_path.split('.', 1)
+                    child_table_name = parts[0]
+                    child_field = parts[1]
+
+                    child_rows = getattr(doc, child_table_name, None)
+                    if child_rows is None:
+                        continue
+
+                    if current_row_index is not None and 0 <= current_row_index < len(child_rows):
+                        v = getattr(child_rows[current_row_index], child_field, None)
+                        if v is not None:
+                            if isinstance(v, str):
+                                escaped = v.replace('\\', '\\\\').replace('"', '\\"')
+                                where_clauses.append('query = query.where({0} == "{1}")'.format(key, escaped))
+                            else:
+                                where_clauses.append('query = query.where({0} == {1})'.format(key, v))
+                    else:
+                        values = []
+                        for row in child_rows:
+                            v = getattr(row, child_field, None)
+                            if v is not None:
+                                values.append(v)
+                        if not values:
+                            continue
+                        str_values = ['"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"' if isinstance(v, str) else str(v) for v in values]
+                        where_clauses.append('query = query.where({0}.isin([{1}]))'.format(key, ', '.join(str_values)))
+                else:
+                    if hasattr(doc, field_path):
+                        actual_value = getattr(doc, field_path)
+                        if actual_value is not None:
+                            if isinstance(actual_value, str):
+                                escaped = actual_value.replace('\\', '\\\\').replace('"', '\\"')
+                                where_clauses.append('query = query.where({0} == "{1}")'.format(key, escaped))
+                            else:
+                                where_clauses.append('query = query.where({0} == {1})'.format(key, actual_value))
+        except Exception:
+            pass
+
+    for key in [k for k, v in params.items() if '.' in k or v.startswith('doc.')]:
+        del params[key]
+
+    if doc_name and doc_type:
+        params = replace_dynamic_params(params, doc_name, doc_type)
+
+    # Inject user parameters
+    if user_params and isinstance(user_params, dict):
+        params.update(user_params)
+
+    modified_code = query_code
+    if where_clauses:
+        where_inject = '\n'.join(where_clauses) + '\n'
+        modified_code = re.sub(
+            r'(result\s*=\s*query\.run\()',
+            where_inject + r'\1',
+            modified_code
+        )
+
+    return execute_query_code(modified_code, filters=params, format_result=True)
