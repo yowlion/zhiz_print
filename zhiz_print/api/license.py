@@ -741,6 +741,29 @@ def _recover_license_by_machine():
     if not license_key:
         return
 
+    # If a record with this license_key already exists, update it instead of inserting
+    existing = frappe.get_all("Zprint License", filters={"license_key": license_key}, limit=1)
+    if existing:
+        now = frappe.utils.now_datetime()
+        expires_at = result.get("expires_at")
+        expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 365)
+        new_hash = _compute_license_hash(
+            license_key, result.get("plan", "Standard"), "Active", expires,
+            machine_id, now
+        )
+        frappe.db.set_value("Zprint License", existing[0].name, {
+            "plan": result.get("plan", "Standard"),
+            "status": "Active",
+            "expires_at": expires,
+            "machine_id": machine_id,
+            "site_name": site_name,
+            "last_validated_at": now,
+            "license_hash": new_hash,
+        })
+        frappe.db.commit()
+        frappe.cache().delete_value(LICENSE_CACHE_KEY)
+        return
+
     now = frappe.utils.now_datetime()
     expires_at = result.get("expires_at")
     expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 365)
