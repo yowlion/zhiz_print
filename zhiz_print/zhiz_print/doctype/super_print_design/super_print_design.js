@@ -2038,44 +2038,8 @@ class SuperPrintDesigner {
             return;
         }
 
-        // Show doc selection dialog first, then preview with doc context
-        this.showDocSelectDialog((docName) => {
-            this._showQueryPreviewDialog(query.query_name, queryCode, parameters, docName);
-        });
-    }
-
-    showDocSelectDialog(callback) {
-        const targetDoctype = this.frm.doc.target_doctype;
-        if (!targetDoctype) {
-            frappe.msgprint(__('Please set Target DocType first'));
-            return;
-        }
-
-        const docDialog = new frappe.ui.Dialog({
-            title: __('Select Document for Preview'),
-            fields: [
-                {
-                    fieldname: 'preview_doc',
-                    label: __('Select Document'),
-                    fieldtype: 'Link',
-                    options: targetDoctype,
-                    reqd: 1,
-                    description: __('Select a {0} document to provide context for query parameters (e.g. doc.field)').replace('{0}', targetDoctype)
-                }
-            ],
-            primary_action_label: __('Confirm'),
-            primary_action: (values) => {
-                docDialog.hide();
-                callback(values.preview_doc);
-            }
-        });
-
-        docDialog.show();
-    }
-
-    _showQueryPreviewDialog(queryName, queryCode, parameters, docName) {
         const previewDialog = new frappe.ui.Dialog({
-            title: __('Preview Query') + ' - ' + queryName,
+            title: __('Preview Query') + ' - ' + query.query_name,
             size: 'large',
             fields: [{
                 fieldname: 'result_content',
@@ -2092,13 +2056,14 @@ class SuperPrintDesigner {
         previewDialog.show();
 
         const targetDoctype = this.frm.doc.target_doctype;
+        const docName = this.frm.doc.sample_doc || '';
         frappe.call({
             method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_query_with_doc',
             args: {
                 query_code: queryCode,
                 parameters: parameters,
                 target_doctype: targetDoctype,
-                doc_name: docName || '',
+                doc_name: docName,
             },
             callback: (response) => {
                 const $loading = previewDialog.$wrapper.find('#preview-loading');
@@ -2244,13 +2209,6 @@ class SuperPrintDesigner {
             return;
         }
 
-        // Show doc selection dialog first, then preview with doc context
-        this.showDocSelectDialog((docName) => {
-            this._showQueryResultInDialog(dialog, queryCode, parameters, docName);
-        });
-    }
-
-    _showQueryResultInDialog(dialog, queryCode, parameters, docName) {
         const $container = dialog.$wrapper.find('#query-preview-container');
         const $content = dialog.$wrapper.find('#query-preview-content');
 
@@ -2258,13 +2216,14 @@ class SuperPrintDesigner {
         $content.html('<i class="fa fa-spinner fa-spin"></i> ' + __('Executing query...'));
 
         const targetDoctype = this.frm.doc.target_doctype;
+        const docName = this.frm.doc.sample_doc || '';
         frappe.call({
             method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_query_with_doc',
             args: {
                 query_code: queryCode,
                 parameters: parameters,
                 target_doctype: targetDoctype,
-                doc_name: docName || '',
+                doc_name: docName,
             },
             callback: (response) => {
                 if (response.message !== undefined) {

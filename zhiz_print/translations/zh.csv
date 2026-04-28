@@ -324,3 +324,5 @@ Select Document for Preview,选择预览文档
 Select Document,选择单据
 "Select a {0} document to provide context for query parameters (e.g. doc.field)","选择一个 {0} 单据为查询参数（如 doc.field）提供上下文"
 Confirm,确认
+Sample Document,模板演示单据
+"Used for query preview to resolve doc.field parameters. Leave empty to preview without document context.",用于查询预览时解析doc.field参数。留空则预览时不带文档上下文。

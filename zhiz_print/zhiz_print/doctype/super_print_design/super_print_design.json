@@ -14,6 +14,8 @@
     "section_basic",
     "design_name",
     "target_doctype",
+    "column_break_sample",
+    "sample_doc",
     "column_break_basic",
     "print_paper",
     "column_break_condition",
@@ -97,6 +99,17 @@
       "reqd": 1
     },
 
+    {
+      "fieldname": "column_break_sample",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "sample_doc",
+      "fieldtype": "Dynamic Link",
+      "label": "Sample Document",
+      "options": "target_doctype",
+      "description": "Used for query preview to resolve doc.field parameters. Leave empty to preview without document context."
+    },
     {
       "fieldname": "column_break_basic",
       "fieldtype": "Column Break"
