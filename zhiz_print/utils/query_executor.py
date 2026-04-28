@@ -18,11 +18,6 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 	from frappe.query_builder.functions import Sum, Count, Avg, Max, Min, Round, Concat, Coalesce, Abs
 	from frappe.query_builder import Column, functions
 	from frappe.query_builder.custom import GROUP_CONCAT
-	from pypika.terms import ValueWrapper
-	try:
-		from pypika.functions import IfNull, Cast, Upper, Lower, Length, Trim, Now
-	except ImportError:
-		IfNull = Cast = Upper = Lower = Length = Trim = Now = None
 
 	_globals = {
 		'qb': frappe.qb,
@@ -42,14 +37,6 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		'Concat': Concat,
 		'Coalesce': Coalesce,
 		'Abs': Abs,
-		'IfNull': IfNull,
-		'Cast': Cast,
-		'Upper': Upper,
-		'Lower': Lower,
-		'Length': Length,
-		'Trim': Trim,
-		'Now': Now,
-		'ValueWrapper': ValueWrapper,
 		'GROUP_CONCAT': GROUP_CONCAT,
 		'Column': Column,
 		'functions': functions,

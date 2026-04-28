@@ -360,7 +360,8 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
                         const iframe = document.createElement("iframe");
                         iframe.className = "sp-iframe";
-                        iframe.style.cssText = "width:100%;height:100%;border:none;";
+                        iframe.style.cssText = "width:100%;height:100%;border:none;overflow:hidden;";
+			iframe.scrolling = 'no';
                         pageWrapper.appendChild(iframe);
 
                         pagesContainer.appendChild(pageWrapper);
