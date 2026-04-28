@@ -17,9 +17,12 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 	from frappe.utils.safe_exec import safe_exec
 	from frappe.query_builder.functions import Sum, Count, Avg, Max, Min, Round, Concat, Coalesce, Abs
 	from frappe.query_builder import Column, functions
-	from pypika.functions import IfNull, Cast, Upper, Lower, Length, Trim, Now, Date, Year, Month, Day, Hour, Minute, Second
-	from pypika.terms import ValueWrapper
 	from frappe.query_builder.custom import GROUP_CONCAT
+	from pypika.terms import ValueWrapper
+	try:
+		from pypika.functions import IfNull, Cast, Upper, Lower, Length, Trim, Now
+	except ImportError:
+		IfNull = Cast = Upper = Lower = Length = Trim = Now = None
 
 	_globals = {
 		'qb': frappe.qb,
@@ -46,13 +49,6 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		'Length': Length,
 		'Trim': Trim,
 		'Now': Now,
-		'Date': Date,
-		'Year': Year,
-		'Month': Month,
-		'Day': Day,
-		'Hour': Hour,
-		'Minute': Minute,
-		'Second': Second,
 		'ValueWrapper': ValueWrapper,
 		'GROUP_CONCAT': GROUP_CONCAT,
 		'Column': Column,
