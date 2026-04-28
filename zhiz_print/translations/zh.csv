@@ -326,3 +326,6 @@ Select Document,选择单据
 Confirm,确认
 Sample Document,模板演示单据
 "Used for query preview to resolve doc.field parameters. Leave empty to preview without document context.",用于查询预览时解析doc.field参数。留空则预览时不带文档上下文。
+"Row {0} format painted",第 {0} 行格式刷已应用
+"Col {0} format painted",第 {0} 列格式刷已应用
+format painted,格式刷已应用

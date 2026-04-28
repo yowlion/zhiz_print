@@ -575,12 +575,22 @@ class SuperPrintDesigner {
         container.addEventListener('click', (e) => {
             const colHeader = e.target.closest('.super-zprint-col-header-cell');
             if (colHeader) {
-                this.handleColClick(parseInt(colHeader.dataset.col));
+                const col = parseInt(colHeader.dataset.col);
+                if (this.formatPainterActive) {
+                    this.paintFormatToCol(col);
+                    return;
+                }
+                this.handleColClick(col);
                 return;
             }
             const rowHeader = e.target.closest('.super-zprint-row-header-cell');
             if (rowHeader) {
-                this.handleRowClick(parseInt(rowHeader.dataset.row));
+                const row = parseInt(rowHeader.dataset.row);
+                if (this.formatPainterActive) {
+                    this.paintFormatToRow(row);
+                    return;
+                }
+                this.handleRowClick(row);
                 return;
             }
             const cell = e.target.closest('.spd-cell');
@@ -773,6 +783,9 @@ class SuperPrintDesigner {
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
                     '<textarea id="row-css-style" class="form-control super-zprint-css-editor" rows="2" placeholder="background-color: #f0f0f0;">' + cssPreview.trim() + '</textarea>' +
+                    '<div style="margin-top:6px">' +
+                        '<button type="button" class="btn btn-xs btn-default" id="row-format-painter-btn" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>' +
         '</form>';
@@ -827,6 +840,22 @@ class SuperPrintDesigner {
                     this.setCssProperty(this.rowStyles[row]?.css_style || '', 'vertical-align', btn.dataset.align));
             });
         });
+        // Row format painter button
+        const rowFormatPainterBtn = container.querySelector('#row-format-painter-btn');
+        if (rowFormatPainterBtn) {
+            rowFormatPainterBtn.addEventListener('click', () => {
+                this.formatPainterActive = true;
+                this.formatPainterSourceCss = this.rowStyles[row]?.css_style || '';
+                this.formatPainterPainting = false;
+                this.formatPainterLastPainted = null;
+                rowFormatPainterBtn.style.background = '#ff9800';
+                rowFormatPainterBtn.style.color = '#fff';
+                rowFormatPainterBtn.style.borderColor = '#ff9800';
+                const grid = container?.querySelector('#spd-grid');
+                if (grid) grid.classList.add('format-painter-cursor');
+                frappe.show_alert({ message: __('Format Painter activated'), indicator: 'blue' });
+            });
+        }
     }
 
     // ==================== Row Type / Row Display Effect ====================
@@ -945,6 +974,9 @@ class SuperPrintDesigner {
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
                     '<textarea id="col-css-style" class="form-control super-zprint-css-editor" rows="2" placeholder="text-align: center;">' + cssPreview.trim() + '</textarea>' +
+                    '<div style="margin-top:6px">' +
+                        '<button type="button" class="btn btn-xs btn-default" id="col-format-painter-btn" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>' +
         '</form>';
@@ -976,6 +1008,22 @@ class SuperPrintDesigner {
                     this.setCssProperty(this.colStyles[col]?.css_style || '', 'text-align', btn.dataset.align));
             });
         });
+        // Column format painter button
+        const colFormatPainterBtn = container.querySelector('#col-format-painter-btn');
+        if (colFormatPainterBtn) {
+            colFormatPainterBtn.addEventListener('click', () => {
+                this.formatPainterActive = true;
+                this.formatPainterSourceCss = this.colStyles[col]?.css_style || '';
+                this.formatPainterPainting = false;
+                this.formatPainterLastPainted = null;
+                colFormatPainterBtn.style.background = '#ff9800';
+                colFormatPainterBtn.style.color = '#fff';
+                colFormatPainterBtn.style.borderColor = '#ff9800';
+                const grid = container?.querySelector('#spd-grid');
+                if (grid) grid.classList.add('format-painter-cursor');
+                frappe.show_alert({ message: __('Format Painter activated'), indicator: 'blue' });
+            });
+        }
     }
 
     updateColStyle(col, property, value) {
@@ -1486,6 +1534,34 @@ class SuperPrintDesigner {
         }
 
         this.formatPainterLastPainted = cellId;
+    }
+
+    paintFormatToRow(row) {
+        if (!this.formatPainterActive || !this.formatPainterSourceCss) return;
+        for (let col = 1; col <= this.cols; col++) {
+            const cell = this.grid[row - 1]?.[col - 1];
+            if (cell && !cell._merged) {
+                cell.css_style = this.formatPainterSourceCss;
+            }
+        }
+        this.frm.dirty();
+        this.deactivateFormatPainter();
+        this.refreshGrid();
+        frappe.show_alert({ message: __('Row') + ' ' + row + ' ' + __('format painted'), indicator: 'green' });
+    }
+
+    paintFormatToCol(col) {
+        if (!this.formatPainterActive || !this.formatPainterSourceCss) return;
+        for (let row = 1; row <= this.rows; row++) {
+            const cell = this.grid[row - 1]?.[col - 1];
+            if (cell && !cell._merged) {
+                cell.css_style = this.formatPainterSourceCss;
+            }
+        }
+        this.frm.dirty();
+        this.deactivateFormatPainter();
+        this.refreshGrid();
+        frappe.show_alert({ message: __('Col') + ' ' + col + ' ' + __('format painted'), indicator: 'green' });
     }
 
     setColorProperty(prop, color) {
