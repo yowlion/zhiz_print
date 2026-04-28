@@ -320,3 +320,7 @@ Add Query,添加查询
 Edit Query,编辑查询
 Update,更新
 Add,添加
+Select Document for Preview,选择预览文档
+Select Document,选择单据
+"Select a {0} document to provide context for query parameters (e.g. doc.field)","选择一个 {0} 单据为查询参数（如 doc.field）提供上下文"
+Confirm,确认

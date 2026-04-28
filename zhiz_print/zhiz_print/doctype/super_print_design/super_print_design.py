@@ -1086,3 +1086,20 @@ body {{
             frappe.log_error(frappe.get_traceback(),
                              f'Enable condition evaluation failed: {design_name}')
             return False
+
+
+@frappe.whitelist()
+def preview_query_with_doc(query_code, parameters=None, target_doctype=None, doc_name=None):
+    """Execute query preview with document context for parameter substitution.
+    Used by the designer's query preview to resolve doc.field references.
+    """
+    if not query_code or not query_code.strip():
+        frappe.throw('Query code is required')
+
+    design = SuperPrintDesign()
+    return design.execute_query(
+        query_code=query_code,
+        parameters=parameters,
+        doc_name=doc_name,
+        doc_type=target_doctype,
+    )
