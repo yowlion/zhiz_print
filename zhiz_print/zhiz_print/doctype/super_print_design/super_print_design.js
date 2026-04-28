@@ -502,7 +502,9 @@ class SuperPrintDesigner {
                     const hasValue = cell_value && cell_value.trim();
 
                     let content = '';
-                    if (cell_type === 'barcode' || cell_type === 'qrcode') {
+                    if (cell_type === 'data_query' && cell.query_name && cell.data_key) {
+                        content = '<div class="super-zprint-cell-content" style="color:#6a5acd;font-style:italic;">{' + this.escapeHtml(cell.query_name) + '.' + this.escapeHtml(cell.data_key) + '}</div>';
+                    } else if (cell_type === 'barcode' || cell_type === 'qrcode') {
                         content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + typeInfo.label + '</span></div>';
                     } else if (!hasValue) {
                         content = '';
