@@ -23,6 +23,8 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		'json': json,
 		'qb': frappe.qb,
 		'DocType': frappe.qb.DocType,
+		'desc': frappe.qb.desc,
+		'Order': frappe.qb.Order,
 	})
 
 	params = {}

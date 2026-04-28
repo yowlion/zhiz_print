@@ -190,10 +190,12 @@ class SuperPrintDesign(frappe.model.document.Document):
     def execute_query(self, query_code, parameters=None, doc_name=None, doc_type=None, user_params=None, current_row_index=None):
         """Execute query with parameter injection as .where() clauses
 
-        Parameters format: bom.name = doc.bom_no  or  bop.parent = doc.items.parent
-        - Left side: query variable reference (e.g. bom.name)
-        - Right side: doc.field for direct field, doc.childtable.field for child table values
-        - Child table values use .isin() for WHERE IN clause
+        Parameters format examples:
+          bom.name = doc.bom_no          → query.where(bom.name == "BOM-001")
+          bop.parent = doc.items.name    → query.where(bop.parent.isin(["ITEM-1","ITEM-2"]))
+        - Left side: query variable reference (e.g. bom.name, bop.parent)
+        - Right side: doc.field for direct field → inject .where(key == value)
+        - Right side: doc.childtable.field for child table → inject .where(key.isin([values]))
         """
         params = parse_parameters(parameters)
 
@@ -211,7 +213,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
                     field_path = val[4:]  # strip 'doc.'
 
-                    # doc.childtable.field pattern (3 segments)
+                    # doc.childtable.field pattern
                     if '.' in field_path:
                         parts = field_path.split('.', 1)
                         child_table_name = parts[0]
@@ -221,18 +223,26 @@ class SuperPrintDesign(frappe.model.document.Document):
                         if child_rows is None:
                             continue
 
-                        values = []
-                        for row in child_rows:
-                            v = getattr(row, child_field, None)
+                        # If current_row_index is specified, take that specific row
+                        if current_row_index is not None and 0 <= current_row_index < len(child_rows):
+                            v = getattr(child_rows[current_row_index], child_field, None)
                             if v is not None:
-                                values.append(v)
-
-                        if not values:
-                            continue
-
-                        # Use .isin() for child table field values
-                        str_values = ['"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"' if isinstance(v, str) else str(v) for v in values]
-                        where_clauses.append('query = query.where({0}.isin([{1}]))'.format(key, ', '.join(str_values)))
+                                if isinstance(v, str):
+                                    escaped = v.replace('\\', '\\\\').replace('"', '\\"')
+                                    where_clauses.append('query = query.where({0} == "{1}")'.format(key, escaped))
+                                else:
+                                    where_clauses.append('query = query.where({0} == {1})'.format(key, v))
+                        else:
+                            # No specific row — collect all values, use .isin()
+                            values = []
+                            for row in child_rows:
+                                v = getattr(row, child_field, None)
+                                if v is not None:
+                                    values.append(v)
+                            if not values:
+                                continue
+                            str_values = ['"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"' if isinstance(v, str) else str(v) for v in values]
+                            where_clauses.append('query = query.where({0}.isin([{1}]))'.format(key, ', '.join(str_values)))
 
                     # doc.field pattern (direct field)
                     else:
