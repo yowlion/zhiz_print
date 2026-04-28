@@ -15,7 +15,11 @@ MERGED_SUFFIX = "||"
 def execute_query_code(query_code, filters=None, parameters=None, format_result=True):
 	"""Safely execute Python query code"""
 	from frappe.utils.safe_exec import safe_exec
-	from frappe.query_builder.functions import Coalesce, Abs
+	from frappe.query_builder.functions import Sum, Count, Avg, Max, Min, Round, Concat, Coalesce, Abs
+	from frappe.query_builder import Column, functions
+	from pypika.functions import IfNull, Cast, Upper, Lower, Length, Trim, Now, Date, Year, Month, Day, Hour, Minute, Second
+	from pypika.terms import ValueWrapper
+	from frappe.query_builder.custom import GROUP_CONCAT
 
 	_globals = {
 		'qb': frappe.qb,
@@ -26,8 +30,33 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		'_dict': frappe._dict,
 		'filters': {},
 		'result': None,
+		'Sum': Sum,
+		'Count': Count,
+		'Avg': Avg,
+		'Max': Max,
+		'Min': Min,
+		'Round': Round,
+		'Concat': Concat,
 		'Coalesce': Coalesce,
 		'Abs': Abs,
+		'IfNull': IfNull,
+		'Cast': Cast,
+		'Upper': Upper,
+		'Lower': Lower,
+		'Length': Length,
+		'Trim': Trim,
+		'Now': Now,
+		'Date': Date,
+		'Year': Year,
+		'Month': Month,
+		'Day': Day,
+		'Hour': Hour,
+		'Minute': Minute,
+		'Second': Second,
+		'ValueWrapper': ValueWrapper,
+		'GROUP_CONCAT': GROUP_CONCAT,
+		'Column': Column,
+		'functions': functions,
 	}
 
 	params = {}
@@ -76,24 +105,15 @@ def format_query_result(result):
 
 
 def parse_parameters(parameters_str):
-	"""Parse parameter string to dict
-
-	Supported formats:
-	  key = value           → {'key': 'value'}
-	  doc.childtable.field  → {'__auto__': 'doc.childtable.field'} (auto-detect query variable)
-	"""
+	"""Parse parameter string to dict"""
 	if not parameters_str:
 		return {}
 	params = {}
 	for line in parameters_str.strip().split('\n'):
 		line = line.strip()
-		if not line:
-			continue
 		if '=' in line:
 			key, val = line.split('=', 1)
 			params[key.strip()] = val.strip()
-		elif line.startswith('doc.'):
-			params['__auto__'] = line.strip()
 	return params
 
 

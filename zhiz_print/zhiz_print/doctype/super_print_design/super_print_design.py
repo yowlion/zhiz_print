@@ -191,21 +191,13 @@ class SuperPrintDesign(frappe.model.document.Document):
         """Execute query with parameter injection as .where() clauses
 
         Parameters format examples:
-          bom.name = doc.bom_no                          → query.where(bom.name == "BOM-001")
-          bop.parent = doc.items.name                    → query.where(bop.parent.isin(["ITEM-1","ITEM-2"]))
-          doc.work_order_sois_items.material_request_item → auto-detect first DocType var, use var.name as where key
+          bom.name = doc.bom_no          → query.where(bom.name == "BOM-001")
+          bop.parent = doc.items.name    → query.where(bop.parent.isin(["ITEM-1","ITEM-2"]))
+        - Left side: query variable reference (e.g. bom.name, bop.parent)
+        - Right side: doc.field for direct field → inject .where(key == value)
+        - Right side: doc.childtable.field for child table → inject .where(key.isin([values]))
         """
         params = parse_parameters(parameters)
-
-        # Auto-detect: resolve __auto__ key (shorthand: doc.childtable.field without left side)
-        # Use the first DocType variable found in query_code as the where key with .name
-        auto_key = params.pop('__auto__', None)
-        if auto_key and auto_key.startswith('doc.'):
-            # Find first DocType variable in query code: "varname = DocType(..."
-            match = re.search(r'(\w+)\s*=\s*DocType\s*\(', query_code)
-            if match:
-                first_var = match.group(1)
-                params[first_var + '.name'] = auto_key
 
         # Build where clauses from parameters
         where_clauses = []
