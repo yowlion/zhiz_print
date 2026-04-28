@@ -755,6 +755,7 @@ class SuperPrintDesigner {
                         '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="top" title="' + __('Top Align') + '"><i class="fa fa-arrow-up"></i> ' + __('Top') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="middle" title="' + __('Center') + '"><i class="fa fa-arrows-v"></i> ' + __('Center') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="bottom" title="' + __('Bottom Align') + '"><i class="fa fa-arrow-down"></i> ' + __('Bottom') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default" id="row-format-painter-btn" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px;margin-left:8px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -783,9 +784,6 @@ class SuperPrintDesigner {
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
                     '<textarea id="row-css-style" class="form-control super-zprint-css-editor" rows="2" placeholder="background-color: #f0f0f0;">' + cssPreview.trim() + '</textarea>' +
-                    '<div style="margin-top:6px">' +
-                        '<button type="button" class="btn btn-xs btn-default" id="row-format-painter-btn" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
-                    '</div>' +
                 '</div>' +
             '</div>' +
         '</form>';
@@ -966,6 +964,7 @@ class SuperPrintDesigner {
                         '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="left" title="' + __('Left Align') + '"><i class="fa fa-align-left"></i> ' + __('Left') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="center" title="' + __('Center') + '"><i class="fa fa-align-center"></i> ' + __('Center') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default col-align-btn" data-align="right" title="' + __('Right Align') + '"><i class="fa fa-align-right"></i> ' + __('Right') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default" id="col-format-painter-btn" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px;margin-left:8px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -974,9 +973,6 @@ class SuperPrintDesigner {
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('CSS Style') + ':</label>' +
                     '<textarea id="col-css-style" class="form-control super-zprint-css-editor" rows="2" placeholder="text-align: center;">' + cssPreview.trim() + '</textarea>' +
-                    '<div style="margin-top:6px">' +
-                        '<button type="button" class="btn btn-xs btn-default" id="col-format-painter-btn" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
-                    '</div>' +
                 '</div>' +
             '</div>' +
         '</form>';
@@ -1493,12 +1489,17 @@ class SuperPrintDesigner {
         this.formatPainterLastPainted = null;
 
         const container = document.getElementById(this.designContainerId);
+        // Reset all format painter buttons
         const btn = container?.querySelector('#format-painter-btn');
-        if (btn) {
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.style.borderColor = '';
-        }
+        const rowBtn = container?.querySelector('#row-format-painter-btn');
+        const colBtn = container?.querySelector('#col-format-painter-btn');
+        [btn, rowBtn, colBtn].forEach(b => {
+            if (b) {
+                b.style.background = '';
+                b.style.color = '';
+                b.style.borderColor = '';
+            }
+        });
         const grid = container?.querySelector('#spd-grid');
         if (grid) grid.classList.remove('format-painter-cursor');
     }
