@@ -14,18 +14,21 @@ MERGED_SUFFIX = "||"
 @frappe.whitelist()
 def execute_query_code(query_code, filters=None, parameters=None, format_result=True):
 	"""Safely execute Python query code"""
-	from frappe.utils.safe_exec import safe_exec, get_safe_globals
+	from frappe.utils.safe_exec import safe_exec
+	from frappe.query_builder.functions import Coalesce, Abs
 
-	_globals = get_safe_globals()
-	_globals.update({
-		'frappe': frappe,
-		'_dict': frappe._dict,
-		'json': json,
+	_globals = {
 		'qb': frappe.qb,
 		'DocType': frappe.qb.DocType,
 		'desc': frappe.qb.desc,
 		'asc': frappe.qb.asc,
-	})
+		'json': json,
+		'_dict': frappe._dict,
+		'filters': {},
+		'result': None,
+		'Coalesce': Coalesce,
+		'Abs': Abs,
+	}
 
 	params = {}
 	if parameters:
