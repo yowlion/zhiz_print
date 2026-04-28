@@ -2344,25 +2344,38 @@ class SuperPrintDesigner {
 
     insertRowAt(row) {
         if (!row || row < 1 || row > this.rows) return;
-        const insertIdx = row - 1;
 
         const oldRows = this.rows;
         const oldCols = this.cols;
+
+        // Step 1: For each column, check if the cell above the inserted row
+        // is part of a merged cell whose rowspan spans across the insertion point.
+        // If so, that merged cell's rowspan increases by 1 (new row is also merged).
+        // If not, the cell above stays independent (new row cell is also independent).
+        const mergedCellsExpanded = new Set(); // cellIds of merged cells that got rowspan+1
+
         const masters = [];
         for (const [cellId, cell] of Object.entries(this.cellDataMap)) {
             if (cell._merged) continue;
             const endRow = cell.row + cell.rowspan - 1;
             let newRow = cell.row;
             let newRowspan = cell.rowspan;
-            if (endRow >= insertIdx + 1 && cell.row <= insertIdx + 1) {
+
+            // Check: does this merged cell span across the insertion row?
+            // A cell spans across 'row' if cell.row <= row AND endRow >= row
+            if (cell.rowspan > 1 && cell.row <= row && endRow >= row) {
                 newRowspan += 1;
+                mergedCellsExpanded.add(cellId);
             }
-            if (cell.row > insertIdx + 1) {
+
+            if (cell.row >= row) {
                 newRow += 1;
             }
+
             masters.push({ ...cell, newRow, newRowspan });
         }
 
+        // Step 2: Rebuild grid
         this.rows = oldRows + 1;
         this.grid = Array.from({ length: this.rows }, () => Array(oldCols).fill(null));
         this.cellDataMap = {};
@@ -2420,22 +2433,26 @@ class SuperPrintDesigner {
 
     insertColAt(col) {
         if (!col || col < 1 || col > this.cols) return;
-        const insertIdx = col - 1;
 
         const oldRows = this.rows;
         const oldCols = this.cols;
+
         const masters = [];
         for (const [cellId, cell] of Object.entries(this.cellDataMap)) {
             if (cell._merged) continue;
             const endCol = cell.col + cell.colspan - 1;
             let newCol = cell.col;
             let newColspan = cell.colspan;
-            if (endCol >= insertIdx + 1 && cell.col <= insertIdx + 1) {
+
+            // Check: does this merged cell span across the insertion col?
+            if (cell.colspan > 1 && cell.col <= col && endCol >= col) {
                 newColspan += 1;
             }
-            if (cell.col > insertIdx + 1) {
+
+            if (cell.col >= col) {
                 newCol += 1;
             }
+
             masters.push({ ...cell, newCol, newColspan });
         }
 
