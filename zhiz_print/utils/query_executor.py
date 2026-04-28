@@ -24,7 +24,7 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		'qb': frappe.qb,
 		'DocType': frappe.qb.DocType,
 		'desc': frappe.qb.desc,
-		'Order': frappe.qb.Order,
+		'asc': frappe.qb.asc,
 	})
 
 	params = {}
