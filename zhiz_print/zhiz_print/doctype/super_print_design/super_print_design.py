@@ -786,14 +786,30 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if data_item:
                     cell_value = self._replace_child_table_placeholders(
                         cell_value, data_item)
-                    # data_key method (backward compatible with old query binding)
+                    # data_key method: first try data_item, then fallback to query_results
                     if cell_data.get('data_key'):
                         dk = cell_data['data_key']
+                        found_in_data_item = False
                         if isinstance(data_item, dict):
-                            cell_value = str(data_item.get(dk, cell_value))
+                            if dk in data_item:
+                                cell_value = str(data_item.get(dk, cell_value))
+                                found_in_data_item = True
                         elif hasattr(data_item, dk):
-                            cell_value = str(
-                                getattr(data_item, dk, cell_value))
+                            cell_value = str(getattr(data_item, dk, cell_value))
+                            found_in_data_item = True
+                        # Fallback to query_results if not found in data_item
+                        if not found_in_data_item and cell_data.get('query_name'):
+                            qr = query_results.get(cell_data['query_name'], {})
+                            qr_data = qr.get('data', [])
+                            if qr_data and isinstance(qr_data, list) and len(qr_data) > 0:
+                                # Try to match by data_index or take first row
+                                data_idx = row_data.get('data_index', 0) if isinstance(row_data, dict) else 0
+                                if data_idx < len(qr_data):
+                                    row_result = qr_data[data_idx]
+                                else:
+                                    row_result = qr_data[0]
+                                if isinstance(row_result, dict) and dk in row_result:
+                                    cell_value = str(row_result[dk])
 
                 # Query data replacement (for non-expanded rows, take first query result row)
                 if not data_item and cell_data.get('query_name') and cell_data.get('data_key'):
