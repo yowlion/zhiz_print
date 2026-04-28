@@ -76,15 +76,24 @@ def format_query_result(result):
 
 
 def parse_parameters(parameters_str):
-	"""Parse parameter string to dict"""
+	"""Parse parameter string to dict
+
+	Supported formats:
+	  key = value           → {'key': 'value'}
+	  doc.childtable.field  → {'__auto__': 'doc.childtable.field'} (auto-detect query variable)
+	"""
 	if not parameters_str:
 		return {}
 	params = {}
 	for line in parameters_str.strip().split('\n'):
 		line = line.strip()
+		if not line:
+			continue
 		if '=' in line:
 			key, val = line.split('=', 1)
 			params[key.strip()] = val.strip()
+		elif line.startswith('doc.'):
+			params['__auto__'] = line.strip()
 	return params
 
 
