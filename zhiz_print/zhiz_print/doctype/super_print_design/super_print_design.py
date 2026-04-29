@@ -210,7 +210,8 @@ class SuperPrintDesign(frappe.model.document.Document):
         def replacer(match):
             field_name = match.group(1)
             if hasattr(doc, field_name):
-                return str(getattr(doc, field_name) or '')
+                v = getattr(doc, field_name)
+                return str(v if v is not None else '')
             return match.group(0)
 
         return re.sub(r'\{doc\.(\w+)(?!\.)\}', replacer, value)
@@ -224,9 +225,11 @@ class SuperPrintDesign(frappe.model.document.Document):
         def replacer(match):
             field_name = match.group(2)
             if hasattr(child_item, field_name):
-                return str(getattr(child_item, field_name) or '')
+                v = getattr(child_item, field_name)
+                return str(v if v is not None else '')
             elif isinstance(child_item, dict) and field_name in child_item:
-                return str(child_item.get(field_name, '') or '')
+                v = child_item.get(field_name, '')
+                return str(v if v is not None else '')
             return match.group(0)
 
         return re.sub(r'\{doc\.(\w+)\.(\w+)\}', replacer, value)
@@ -240,7 +243,8 @@ class SuperPrintDesign(frappe.model.document.Document):
         def replacer(match):
             param_name = match.group(1)
             if param_name in params:
-                return str(params[param_name] or '')
+                v = params[param_name]
+                return str(v if v is not None else '')
             return match.group(0)
 
         return re.sub(r'\{param\.(\w+)\}', replacer, value)
