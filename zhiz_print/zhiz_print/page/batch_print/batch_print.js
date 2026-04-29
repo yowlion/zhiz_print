@@ -183,6 +183,15 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
             this.available_designs = designs;
             listEl.innerHTML = "";
+
+            // Auto Match option at top
+            const autoItem = document.createElement("div");
+            autoItem.className = "sp-template-item sp-auto-match-item";
+            autoItem.dataset.autoMatch = "1";
+            autoItem.innerHTML = `<i class="fa fa-magic"></i><span>${__("Auto Match")}</span>`;
+            autoItem.addEventListener("click", () => this.on_auto_match_click(autoItem));
+            listEl.appendChild(autoItem);
+
             designs.forEach((d) => {
                 const item = document.createElement("div");
                 item.className = "sp-template-item";
@@ -195,15 +204,23 @@ zhiz_print.BatchPrintView = class BatchPrintView {
             // Load batch logs
             this.load_batch_logs();
 
-            // Auto-select first
-            const firstItem = listEl.querySelector(".sp-template-item");
-            if (firstItem) {
-                this.on_template_click(designs[0], firstItem);
-            }
+            // Auto-select Auto Match
+            this.on_auto_match_click(autoItem);
         } catch (e) {
             console.error("Failed to load templates:", e);
             listEl.innerHTML = `<div class="sp-error"><i class="fa fa-exclamation-circle"></i> ${__("Loading failed")}</div>`;
         }
+    }
+
+    on_auto_match_click(el) {
+        document.querySelectorAll(".sp-template-item").forEach((i) => i.classList.remove("active"));
+        el.classList.add("active");
+
+        this.current_design = null;
+        this.current_design_info = null;
+        this.auto_match = true;
+
+        this.render_batch_preview();
     }
 
     async on_template_click(design, el) {
@@ -212,6 +229,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
         this.current_design = design.name;
         this.current_design_info = design;
+        this.auto_match = false;
 
         // Parameter dialog
         if (design.has_parameters && design.parameters?.length > 0) {
@@ -264,7 +282,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
     // ==================== Batch Preview ====================
 
     async render_batch_preview() {
-        if (!this.current_design) return;
+        if (!this.current_design && !this.auto_match) return;
 
         const area = document.getElementById("sp-preview-area");
         area.innerHTML =
@@ -274,14 +292,20 @@ zhiz_print.BatchPrintView = class BatchPrintView {
             "</p></div>";
 
         try {
+            const args = {
+                doctype: this.doctype,
+                docnames: JSON.stringify(this.docnames),
+                params: this.current_params,
+            };
+            if (this.auto_match) {
+                args.auto_match = 1;
+            } else {
+                args.design_name = this.current_design;
+            }
+
             const result = await frappe.call({
                 method: "zhiz_print.api.batch_print.batch_render_preview",
-                args: {
-                    doctype: this.doctype,
-                    docnames: JSON.stringify(this.docnames),
-                    design_name: this.current_design,
-                    params: this.current_params,
-                },
+                args: args,
             });
 
             if (!result.message) {
@@ -327,7 +351,11 @@ zhiz_print.BatchPrintView = class BatchPrintView {
                 // Document separator
                 const separator = document.createElement("div");
                 separator.className = "sp-doc-separator";
-                separator.textContent = this.esc(docResult.docname) + " (" + (docIdx + 1) + "/" + this.preview_results.length + ")";
+                let sepText = this.esc(docResult.docname) + " (" + (docIdx + 1) + "/" + this.preview_results.length + ")";
+                if (this.auto_match && docResult.design_label) {
+                    sepText += " - " + this.esc(docResult.design_label);
+                }
+                separator.textContent = sepText;
                 pagesContainer.appendChild(separator);
 
                 // Parse pages from HTML
@@ -466,15 +494,19 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
         // Record batch print logs
         try {
+            const logArgs = {
+                doctype: this.doctype,
+                docnames: JSON.stringify(this.docnames),
+                design_name: this.current_design,
+                params: this.current_params,
+                export_type: "Print",
+            };
+            if (this.auto_match) {
+                logArgs.auto_match = 1;
+            }
             await frappe.call({
                 method: "zhiz_print.api.batch_print.batch_record_print_log",
-                args: {
-                    doctype: this.doctype,
-                    docnames: JSON.stringify(this.docnames),
-                    design_name: this.current_design,
-                    params: this.current_params,
-                    export_type: "Print",
-                },
+                args: logArgs,
             });
         } catch (e) {
             console.error("Failed to record batch logs:", e);
@@ -538,17 +570,22 @@ zhiz_print.BatchPrintView = class BatchPrintView {
     // ==================== Export All PDF ====================
 
     async export_all_pdf() {
-        if (!this.current_design) {
+        if (!this.current_design && !this.auto_match) {
             frappe.show_alert({ message: __("Please select a template first"), indicator: "yellow" });
             return;
         }
 
-        const params = new URLSearchParams({
+        const pdfParams = {
             doctype: this.doctype,
             docnames: JSON.stringify(this.docnames),
-            design_name: this.current_design,
             params: JSON.stringify(this.current_params || {}),
-        });
+        };
+        if (this.auto_match) {
+            pdfParams.auto_match = 1;
+        } else {
+            pdfParams.design_name = this.current_design;
+        }
+        const params = new URLSearchParams(pdfParams);
         const url = "/api/method/zhiz_print.api.batch_print.batch_generate_pdf?" + params;
         const w = window.open(url, "_blank");
         if (!w) {
@@ -558,15 +595,19 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
         // Record batch logs
         try {
+            const logArgs = {
+                doctype: this.doctype,
+                docnames: JSON.stringify(this.docnames),
+                design_name: this.current_design,
+                params: this.current_params,
+                export_type: "Export PDF",
+            };
+            if (this.auto_match) {
+                logArgs.auto_match = 1;
+            }
             await frappe.call({
                 method: "zhiz_print.api.batch_print.batch_record_print_log",
-                args: {
-                    doctype: this.doctype,
-                    docnames: JSON.stringify(this.docnames),
-                    design_name: this.current_design,
-                    params: this.current_params,
-                    export_type: "Export PDF",
-                },
+                args: logArgs,
             });
             this.load_batch_logs();
         } catch (e) {
@@ -577,17 +618,22 @@ zhiz_print.BatchPrintView = class BatchPrintView {
     // ==================== Export All Excel ====================
 
     async export_all_excel() {
-        if (!this.current_design) {
+        if (!this.current_design && !this.auto_match) {
             frappe.show_alert({ message: __("Please select a template first"), indicator: "yellow" });
             return;
         }
 
-        const excelParams = new URLSearchParams({
+        const excelArgs = {
             doctype: this.doctype,
             docnames: JSON.stringify(this.docnames),
-            design_name: this.current_design,
             params: JSON.stringify(this.current_params || {}),
-        });
+        };
+        if (this.auto_match) {
+            excelArgs.auto_match = 1;
+        } else {
+            excelArgs.design_name = this.current_design;
+        }
+        const excelParams = new URLSearchParams(excelArgs);
         const url = "/api/method/zhiz_print.api.batch_print.batch_export_excel?" + excelParams;
 
         frappe.show_alert({ message: __("Exporting Excel..."), indicator: "blue" });
@@ -638,15 +684,19 @@ zhiz_print.BatchPrintView = class BatchPrintView {
             frappe.show_alert({ message: __("Excel exported"), indicator: "green" });
 
             // Record batch logs
+            const excelLogArgs = {
+                doctype: this.doctype,
+                docnames: JSON.stringify(this.docnames),
+                design_name: this.current_design,
+                params: this.current_params,
+                export_type: "Export Excel",
+            };
+            if (this.auto_match) {
+                excelLogArgs.auto_match = 1;
+            }
             await frappe.call({
                 method: "zhiz_print.api.batch_print.batch_record_print_log",
-                args: {
-                    doctype: this.doctype,
-                    docnames: JSON.stringify(this.docnames),
-                    design_name: this.current_design,
-                    params: this.current_params,
-                    export_type: "Export Excel",
-                },
+                args: excelLogArgs,
             });
             this.load_batch_logs();
         } catch (e) {

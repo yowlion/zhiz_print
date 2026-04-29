@@ -26,6 +26,8 @@
 .sp-template-item i { font-size:14px; color:#999; flex-shrink:0; }
 .sp-template-item.active i { color:#2196f3; }
 .sp-template-item span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp-auto-match-item { border-bottom:1px solid #e8e8e8; color:#2196f3; font-weight:500; }
+.sp-auto-match-item.active { background:#e3f2fd; color:#1565c0; }
 
 /* Empty / Loading / Error states */
 .sp-loading, .sp-empty, .sp-error { text-align:center; padding:30px 16px; color:#999; font-size:12px; }

@@ -329,3 +329,5 @@ Sample Document,模板演示单据
 "Row {0} format painted",第 {0} 行格式刷已应用
 "Col {0} format painted",第 {0} 列格式刷已应用
 format painted,格式刷已应用
+Auto Match,自动匹配
+No matching template found,未找到匹配的模板

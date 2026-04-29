@@ -8,6 +8,57 @@ from frappe import _
 import json
 
 
+def _auto_match_designs_for_docs(doctype, docnames):
+    """Match each docname to the first design whose enable_condition passes.
+    Returns dict: {docname: design_info_dict} and set of all matched design names."""
+    from zhiz_print.zhiz_print.doctype.super_print_design.super_print_design import SuperPrintDesign
+
+    designs = frappe.get_all(
+        "Super Print Design",
+        filters={"target_doctype": doctype, "enabled": 1},
+        fields=["name", "design_name", "print_paper"],
+        order_by="design_name",
+    )
+
+    if not designs:
+        return {}, set()
+
+    # Preload paper info for all designs
+    design_map = {}
+    for d in designs:
+        if d.print_paper:
+            paper = frappe.db.get_value(
+                "Super Print Paper", d.print_paper,
+                ["width", "height", "margin_top", "margin_bottom", "margin_left", "margin_right"],
+                as_dict=True,
+            )
+            if paper:
+                d["paper_width"] = paper.width
+                d["paper_height"] = paper.height
+                d["margin_top"] = paper.margin_top or 0
+                d["margin_bottom"] = paper.margin_bottom or 0
+                d["margin_left"] = paper.margin_left or 0
+                d["margin_right"] = paper.margin_right or 0
+        design_map[d.name] = d
+
+    doc_matches = {}
+    matched_designs = set()
+
+    for docname in docnames:
+        try:
+            doc = frappe.get_doc(doctype, docname)
+        except Exception:
+            continue
+
+        for d in designs:
+            if SuperPrintDesign.check_enable_conditions(d.name, doc=doc):
+                doc_matches[docname] = d
+                matched_designs.add(d.name)
+                break
+
+    return doc_matches, matched_designs
+
+
 @frappe.whitelist()
 def check_batch_print_enabled(doctype):
     """Check if super print is enabled for a given doctype and return available designs."""
@@ -60,7 +111,7 @@ def check_batch_print_enabled(doctype):
 
 
 @frappe.whitelist()
-def batch_render_preview(doctype, docnames, design_name, params=None):
+def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Render preview HTML for multiple documents."""
     from zhiz_print.api.print_designer import _check_license, _render_print_html
 
@@ -73,45 +124,77 @@ def batch_render_preview(doctype, docnames, design_name, params=None):
             params = json.loads(params)
         except (json.JSONDecodeError, TypeError):
             params = {}
-
-    design = frappe.get_doc("Super Print Design", design_name)
-    paper_width, paper_height = 210, 297
-    margin_top = margin_bottom = margin_left = margin_right = 0
-
-    if design.print_paper:
-        paper = frappe.get_doc("Super Print Paper", design.print_paper)
-        paper_width = paper.width
-        paper_height = paper.height
-        margin_top = paper.margin_top or 0
-        margin_bottom = paper.margin_bottom or 0
-        margin_left = paper.margin_left or 0
-        margin_right = paper.margin_right or 0
+    auto_match = frappe.utils.cint(auto_match)
 
     results = []
     errors = []
 
-    for docname in docnames:
-        try:
-            html, _ = _render_print_html(doctype, docname, design_name, params, skip_px_scaling=True)
-            results.append({
-                "docname": docname,
-                "html": html,
-                "paper_width": paper_width,
-                "paper_height": paper_height,
-                "margin_top": margin_top,
-                "margin_bottom": margin_bottom,
-                "margin_left": margin_left,
-                "margin_right": margin_right,
-            })
-        except Exception as e:
-            frappe.log_error(f"Batch render failed for {doctype} {docname}: {e}")
-            errors.append({"docname": docname, "error": str(e)})
+    if auto_match:
+        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
+
+        for docname in docnames:
+            matched = doc_matches.get(docname)
+            if not matched:
+                errors.append({"docname": docname, "error": "No matching template found"})
+                continue
+            try:
+                dname = matched["name"]
+                html, _ = _render_print_html(doctype, docname, dname, params, skip_px_scaling=True)
+                results.append({
+                    "docname": docname,
+                    "html": html,
+                    "design_name": dname,
+                    "design_label": matched.get("design_name", dname),
+                    "paper_width": matched.get("paper_width", 210),
+                    "paper_height": matched.get("paper_height", 297),
+                    "margin_top": matched.get("margin_top", 0),
+                    "margin_bottom": matched.get("margin_bottom", 0),
+                    "margin_left": matched.get("margin_left", 0),
+                    "margin_right": matched.get("margin_right", 0),
+                })
+            except Exception as e:
+                frappe.log_error(f"Batch render failed for {doctype} {docname}: {e}")
+                errors.append({"docname": docname, "error": str(e)})
+    else:
+        if not design_name:
+            frappe.throw(_("Design name is required"))
+        design = frappe.get_doc("Super Print Design", design_name)
+        paper_width, paper_height = 210, 297
+        margin_top = margin_bottom = margin_left = margin_right = 0
+
+        if design.print_paper:
+            paper = frappe.get_doc("Super Print Paper", design.print_paper)
+            paper_width = paper.width
+            paper_height = paper.height
+            margin_top = paper.margin_top or 0
+            margin_bottom = paper.margin_bottom or 0
+            margin_left = paper.margin_left or 0
+            margin_right = paper.margin_right or 0
+
+        for docname in docnames:
+            try:
+                html, _ = _render_print_html(doctype, docname, design_name, params, skip_px_scaling=True)
+                results.append({
+                    "docname": docname,
+                    "html": html,
+                    "design_name": design_name,
+                    "design_label": design.design_name,
+                    "paper_width": paper_width,
+                    "paper_height": paper_height,
+                    "margin_top": margin_top,
+                    "margin_bottom": margin_bottom,
+                    "margin_left": margin_left,
+                    "margin_right": margin_right,
+                })
+            except Exception as e:
+                frappe.log_error(f"Batch render failed for {doctype} {docname}: {e}")
+                errors.append({"docname": docname, "error": str(e)})
 
     return {"results": results, "errors": errors}
 
 
 @frappe.whitelist()
-def batch_generate_pdf(doctype, docnames, design_name, params=None):
+def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Generate merged PDF for multiple documents by concatenating HTML first."""
     from zhiz_print.api.print_designer import (
         _check_license, _render_print_html, _pdf_response,
@@ -127,48 +210,85 @@ def batch_generate_pdf(doctype, docnames, design_name, params=None):
             params = json.loads(params)
         except (json.JSONDecodeError, TypeError):
             params = {}
+    auto_match = frappe.utils.cint(auto_match)
 
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
-    design = frappe.get_doc("Super Print Design", design_name)
     success_count = 0
-
-    # Render HTML for each doc and concatenate into one HTML document
     html_parts = []
     styles_collected = set()
 
-    for idx, docname in enumerate(docnames):
-        try:
-            html, _ = _render_print_html(doctype, docname, design_name, params)
-            # Extract body content
-            import re
-            body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
-            style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
+    import re
 
-            body_content = body_match.group(1) if body_match else html
+    if auto_match:
+        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
 
-            # Add page break between documents
-            if idx < len(docnames) - 1:
-                body_content += '<div style="page-break-after:always"></div>'
+        for idx, docname in enumerate(docnames):
+            matched = doc_matches.get(docname)
+            if not matched:
+                continue
+            try:
+                dname = matched["name"]
+                html, _ = _render_print_html(doctype, docname, dname, params)
+                body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
+                style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
 
-            # Collect unique styles
-            for s in style_matches:
-                if s not in styles_collected:
-                    styles_collected.add(s)
+                body_content = body_match.group(1) if body_match else html
+                if idx < len(docnames) - 1:
+                    body_content += '<div style="page-break-after:always"></div>'
 
-            html_parts.append(body_content)
-            success_count += 1
-        except Exception as e:
-            frappe.log_error(f"Batch PDF render failed for {doctype} {docname}: {e}")
+                for s in style_matches:
+                    if s not in styles_collected:
+                        styles_collected.add(s)
 
-    if success_count == 0:
-        frappe.throw(_("All documents failed to generate PDF"))
+                html_parts.append(body_content)
+                success_count += 1
+            except Exception as e:
+                frappe.log_error(f"Batch PDF render failed for {doctype} {docname}: {e}")
 
-    # Build combined HTML
-    combined_html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n'
-    combined_html += "\n".join(styles_collected)
-    combined_html += '\n</head>\n<body>\n'
-    combined_html += "\n".join(html_parts)
-    combined_html += '\n</body>\n</html>'
+        if success_count == 0:
+            frappe.throw(_("All documents failed to generate PDF"))
+
+        combined_html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n'
+        combined_html += "\n".join(styles_collected)
+        combined_html += '\n</head>\n<body>\n'
+        combined_html += "\n".join(html_parts)
+        combined_html += '\n</body>\n</html>'
+
+        # Use first matched design's paper for PDF settings
+        first_matched = next(iter(doc_matches.values()), None)
+        design = frappe.get_doc("Super Print Design", first_matched["name"]) if first_matched else None
+    else:
+        if not design_name:
+            frappe.throw(_("Design name is required"))
+        design = frappe.get_doc("Super Print Design", design_name)
+
+        for idx, docname in enumerate(docnames):
+            try:
+                html, _ = _render_print_html(doctype, docname, design_name, params)
+                body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
+                style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
+
+                body_content = body_match.group(1) if body_match else html
+                if idx < len(docnames) - 1:
+                    body_content += '<div style="page-break-after:always"></div>'
+
+                for s in style_matches:
+                    if s not in styles_collected:
+                        styles_collected.add(s)
+
+                html_parts.append(body_content)
+                success_count += 1
+            except Exception as e:
+                frappe.log_error(f"Batch PDF render failed for {doctype} {docname}: {e}")
+
+        if success_count == 0:
+            frappe.throw(_("All documents failed to generate PDF"))
+
+        combined_html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n'
+        combined_html += "\n".join(styles_collected)
+        combined_html += '\n</head>\n<body>\n'
+        combined_html += "\n".join(html_parts)
+        combined_html += '\n</body>\n</html>'
 
     # Generate single PDF using the selected engine
     if engine_mode == "WeasyPrint":
@@ -186,13 +306,14 @@ def batch_generate_pdf(doctype, docnames, design_name, params=None):
             "margin-top": "0", "margin-bottom": "0",
             "margin-left": "0", "margin-right": "0",
         }
-        if design.print_paper:
+        if design and design.print_paper:
             paper = frappe.get_doc("Super Print Paper", design.print_paper)
             options["page-width"] = f"{paper.width}mm"
             options["page-height"] = f"{paper.height}mm"
         pdf_bytes = pdfkit.from_string(combined_html, False, options=options)
 
-    _pdf_response(pdf_bytes, f"batch-{doctype}-{success_count}docs-{design.design_name}.pdf")
+    label = "auto-match" if auto_match else (design.design_name if design else "batch")
+    _pdf_response(pdf_bytes, f"batch-{doctype}-{success_count}docs-{label}.pdf")
 
 
 def _generate_chromium_pdf(html, design):
@@ -246,7 +367,7 @@ def _generate_chromium_pdf(html, design):
 
 
 @frappe.whitelist()
-def batch_export_excel(doctype, docnames, design_name, params=None):
+def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Export multi-sheet Excel for multiple documents."""
     from zhiz_print.api.print_designer import _check_license
     from io import BytesIO
@@ -263,72 +384,99 @@ def batch_export_excel(doctype, docnames, design_name, params=None):
             params = json.loads(params)
         except (json.JSONDecodeError, TypeError):
             params = {}
+    auto_match = frappe.utils.cint(auto_match)
 
-    design = frappe.get_doc("Super Print Design", design_name)
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
-
     errors = []
 
-    for idx, docname in enumerate(docnames):
-        try:
-            if not frappe.has_permission(doctype, "print", docname):
-                errors.append({"docname": docname, "error": "No print permission"})
+    if auto_match:
+        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
+
+        for idx, docname in enumerate(docnames):
+            matched = doc_matches.get(docname)
+            if not matched:
+                errors.append({"docname": docname, "error": "No matching template found"})
                 continue
-
-            html = design.get_preview_for_document(doc_name=docname, params=params)
-            soup = BeautifulSoup(html, 'html.parser')
-            css_rules = _extract_css_rules(soup)
-
-            sheet_name = str(docname)[:31]
-            ws = wb.create_sheet(title=sheet_name)
-
-            pages = []
-            for page_div in soup.find_all('div', class_='print-page'):
-                content_div = page_div.find('div', class_='print-page-content')
-                if not content_div:
+            try:
+                if not frappe.has_permission(doctype, "print", docname):
+                    errors.append({"docname": docname, "error": "No print permission"})
                     continue
-                table = content_div.find('table', class_='print-form-table')
-                if table:
-                    pages.append(table)
 
-            if not pages:
-                ws.cell(row=1, column=1, value="No Data")
-                continue
+                design = frappe.get_doc("Super Print Design", matched["name"])
+                html = design.get_preview_for_document(doc_name=docname, params=params)
+                _write_doc_to_sheet(wb, html, docname, css_rules=None)
+            except Exception as e:
+                frappe.log_error(f"Batch Excel failed for {doctype} {docname}: {e}")
+                errors.append({"docname": docname, "error": str(e)})
 
-            header_count = 0
-            if len(pages) > 1:
-                rows_1 = [tr.get_text(strip=True) for tr in pages[0].find_all('tr')]
-                rows_2 = [tr.get_text(strip=True) for tr in pages[1].find_all('tr')]
-                for i in range(min(len(rows_1), len(rows_2))):
-                    if rows_1[i] == rows_2[i]:
-                        header_count = i + 1
-                    else:
-                        break
+        label = "auto-match"
+    else:
+        if not design_name:
+            frappe.throw(_("Design name is required"))
+        design = frappe.get_doc("Super Print Design", design_name)
 
-            current_row = 1
-            for page_idx, table in enumerate(pages):
-                skip = header_count if page_idx > 0 else 0
-                if page_idx == 0:
-                    _set_column_widths(ws, table, css_rules)
-                rows_written = _write_table_to_excel(ws, table, current_row, css_rules, skip_rows=skip)
-                current_row += rows_written
+        for idx, docname in enumerate(docnames):
+            try:
+                if not frappe.has_permission(doctype, "print", docname):
+                    errors.append({"docname": docname, "error": "No print permission"})
+                    continue
 
-        except Exception as e:
-            frappe.log_error(f"Batch Excel failed for {doctype} {docname}: {e}")
-            errors.append({"docname": docname, "error": str(e)})
+                html = design.get_preview_for_document(doc_name=docname, params=params)
+                soup = BeautifulSoup(html, 'html.parser')
+                css_rules = _extract_css_rules(soup)
+
+                sheet_name = str(docname)[:31]
+                ws = wb.create_sheet(title=sheet_name)
+
+                pages = []
+                for page_div in soup.find_all('div', class_='print-page'):
+                    content_div = page_div.find('div', class_='print-page-content')
+                    if not content_div:
+                        continue
+                    table = content_div.find('table', class_='print-form-table')
+                    if table:
+                        pages.append(table)
+
+                if not pages:
+                    ws.cell(row=1, column=1, value="No Data")
+                    continue
+
+                header_count = 0
+                if len(pages) > 1:
+                    rows_1 = [tr.get_text(strip=True) for tr in pages[0].find_all('tr')]
+                    rows_2 = [tr.get_text(strip=True) for tr in pages[1].find_all('tr')]
+                    for i in range(min(len(rows_1), len(rows_2))):
+                        if rows_1[i] == rows_2[i]:
+                            header_count = i + 1
+                        else:
+                            break
+
+                current_row = 1
+                for page_idx, table in enumerate(pages):
+                    skip = header_count if page_idx > 0 else 0
+                    if page_idx == 0:
+                        _set_column_widths(ws, table, css_rules)
+                    rows_written = _write_table_to_excel(ws, table, current_row, css_rules, skip_rows=skip)
+                    current_row += rows_written
+
+            except Exception as e:
+                frappe.log_error(f"Batch Excel failed for {doctype} {docname}: {e}")
+                errors.append({"docname": docname, "error": str(e)})
+
+        label = design.design_name
 
     output = BytesIO()
     wb.save(output)
     output.seek(0)
 
-    frappe.local.response.filename = f"batch-{doctype}-{len(docnames)}docs-{design.design_name}.xlsx"
+    frappe.local.response.filename = f"batch-{doctype}-{len(docnames)}docs-{label}.xlsx"
     frappe.local.response.filecontent = output.getvalue()
     frappe.local.response.type = "binary"
 
 
 @frappe.whitelist()
-def batch_record_print_log(doctype, docnames, design_name, params=None, export_type='Print'):
+def batch_record_print_log(doctype, docnames, design_name=None, params=None, export_type='Print', auto_match=False):
     """Record individual print logs for each document in the batch."""
     from zhiz_print.api.print_designer import _check_license
 
@@ -341,10 +489,19 @@ def batch_record_print_log(doctype, docnames, design_name, params=None, export_t
             params = json.loads(params)
         except (json.JSONDecodeError, TypeError):
             params = {}
+    auto_match = frappe.utils.cint(auto_match)
+
+    # Resolve per-doc design_name for auto_match
+    doc_design_map = {}
+    if auto_match:
+        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
+        for docname, matched in doc_matches.items():
+            doc_design_map[docname] = matched["name"]
 
     results = []
     for docname in docnames:
         try:
+            dname = doc_design_map.get(docname, design_name)
             existing_count = frappe.db.count("Super Print Log", filters={
                 "reference_doctype": doctype,
                 "reference_name": docname,
@@ -353,7 +510,7 @@ def batch_record_print_log(doctype, docnames, design_name, params=None, export_t
                 "doctype": "Super Print Log",
                 "reference_doctype": doctype,
                 "reference_name": docname,
-                "print_design": design_name,
+                "print_design": dname,
                 "export_type": export_type,
                 "print_count": existing_count + 1,
                 "print_user": frappe.session.user,
