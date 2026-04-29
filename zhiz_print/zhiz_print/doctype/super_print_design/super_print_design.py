@@ -710,10 +710,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                         found_in_data_item = False
                         if isinstance(data_item, dict):
                             if dk in data_item:
-                                cell_value = str(data_item.get(dk, cell_value) or '')
+                                cell_value = str(data_item.get(dk, cell_value) if data_item.get(dk, cell_value) is not None else '')
                                 found_in_data_item = True
                         elif hasattr(data_item, dk):
-                            cell_value = str(getattr(data_item, dk, cell_value) or '')
+                            cell_value = str(v if (v := getattr(data_item, dk, cell_value)) is not None else '')
                             found_in_data_item = True
                         # Fallback to query_results if not found in data_item
                         if not found_in_data_item and cell_data.get('query_name'):
@@ -727,7 +727,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                                 else:
                                     row_result = qr_data[0]
                                 if isinstance(row_result, dict) and dk in row_result:
-                                    cell_value = str(row_result[dk] or '')
+                                    cell_value = str(row_result[dk] if row_result[dk] is not None else '')
 
                 # Query data replacement (for non-expanded rows, take first query result row)
                 if not data_item and cell_data.get('query_name') and cell_data.get('data_key'):
@@ -736,7 +736,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                     if qr_data and isinstance(qr_data, list) and len(qr_data) > 0:
                         first = qr_data[0]
                         if isinstance(first, dict) and cell_data['data_key'] in first:
-                            cell_value = str(first[cell_data['data_key']] or '')
+                            cell_value = str(first[cell_data['data_key']] if first[cell_data['data_key']] is not None else '')
 
                 # Calculate cell dimensions
                 cell_rowspan = cell_data['rowspan']
