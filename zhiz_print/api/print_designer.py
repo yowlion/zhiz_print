@@ -44,8 +44,8 @@ def get_available_designs(doctype, docname=None):
             "target_doctype": doctype,
             "enabled": 1,
         },
-        fields=["name", "design_name", "print_paper"],
-        order_by="design_name"
+        fields=["name", "design_name", "print_paper", "priority"],
+        order_by="priority asc, design_name"
     )
 
     result = []

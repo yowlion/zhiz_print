@@ -196,7 +196,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
                 const item = document.createElement("div");
                 item.className = "sp-template-item";
                 item.dataset.name = d.name;
-                item.innerHTML = `<i class="fa fa-file-text-o"></i><span>${this.esc(d.design_name)}</span>`;
+                item.innerHTML = `<i class="fa fa-file-text-o"></i><span>${this.esc(d.design_name)}</span><span class="sp-template-priority">P${d.priority || 5}</span>`;
                 item.addEventListener("click", () => this.on_template_click(d, item));
                 listEl.appendChild(item);
             });

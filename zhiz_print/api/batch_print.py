@@ -16,8 +16,8 @@ def _auto_match_designs_for_docs(doctype, docnames):
     designs = frappe.get_all(
         "Super Print Design",
         filters={"target_doctype": doctype, "enabled": 1},
-        fields=["name", "design_name", "print_paper"],
-        order_by="design_name",
+        fields=["name", "design_name", "print_paper", "priority"],
+        order_by="priority asc, design_name",
     )
 
     if not designs:
@@ -78,8 +78,8 @@ def check_batch_print_enabled(doctype):
     designs = frappe.get_all(
         "Super Print Design",
         filters={"target_doctype": doctype, "enabled": 1},
-        fields=["name", "design_name", "print_paper"],
-        order_by="design_name",
+        fields=["name", "design_name", "print_paper", "priority"],
+        order_by="priority asc, design_name",
     )
 
     for d in designs:

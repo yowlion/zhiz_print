@@ -11,6 +11,8 @@
     "settings_tab",
     "section_enabled",
     "enabled",
+    "column_break_priority",
+    "priority",
     "section_basic",
     "design_name",
     "target_doctype",
@@ -77,6 +79,20 @@
       "fieldname": "enabled",
       "fieldtype": "Check",
       "label": "Enabled"
+    },
+    {
+      "fieldname": "column_break_priority",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "5",
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "1\n2\n3\n4\n5\n6\n7\n8\n9",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Lower number means higher priority. Used for template ordering and auto-match selection."
     },
     {
       "fieldname": "section_basic",

@@ -331,3 +331,5 @@ Sample Document,模板演示单据
 format painted,格式刷已应用
 Auto Match,自动匹配
 No matching template found,未找到匹配的模板
+Priority,优先级
+"Lower number means higher priority. Used for template ordering and auto-match selection.",数字越小优先级越高。用于模板排序和自动匹配选择。
