@@ -379,15 +379,67 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Pagination ====================
 
-    def _get_row_height(self, row_data, row_styles):
-        """Get actual height of a single row (px)"""
+    def _get_row_height(self, row_data, row_styles, cell_map=None, col_styles=None,
+                        doc=None, row_display_map=None, font_size=None):
+        """Get actual height of a single row (px), accounting for text wrapping"""
+        import math
         if isinstance(row_data, dict):
             row_num = row_data['template_row']
+            data_item = row_data.get('data_item')
         else:
             row_num = row_data
-        return row_styles.get(str(row_num), {}).get('height', 20)
+            data_item = None
 
-    def _paginate_rows_v2(self, all_rows, row_type_map, row_styles, paper):
+        configured_height = row_styles.get(str(row_num), {}).get('height', 20)
+
+        if not cell_map or data_item is None:
+            return configured_height
+
+        row_display = (row_display_map or {}).get(row_num, '')
+        if row_display == 'Fixed Height':
+            return configured_height
+
+        actual_font_size = font_size or self.font_size or 12
+        max_content_height = 0
+
+        for col in range(1, self.columns + 1):
+            cell_key = f"{row_num}_{col}"
+            cell_data = cell_map.get(cell_key)
+            if not cell_data:
+                continue
+
+            cell_value = cell_data.get('cell_value', '')
+            if not cell_value or cell_value.startswith(MERGED_PREFIX):
+                continue
+
+            cell_value = self._replace_doc_placeholders(cell_value, doc)
+            if data_item:
+                cell_value = self._replace_child_table_placeholders(cell_value, data_item)
+
+            if not cell_value:
+                continue
+
+            cell_colspan = cell_data.get('colspan', 1)
+            cell_w = sum(
+                col_styles.get(str(c), {}).get('width', 60)
+                for c in range(col, col + cell_colspan)
+            )
+
+            if cell_w <= 0:
+                continue
+
+            avg_char_w = actual_font_size * 0.7
+            chars_per_line = max(1, cell_w / avg_char_w)
+            lines_needed = max(1, math.ceil(len(str(cell_value)) / chars_per_line))
+            content_height = lines_needed * actual_font_size
+
+            max_content_height = max(max_content_height, content_height)
+
+        return max(configured_height, max_content_height)
+
+    def _paginate_rows_v2(self, all_rows, row_type_map, row_styles, paper,
+                          cell_map=None, col_styles=None, doc=None,
+                          row_display_map=None, font_size=None):
         """Auto pagination based on row_type"""
         margin_top = cint(paper.margin_top) or 10 if paper else 10
         margin_bottom = cint(paper.margin_bottom) or 10 if paper else 10
@@ -418,7 +470,8 @@ class SuperPrintDesign(frappe.model.document.Document):
         current_height = 0
 
         for row_data in data_rows:
-            row_h = self._get_row_height(row_data, row_styles)
+            row_h = self._get_row_height(row_data, row_styles, cell_map, col_styles,
+                                          doc, row_display_map, font_size)
             if current_page_rows and (current_height + row_h) > content_available:
                 # Current row does not fit, page break
                 pages.append(title_rows + current_page_rows)
@@ -502,7 +555,9 @@ class SuperPrintDesign(frappe.model.document.Document):
 
             # Pagination
             pages = self._paginate_rows_v2(
-                all_rows_data, row_type_map, row_styles, paper)
+                all_rows_data, row_type_map, row_styles, paper,
+                cell_map=cell_map, col_styles=col_styles, doc=doc,
+                row_display_map=row_display_map, font_size=self.font_size or 13)
 
             # Generate HTML for each page
             body_html = self._build_pages_html(
