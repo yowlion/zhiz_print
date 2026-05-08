@@ -381,7 +381,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def _get_row_height(self, row_data, row_styles, cell_map=None, col_styles=None,
                         doc=None, row_display_map=None, font_size=None):
-        """Get actual height of a single row (px), accounting for text wrapping"""
+        """Get actual height of a single row (px), accounting for text wrapping and border-collapse"""
         import math
         if isinstance(row_data, dict):
             row_num = row_data['template_row']
@@ -392,12 +392,15 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         configured_height = row_styles.get(str(row_num), {}).get('height', 20)
 
+        # border-collapse: each row adds 1px for its bottom border
+        border_px = 1
+
         if not cell_map or data_item is None:
-            return configured_height
+            return configured_height + border_px
 
         row_display = (row_display_map or {}).get(row_num, '')
         if row_display == 'Fixed Height':
-            return configured_height
+            return configured_height + border_px
 
         actual_font_size = font_size or self.font_size or 12
         max_content_height = 0
@@ -428,6 +431,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             if cell_w <= 0:
                 continue
 
+            # Subtract 2px border (1px each side with border-collapse)
             effective_w = max(1, cell_w - 2)
             avg_char_w = actual_font_size * 0.65
             chars_per_line = max(1, effective_w / avg_char_w)
@@ -436,7 +440,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
             max_content_height = max(max_content_height, content_height)
 
-        return max(configured_height, int(math.ceil(max_content_height)))
+        return max(configured_height, int(math.ceil(max_content_height))) + border_px
 
     def _paginate_rows_v2(self, all_rows, row_type_map, row_styles, paper,
                           cell_map=None, col_styles=None, doc=None,
@@ -453,8 +457,9 @@ class SuperPrintDesign(frappe.model.document.Document):
         title_rows = [r for r in all_rows
                       if isinstance(r, int) and row_type_map.get(r) == 'Repeat Title Row']
 
+        # Title height includes 1px border per row (border-collapse)
         title_height = sum(
-            row_styles.get(str(r), {}).get('height', 20)
+            row_styles.get(str(r), {}).get('height', 20) + 1
             for r in title_rows
         ) if title_rows else 0
 
@@ -465,7 +470,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             return [all_rows] if all_rows else [[]]
 
         # Accumulate pagination by actual row height
-        content_available = available_px - title_height
+        # Subtract 1px for table top border (border-collapse)
+        content_available = available_px - title_height - 1
         pages = []
         current_page_rows = []
         current_height = 0
