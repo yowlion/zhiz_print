@@ -428,12 +428,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             if cell_w <= 0:
                 continue
 
-            # Use 0.8 for mixed CJK/Latin; subtract border/padding
-            effective_w = max(1, cell_w - 4)
-            avg_char_w = actual_font_size * 0.8
+            effective_w = max(1, cell_w - 2)
+            avg_char_w = actual_font_size * 0.65
             chars_per_line = max(1, effective_w / avg_char_w)
             lines_needed = max(1, math.ceil(len(str(cell_value)) / chars_per_line))
-            content_height = lines_needed * actual_font_size + 4
+            content_height = lines_needed * actual_font_size
 
             max_content_height = max(max_content_height, content_height)
 
@@ -466,8 +465,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             return [all_rows] if all_rows else [[]]
 
         # Accumulate pagination by actual row height
-        # Safety factor: reduce available space by 8% to account for estimation errors
-        content_available = (available_px - title_height) * 0.92
+        content_available = available_px - title_height
         pages = []
         current_page_rows = []
         current_height = 0
