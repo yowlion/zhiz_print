@@ -383,6 +383,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                         doc=None, row_display_map=None, font_size=None):
         """Get actual height of a single row (px), accounting for text wrapping and border-collapse"""
         import math
+        import re as _re
         if isinstance(row_data, dict):
             row_num = row_data['template_row']
             data_item = row_data.get('data_item')
@@ -433,9 +434,13 @@ class SuperPrintDesign(frappe.model.document.Document):
 
             # Subtract 2px border (1px each side with border-collapse)
             effective_w = max(1, cell_w - 2)
-            avg_char_w = actual_font_size * 0.65
-            chars_per_line = max(1, effective_w / avg_char_w)
-            lines_needed = max(1, math.ceil(len(str(cell_value)) / chars_per_line))
+
+            # Calculate actual text width: Chinese ~font_size, others ~font_size*0.55
+            text = str(cell_value)
+            cn_chars = len(_re.findall(r'[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]', text))
+            other_chars = len(text) - cn_chars
+            total_text_width = cn_chars * actual_font_size + other_chars * actual_font_size * 0.55
+            lines_needed = max(1, math.ceil(total_text_width / effective_w))
             content_height = lines_needed * actual_font_size
 
             max_content_height = max(max_content_height, content_height)
