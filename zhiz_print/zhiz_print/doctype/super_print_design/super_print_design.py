@@ -428,14 +428,16 @@ class SuperPrintDesign(frappe.model.document.Document):
             if cell_w <= 0:
                 continue
 
-            avg_char_w = actual_font_size * 0.7
-            chars_per_line = max(1, cell_w / avg_char_w)
+            # Use 0.8 for mixed CJK/Latin; subtract border/padding
+            effective_w = max(1, cell_w - 4)
+            avg_char_w = actual_font_size * 0.8
+            chars_per_line = max(1, effective_w / avg_char_w)
             lines_needed = max(1, math.ceil(len(str(cell_value)) / chars_per_line))
-            content_height = lines_needed * actual_font_size
+            content_height = lines_needed * actual_font_size + 4
 
             max_content_height = max(max_content_height, content_height)
 
-        return max(configured_height, max_content_height)
+        return max(configured_height, int(math.ceil(max_content_height)))
 
     def _paginate_rows_v2(self, all_rows, row_type_map, row_styles, paper,
                           cell_map=None, col_styles=None, doc=None,
@@ -464,7 +466,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             return [all_rows] if all_rows else [[]]
 
         # Accumulate pagination by actual row height
-        content_available = available_px - title_height
+        # Safety factor: reduce available space by 8% to account for estimation errors
+        content_available = (available_px - title_height) * 0.92
         pages = []
         current_page_rows = []
         current_height = 0
@@ -704,6 +707,14 @@ class SuperPrintDesign(frappe.model.document.Document):
             row_css = _re.sub(r'vertical-align\s*:\s*\w+\s*;?', '', row_css).strip()
 
         row_style_attr = f'height:{row_style.get("height", 20)}px;'
+
+        # For data-driven rows, use estimated content height to match pagination
+        if data_item:
+            estimated_h = self._get_row_height(row_data, row_styles, cell_map, col_styles,
+                                                doc, row_display_map, self.font_size or 13)
+            if estimated_h > row_style.get("height", 20):
+                row_style_attr = f'height:{estimated_h}px;'
+
         if row_css:
             row_style_attr += row_css
 
