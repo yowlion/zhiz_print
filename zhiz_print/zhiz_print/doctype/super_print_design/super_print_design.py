@@ -1171,4 +1171,5 @@ def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, 
             modified_code
         )
 
-    return execute_query_code(modified_code, filters=params, format_result=True)
+    return execute_query_code(modified_code, filters=params, format_result=True,
+                              extra_globals={'doc': doc} if doc else None)

@@ -12,7 +12,7 @@ MERGED_SUFFIX = "||"
 
 
 @frappe.whitelist()
-def execute_query_code(query_code, filters=None, parameters=None, format_result=True):
+def execute_query_code(query_code, filters=None, parameters=None, format_result=True, extra_globals=None):
 	"""Safely execute Python query code"""
 	from frappe.utils.safe_exec import safe_exec
 	from frappe.query_builder.functions import Sum, Count, Avg, Max, Min, Round, Concat, Coalesce, Abs
@@ -41,6 +41,9 @@ def execute_query_code(query_code, filters=None, parameters=None, format_result=
 		'Column': Column,
 		'functions': functions,
 	}
+
+	if extra_globals and isinstance(extra_globals, dict):
+		_globals.update(extra_globals)
 
 	params = {}
 	if parameters:
