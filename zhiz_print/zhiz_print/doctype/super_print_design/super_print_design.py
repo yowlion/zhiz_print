@@ -1172,7 +1172,7 @@ def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, 
             modified_code
         )
 
-    if doc_type and doc_name:
+    if doc_type and doc_name and re.search(r'\bdoc\b', modified_code):
         modified_code = 'doc = frappe.get_doc({0}, {1})\n'.format(
             json.dumps(doc_type), json.dumps(doc_name)) + modified_code
 
