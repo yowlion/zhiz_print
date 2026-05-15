@@ -1099,6 +1099,7 @@ def preview_query_with_doc(query_code, parameters=None, target_doctype=None, doc
 def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, current_row_index=None, user_params=None):
     """Execute query with parameter injection as .where() clauses (standalone, no Document instance needed)."""
     params = parse_parameters(parameters)
+    doc = None
 
     where_clauses = []
     if doc_name and doc_type:
