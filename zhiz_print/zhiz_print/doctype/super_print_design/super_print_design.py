@@ -202,6 +202,26 @@ class SuperPrintDesign(frappe.model.document.Document):
     # ==================== Placeholder Replacement ====================
 
     @staticmethod
+    def _fmt_val(v):
+        """Format display value, strip trailing zeros: 5.0 -> 5, 5.10 -> 5.1"""
+        if v is None:
+            return ''
+        if isinstance(v, float):
+            if v == int(v):
+                return str(int(v))
+            return str(v).rstrip('0').rstrip('.')
+        if isinstance(v, int):
+            return str(v)
+        s = str(v)
+        if '.' in s:
+            try:
+                float(s)
+                return s.rstrip('0').rstrip('.')
+            except (ValueError, TypeError):
+                pass
+        return s
+
+    @staticmethod
     def _replace_doc_placeholders(value, doc):
         """Replace {doc.field_name} placeholders with actual document field values (does not match {doc.xxx.yyy} child table pattern)"""
         if not value or not doc:
@@ -211,7 +231,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             field_name = match.group(1)
             if hasattr(doc, field_name):
                 v = getattr(doc, field_name)
-                return str(v if v is not None else '')
+                return SuperPrintDesign._fmt_val(v)
             return match.group(0)
 
         return re.sub(r'\{doc\.(\w+)(?!\.)\}', replacer, value)
@@ -226,10 +246,10 @@ class SuperPrintDesign(frappe.model.document.Document):
             field_name = match.group(2)
             if hasattr(child_item, field_name):
                 v = getattr(child_item, field_name)
-                return str(v if v is not None else '')
+                return SuperPrintDesign._fmt_val(v)
             elif isinstance(child_item, dict) and field_name in child_item:
                 v = child_item.get(field_name, '')
-                return str(v if v is not None else '')
+                return SuperPrintDesign._fmt_val(v)
             return match.group(0)
 
         return re.sub(r'\{doc\.(\w+)\.(\w+)\}', replacer, value)
@@ -244,7 +264,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             param_name = match.group(1)
             if param_name in params:
                 v = params[param_name]
-                return str(v if v is not None else '')
+                return SuperPrintDesign._fmt_val(v)
             return match.group(0)
 
         return re.sub(r'\{param\.(\w+)\}', replacer, value)
