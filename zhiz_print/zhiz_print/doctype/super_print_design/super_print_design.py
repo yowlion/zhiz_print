@@ -1102,6 +1102,7 @@ def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, 
     doc = None
 
     where_clauses = []
+    skip_query = False
     if doc_name and doc_type:
         try:
             doc = frappe.get_doc(doc_type, doc_name)
@@ -1121,7 +1122,8 @@ def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, 
 
                     child_rows = getattr(doc, child_table_name, None)
                     if child_rows is None:
-                        continue
+                        skip_query = True
+                        break
 
                     if current_row_index is not None and 0 <= current_row_index < len(child_rows):
                         v = getattr(child_rows[current_row_index], child_field, None)
@@ -1138,7 +1140,8 @@ def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, 
                             if v is not None:
                                 values.append(v)
                         if not values:
-                            continue
+                            skip_query = True
+                            break
                         str_values = ['"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"' if isinstance(v, str) else str(v) for v in values]
                         where_clauses.append('query = query.where({0}.isin([{1}]))'.format(key, ', '.join(str_values)))
                 else:
@@ -1152,6 +1155,9 @@ def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, 
                                 where_clauses.append('query = query.where({0} == {1})'.format(key, actual_value))
         except Exception:
             pass
+
+    if skip_query:
+        return []
 
     for key in [k for k, v in params.items() if '.' in k or v.startswith('doc.')]:
         del params[key]

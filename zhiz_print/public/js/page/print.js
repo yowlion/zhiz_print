@@ -460,14 +460,16 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				// Mount to DOM first so iframe can access contentDocument
 				area.appendChild(pagesContainer);
 
-				// Write content to each page iframe
-				pageWrappers.forEach(({ iframe, pageEl }) => {
-					const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-					iframeDoc.open();
-					iframeDoc.write(pageEl
-						? this._build_single_page_html(pageEl, parsed, previewW, previewH)
-						: html);
-					iframeDoc.close();
+				// Wait for browser to initialize iframes before writing content
+				requestAnimationFrame(() => {
+					pageWrappers.forEach(({ iframe, pageEl }) => {
+						const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+						iframeDoc.open();
+						iframeDoc.write(pageEl
+							? this._build_single_page_html(pageEl, parsed, previewW, previewH)
+							: html);
+						iframeDoc.close();
+					});
 				});
 			}
 		} catch (e) {
