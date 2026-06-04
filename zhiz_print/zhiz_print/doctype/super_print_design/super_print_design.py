@@ -1075,7 +1075,7 @@ body {{
         # Support eval: prefix and JS syntax
         if condition.startswith('eval:'):
             condition = condition[5:].strip()
-        condition = condition.replace('===', '==').replace('!==', '!=')
+        condition = condition.replace('===', '==').replace('!==', '!=').replace('||', ' or ').replace('&&', ' and ')
 
         try:
             return frappe.safe_eval(condition, {}, {'doc': doc, 'user': frappe.session.user})
