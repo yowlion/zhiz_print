@@ -158,6 +158,11 @@ def _call_query_function(func_path, kwargs=None):
 	if result is None:
 		return []
 
+	# Convert list-of-lists to list of dicts (c0, c1, c2, ...)
+	if isinstance(result, (list, tuple)) and result and isinstance(result[0], (list, tuple)):
+		col_count = len(result[0])
+		result = [{'c%d' % i: row[i] for i in range(col_count)} for row in result]
+
 	return format_query_result(result)
 
 
