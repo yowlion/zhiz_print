@@ -1077,7 +1077,7 @@ class SuperPrintDesigner {
                     '<label>' + __('Bound Query') + ':</label>' +
                     '<select id="prop-query-name" class="form-control"><option value="">--</option>' + queryOptions + '</select>' +
                     '<label>' + __('Data Key') + ':</label>' +
-                    '<input id="prop-data-key" class="form-control" placeholder="' + __('e.g. item_code') + '">' +
+                    '<select id="prop-data-key" class="form-control"><option value="">--</option></select>' +
                 '</div>' +
                 '<div id="barcode-group" style="display:none">' +
                     '<label>' + __('Barcode Format') + ':</label>' +
@@ -1192,6 +1192,9 @@ class SuperPrintDesigner {
         setValue('prop-barcode-width', cell.barcode_width || 100);
         setValue('prop-barcode-height', cell.barcode_height || 40);
         this.togglePropertyGroups(cell.cell_type);
+        if (cell.cell_type === 'data_query' && cell.query_name) {
+            this.loadDataKeyOptions(cell.query_name);
+        }
     }
 
     togglePropertyGroups(cellType) {
@@ -1203,6 +1206,30 @@ class SuperPrintDesigner {
         if (queryGroup) queryGroup.style.display = (cellType === 'data_query') ? 'block' : 'none';
         if (barcodeGroup) barcodeGroup.style.display = (cellType === 'barcode') ? 'block' : 'none';
         if (qrcodeGroup) qrcodeGroup.style.display = (cellType === 'qrcode') ? 'block' : 'none';
+    }
+
+    loadDataKeyOptions(queryName) {
+        const container = document.getElementById(this.designContainerId);
+        const select = container?.querySelector('#prop-data-key');
+        if (!select) return;
+        select.innerHTML = '<option value="">--</option>';
+        if (!queryName) return;
+
+        frappe.call({
+            method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.get_query_keys',
+            args: { design_name: this.doc.name, query_name: queryName },
+            callback: (r) => {
+                const keys = r.message || [];
+                keys.forEach(k => {
+                    const opt = document.createElement('option');
+                    opt.value = k;
+                    opt.textContent = k;
+                    select.appendChild(opt);
+                });
+                const cell = this.getSelectedCell();
+                if (cell && cell.data_key) select.value = cell.data_key;
+            }
+        });
     }
 
     bindPropertyFormEvents(cell) {
@@ -1230,6 +1257,7 @@ class SuperPrintDesigner {
         });
         container.querySelector('#prop-query-name')?.addEventListener('change', (e) => {
             this.updateCellProperty('query_name', e.target.value);
+            this.loadDataKeyOptions(e.target.value);
         });
         container.querySelector('#prop-barcode-format')?.addEventListener('change', (e) => {
             this.updateCellProperty('barcode_format', e.target.value);

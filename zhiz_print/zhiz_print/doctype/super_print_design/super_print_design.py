@@ -1133,6 +1133,32 @@ def preview_query_with_doc(query_code, parameters=None, target_doctype=None, doc
     return _execute_query_with_doc_context(query_code, parameters, target_doctype, doc_name)
 
 
+@frappe.whitelist()
+def get_query_keys(design_name, query_name):
+    """Return the column keys for a specific query in a design, using sample_doc for preview."""
+    doc = frappe.get_doc("Super Print Design", design_name)
+    query = None
+    for q in doc.design_queries:
+        if q.query_name == query_name:
+            query = q
+            break
+    if not query or not query.query_code:
+        return []
+
+    result = _execute_query_with_doc_context(
+        query.query_code, query.parameters,
+        doc.target_doctype, doc.sample_doc
+    )
+
+    if not result or not isinstance(result, list):
+        return []
+
+    first = result[0]
+    if isinstance(first, dict):
+        return list(first.keys())
+    return []
+
+
 def _resolve_and_call_function(func_path, parameters, doc_type, doc_name, user_params=None):
     """Resolve doc. parameters and call a Python function as query."""
     params = parse_parameters(parameters)
