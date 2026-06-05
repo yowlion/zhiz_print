@@ -202,6 +202,17 @@ class SuperPrintDesign(frappe.model.document.Document):
     # ==================== Placeholder Replacement ====================
 
     @staticmethod
+    def _eval_logic_code(expr, doc=None, row=None):
+        """Evaluate logic code expression with doc and row context."""
+        try:
+            local_vars = {'doc': doc, 'row': row}
+            result = frappe.safe_eval(expr, {}, local_vars)
+            return str(result) if result is not None else ''
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), 'Logic code eval failed: %s' % expr[:100])
+            return ''
+
+    @staticmethod
     def _fmt_val(v):
         """Format display value, strip trailing zeros: 5.0 -> 5, 5.10 -> 5.1"""
         if v is None:
@@ -222,32 +233,11 @@ class SuperPrintDesign(frappe.model.document.Document):
         return s
 
     @staticmethod
-    def _eval_ternary(v, yes_text, no_text):
-        """Evaluate ternary: truthy -> yes_text, falsy -> no_text"""
-        is_truthy = v is not None and v != '' and v != 0 and v != False
-        return yes_text if is_truthy else no_text
-
-    @staticmethod
     def _replace_doc_placeholders(value, doc):
-        """Replace {doc.field_name} placeholders with actual document field values.
-        Supports ternary: {doc.field ? yes : no}
-        """
+        """Replace {doc.field_name} placeholders with actual document field values (does not match {doc.xxx.yyy} child table pattern)"""
         if not value or not doc:
             return value or ''
 
-        # Ternary: {doc.field ? yes : no}
-        def ternary_replacer(match):
-            field_name = match.group(1)
-            yes_text = match.group(2) or ''
-            no_text = match.group(3) or ''
-            if hasattr(doc, field_name):
-                v = getattr(doc, field_name)
-                return SuperPrintDesign._eval_ternary(v, yes_text, no_text)
-            return match.group(0)
-
-        value = re.sub(r'\{doc\.(\w+)(?!\.)\s*\?\s*([^:}]*?):\s*([^}]*?)\}', ternary_replacer, value)
-
-        # Simple: {doc.field}
         def replacer(match):
             field_name = match.group(1)
             if hasattr(doc, field_name):
@@ -259,36 +249,17 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     @staticmethod
     def _replace_child_table_placeholders(value, child_item):
-        """Replace {doc.child_table.field_name} with actual child table row values.
-        Supports ternary: {doc.child_table.field ? yes : no}
-        """
+        """Replace {doc.child_table.field_name} with actual child table row values"""
         if not value or not child_item:
             return value or ''
 
-        def _get_val(ci, field_name):
-            if hasattr(ci, field_name):
-                return getattr(ci, field_name)
-            elif isinstance(ci, dict) and field_name in ci:
-                return ci.get(field_name, '')
-            return None
-
-        # Ternary: {doc.child_table.field ? yes : no}
-        def ternary_replacer(match):
-            field_name = match.group(2)
-            yes_text = match.group(3) or ''
-            no_text = match.group(4) or ''
-            v = _get_val(child_item, field_name)
-            if v is not None:
-                return SuperPrintDesign._eval_ternary(v, yes_text, no_text)
-            return match.group(0)
-
-        value = re.sub(r'\{doc\.(\w+)\.(\w+)\s*\?\s*([^:}]*?):\s*([^}]*?)\}', ternary_replacer, value)
-
-        # Simple: {doc.child_table.field}
         def replacer(match):
             field_name = match.group(2)
-            v = _get_val(child_item, field_name)
-            if v is not None:
+            if hasattr(child_item, field_name):
+                v = getattr(child_item, field_name)
+                return SuperPrintDesign._fmt_val(v)
+            elif isinstance(child_item, dict) and field_name in child_item:
+                v = child_item.get(field_name, '')
                 return SuperPrintDesign._fmt_val(v)
             return match.group(0)
 
@@ -831,6 +802,11 @@ class SuperPrintDesign(frappe.model.document.Document):
 
                 # Get cell value
                 cell_value = cell_data.get('cell_value', '')
+                cell_type = cell_data.get('cell_type', 'static')
+
+                # Logic code: evaluate Python expression
+                if cell_type == 'logic' and cell_value:
+                    cell_value = self._eval_logic_code(cell_value, doc, data_item)
 
                 # Replace {doc.field_name} placeholder (single level)
                 cell_value = self._replace_doc_placeholders(cell_value, doc)

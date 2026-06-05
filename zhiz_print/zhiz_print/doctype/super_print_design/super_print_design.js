@@ -47,6 +47,7 @@ class SuperPrintDesigner {
 
         this.cellTypes = [
             { value: 'static', label: __('Static Text'), icon: 'fa-font' },
+            { value: 'logic', label: __('Logic Code'), icon: 'fa-code' },
             { value: 'data_query', label: __('Data Query'), icon: 'fa-search' },
             { value: 'barcode', label: __('Barcode'), icon: 'fa-barcode' },
             { value: 'qrcode', label: __('QR Code'), icon: 'fa-qrcode' },
