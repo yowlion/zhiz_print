@@ -1226,7 +1226,7 @@ class SuperPrintDesigner {
                     opt.textContent = k;
                     select.appendChild(opt);
                 });
-                const cell = this.getSelectedCell();
+                const cell = this.cellDataMap[this.currentCell];
                 if (cell && cell.data_key) select.value = cell.data_key;
             }
         });
