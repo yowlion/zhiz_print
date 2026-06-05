@@ -12,7 +12,7 @@ import os
 import time
 import uuid
 
-LICENSE_SERVER = "http://gdzhiz.com:51818"
+LICENSE_SERVER = "https://gdzhiz.com:38443"
 PRODUCT_CODE = "zhiz_print"
 API_SECRET = "1e4266377127627a8782327e4d7054bcf8862e6ebd94c3885d14decfcf4ef21d"
 LICENSE_CACHE_KEY = "zhiz_print:license_status"
