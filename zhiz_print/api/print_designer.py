@@ -185,6 +185,34 @@ def _fix_merged_cell_borders_for_pdf(html):
     return str(soup)
 
 
+def _resolve_image_urls_for_pdf(html):
+    """Convert relative image URLs to file:// absolute paths for PDF engines.
+    Handles /private/files/... and /files/... paths."""
+    import os
+
+    site_path = frappe.get_site_path()
+    public_path = os.path.join(site_path, 'public')
+
+    def _resolve(match):
+        url = match.group(1) or match.group(2) or match.group(3) or ''
+        if not url or url.startswith(('http://', 'https://', 'data:', 'file://')):
+            return match.group(0)
+        if url.startswith('/private/files/'):
+            local = os.path.join(site_path, url.lstrip('/'))
+            if os.path.exists(local):
+                return match.group(0).replace(url, 'file://' + os.path.abspath(local))
+        elif url.startswith('/files/'):
+            local = os.path.join(public_path, url.lstrip('/'))
+            if os.path.exists(local):
+                return match.group(0).replace(url, 'file://' + os.path.abspath(local))
+        return match.group(0)
+
+    # Match src="..." in <img> tags and url(...) in CSS
+    html = re.sub(r'src="(/[^"]*)"', _resolve, html)
+    html = re.sub(r"url\(['\"]?(/[^)'\"]*)['\"]?\)", _resolve, html)
+    return html
+
+
 def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False):
     """Common function: render print HTML and apply px scaling, shared by PDF engines.
     Returns (html, design) tuple."""
@@ -265,6 +293,9 @@ def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None):
 
     # PDF-specific: fix ghost borders of merged cells
     html = _fix_merged_cell_borders_for_pdf(html)
+
+    # PDF-specific: convert relative image URLs to file:// paths
+    html = _resolve_image_urls_for_pdf(html)
 
     # DEBUG: save final HTML
     import os
@@ -392,6 +423,9 @@ def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
     # wkhtmltopdf preprocessing: SVG->PNG, background shorthand fix, flex->table
     html = _prepare_html_for_wkhtmltopdf(html)
 
+    # PDF-specific: convert relative image URLs to file:// paths
+    html = _resolve_image_urls_for_pdf(html)
+
     options = {
         "quiet": "",
         "encoding": "UTF-8",
@@ -424,6 +458,9 @@ def _generate_print_pdf_chromium(doctype, docname, design_name, params=None):
     import tempfile
 
     html, design = _render_print_html(doctype, docname, design_name, params)
+
+    # PDF-specific: convert relative image URLs to file:// paths
+    html = _resolve_image_urls_for_pdf(html)
 
     # Find available Chromium executable
     chromium_cmd = None
