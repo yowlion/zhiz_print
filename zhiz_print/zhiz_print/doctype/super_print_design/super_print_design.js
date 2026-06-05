@@ -1217,7 +1217,7 @@ class SuperPrintDesigner {
 
         frappe.call({
             method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.get_query_keys',
-            args: { design_name: this.doc.name, query_name: queryName },
+            args: { design_name: this.frm.doc.name, query_name: queryName },
             callback: (r) => {
                 const keys = r.message || [];
                 keys.forEach(k => {
