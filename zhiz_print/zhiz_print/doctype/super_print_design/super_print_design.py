@@ -282,6 +282,29 @@ class SuperPrintDesign(frappe.model.document.Document):
         return re.sub(r'\{param\.(\w+)\}', replacer, value)
 
     @staticmethod
+    def _replace_query_data_placeholders(value, query_results):
+        """Replace {query_name.column} with query result data (first row)"""
+        if not value or not query_results:
+            return value or ''
+
+        def replacer(match):
+            qn = match.group(1)
+            col = match.group(2)
+            # Skip doc/param prefixes (handled by other methods)
+            if qn in ('doc', 'param'):
+                return match.group(0)
+            qr = query_results.get(qn, {})
+            data = qr.get('data', [])
+            if data and isinstance(data, list) and len(data) > 0:
+                first = data[0]
+                if isinstance(first, dict) and col in first:
+                    v = first[col]
+                    return SuperPrintDesign._fmt_val(v)
+            return match.group(0)
+
+        return re.sub(r'\{(\w+)\.(\w+)\}', replacer, value)
+
+    @staticmethod
     def _detect_child_table_patterns(cell_value):
         """Detect {doc.child_table.field_name} patterns, return [(table_name, field_name), ...]"""
         if not cell_value:
@@ -369,12 +392,43 @@ class SuperPrintDesign(frappe.model.document.Document):
             row_data_map[row_num] = self._get_row_data_items(
                 info, doc, query_results)
 
-        # Build expanded row list
+        # Build expanded row list — group adjacent data-driven rows sharing query_name
         result = []
-        for row in all_rows:
+        i = 0
+        while i < len(all_rows):
+            row = all_rows[i]
             if row in row_data_map:
+                # Check if next rows form a consecutive group with same query source
+                group = [row]
+                j = i + 1
+                while j < len(all_rows):
+                    next_row = all_rows[j]
+                    if next_row in row_data_map:
+                        # Check query_names overlap (share at least one query)
+                        curr_qn = data_driven_rows[row].get('query_names', set())
+                        next_qn = data_driven_rows[next_row].get('query_names', set())
+                        # Also check if they have the same data source (same child table or same query)
+                        curr_ct = data_driven_rows[row].get('child_tables', set())
+                        next_ct = data_driven_rows[next_row].get('child_tables', set())
+                        same_source = (curr_qn & next_qn) or (curr_ct & next_ct)
+                        if same_source and next_row == group[-1] + 1:
+                            group.append(next_row)
+                            j += 1
+                            continue
+                    break
+
                 data_items = row_data_map[row]
-                if data_items:
+                if data_items and len(group) > 1:
+                    # Group expansion: for each data item, emit all rows in group
+                    for data_idx, data_item in enumerate(data_items):
+                        for gr in group:
+                            result.append({
+                                'template_row': gr,
+                                'data_index': data_idx,
+                                'data_item': data_item
+                            })
+                elif data_items:
+                    # Single row expansion (no grouping)
                     for data_idx, data_item in enumerate(data_items):
                         result.append({
                             'template_row': row,
@@ -382,10 +436,12 @@ class SuperPrintDesign(frappe.model.document.Document):
                             'data_item': data_item
                         })
                 else:
-                    # Keep one empty row when no data
-                    result.append(row)
+                    for gr in group:
+                        result.append(gr)
+                i = j
             else:
                 result.append(row)
+                i += 1
 
         return result
 
@@ -815,6 +871,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # Replace {param.param_name} user parameter placeholder
                 cell_value = self._replace_param_placeholders(
                     cell_value, params)
+
+                # Replace {query_name.column} query data placeholder (non-doc/param)
+                cell_value = self._replace_query_data_placeholders(
+                    cell_value, query_results)
 
                 # Replace {doc.child_table.field_name} child table placeholder
                 if data_item:

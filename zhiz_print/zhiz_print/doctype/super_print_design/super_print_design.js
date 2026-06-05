@@ -503,7 +503,7 @@ class SuperPrintDesigner {
                     const hasValue = cell_value && cell_value.trim();
 
                     let content = '';
-                    if (cell_type === 'data_query' && cell.query_name && cell.data_key) {
+                    if ((cell_type === 'data_query' || cell_type === 'image') && cell.query_name && cell.data_key) {
                         content = '<div class="super-zprint-cell-content" style="color:#6a5acd;font-style:italic;">{' + this.escapeHtml(cell.query_name) + '.' + this.escapeHtml(cell.data_key) + '}</div>';
                     } else if (cell_type === 'barcode' || cell_type === 'qrcode') {
                         content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + typeInfo.label + '</span></div>';
@@ -1192,7 +1192,7 @@ class SuperPrintDesigner {
         setValue('prop-barcode-width', cell.barcode_width || 100);
         setValue('prop-barcode-height', cell.barcode_height || 40);
         this.togglePropertyGroups(cell.cell_type);
-        if (cell.cell_type === 'data_query' && cell.query_name) {
+        if ((cell.cell_type === 'data_query' || cell.cell_type === 'image') && cell.query_name) {
             this.loadDataKeyOptions(cell.query_name);
         }
     }
@@ -1203,7 +1203,7 @@ class SuperPrintDesigner {
         const queryGroup = container.querySelector('#query-group');
         const barcodeGroup = container.querySelector('#barcode-group');
         const qrcodeGroup = container.querySelector('#qrcode-group');
-        if (queryGroup) queryGroup.style.display = (cellType === 'data_query') ? 'block' : 'none';
+        if (queryGroup) queryGroup.style.display = (cellType === 'data_query' || cellType === 'image') ? 'block' : 'none';
         if (barcodeGroup) barcodeGroup.style.display = (cellType === 'barcode') ? 'block' : 'none';
         if (qrcodeGroup) qrcodeGroup.style.display = (cellType === 'qrcode') ? 'block' : 'none';
     }
