@@ -124,14 +124,17 @@ def replace_dynamic_params(params, doc_name, doc_type):
 
 def _is_function_path(code):
 	"""Check if query_code is a Python function path like 'app.module.file.function'"""
-	if not code or not code.strip():
+	if not code or not isinstance(code, str):
 		return False
 	code = code.strip()
-	if '\n' in code:
+	if not code or '\n' in code or ' ' in code:
 		return False
-	if any(kw in code for kw in ['=', 'import ', 'from ', 'def ', 'class ', 'query', 'result']):
+	if any(ch in code for ch in ('=', '(', ')', '{', '}', ':', '"', "'")):
 		return False
-	return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_.]*$', code))
+	for ch in code:
+		if not (ch.isalnum() or ch in ('.', '_')):
+			return False
+	return '.' in code and not code.startswith('.')
 
 
 def _call_query_function(func_path, kwargs=None):
