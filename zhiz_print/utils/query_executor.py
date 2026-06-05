@@ -5,6 +5,7 @@
 from __future__ import unicode_literals
 import frappe
 import json
+import re
 
 
 MERGED_PREFIX = "||MERGED::"
@@ -13,7 +14,10 @@ MERGED_SUFFIX = "||"
 
 @frappe.whitelist()
 def execute_query_code(query_code, filters=None, parameters=None, format_result=True, extra_globals=None):
-	"""Safely execute Python query code"""
+	"""Safely execute Python query code or call a function path"""
+	if _is_function_path(query_code):
+		return _call_query_function(query_code, filters)
+
 	from frappe.utils.safe_exec import safe_exec
 	from frappe.query_builder.functions import Sum, Count, Avg, Max, Min, Round, Concat, Coalesce, Abs
 	from frappe.query_builder import Column, functions
@@ -116,6 +120,42 @@ def replace_dynamic_params(params, doc_name, doc_type):
 			if hasattr(doc, field_name):
 				params[key] = getattr(doc, field_name)
 	return params
+
+
+def _is_function_path(code):
+	"""Check if query_code is a Python function path like 'app.module.file.function'"""
+	if not code or not code.strip():
+		return False
+	code = code.strip()
+	if '\n' in code:
+		return False
+	if any(kw in code for kw in ['=', 'import ', 'from ', 'def ', 'class ', 'query', 'result']):
+		return False
+	return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_.]*$', code))
+
+
+def _call_query_function(func_path, kwargs=None):
+	"""Import and call a Python function, passing kwargs"""
+	if kwargs is None:
+		kwargs = {}
+
+	module_path = '.'.join(func_path.split('.')[:-1])
+	func_name = func_path.split('.')[-1]
+
+	try:
+		module = frappe.get_module(module_path)
+		if module is None:
+			module = __import__(module_path, fromlist=[func_name])
+		func = getattr(module, func_name)
+		result = func(**kwargs)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), 'Query function call failed: %s' % func_path)
+		return []
+
+	if result is None:
+		return []
+
+	return format_query_result(result)
 
 
 def is_merged_cell(value):

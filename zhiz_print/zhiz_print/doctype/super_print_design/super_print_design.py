@@ -13,7 +13,8 @@ from frappe.utils import cint
 from zhiz_print.utils.query_executor import (
     is_merged_cell, extract_master_id,
     generate_barcode_base64, generate_qrcode_base64,
-    execute_query_code, parse_parameters, replace_dynamic_params
+    execute_query_code, parse_parameters, replace_dynamic_params,
+    _is_function_path, _call_query_function, format_query_result
 )
 
 MERGED_PREFIX = "||MERGED::"
@@ -1132,8 +1133,39 @@ def preview_query_with_doc(query_code, parameters=None, target_doctype=None, doc
     return _execute_query_with_doc_context(query_code, parameters, target_doctype, doc_name)
 
 
+def _resolve_and_call_function(func_path, parameters, doc_type, doc_name, user_params=None):
+    """Resolve doc. parameters and call a Python function as query."""
+    params = parse_parameters(parameters)
+    kwargs = {}
+
+    if doc_name and doc_type:
+        try:
+            doc = frappe.get_doc(doc_type, doc_name)
+            for key, val in params.items():
+                if isinstance(val, str) and val.startswith('doc.'):
+                    field_path = val[4:]
+                    if hasattr(doc, field_path):
+                        kwargs[key] = getattr(doc, field_path)
+                    else:
+                        kwargs[key] = val
+                else:
+                    kwargs[key] = val
+        except Exception:
+            kwargs = dict(params)
+    else:
+        kwargs = dict(params)
+
+    if user_params and isinstance(user_params, dict):
+        kwargs.update(user_params)
+
+    return _call_query_function(func_path, kwargs)
+
+
 def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, current_row_index=None, user_params=None):
     """Execute query with parameter injection as .where() clauses (standalone, no Document instance needed)."""
+    if _is_function_path(query_code):
+        return _resolve_and_call_function(query_code, parameters, doc_type, doc_name, user_params)
+
     params = parse_parameters(parameters)
     doc = None
 
