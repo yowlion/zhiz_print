@@ -1020,6 +1020,31 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Cell Content Rendering ====================
 
+    @staticmethod
+    def _resolve_image_url(url):
+        """Convert relative file URL to absolute URL for PDF rendering (WeasyPrint/wkhtmltopdf)"""
+        if not url:
+            return url
+        # Already absolute URL or data URI
+        if url.startswith(('http://', 'https://', 'data:', 'file://')):
+            return url
+        # Relative file path: /private/files/... or /files/...
+        if url.startswith('/'):
+            import os
+            site_path = frappe.get_site_path()
+            if url.startswith('/private/files/'):
+                local = os.path.join(site_path, url.lstrip('/'))
+            elif url.startswith('/files/'):
+                local = os.path.join(site_path, 'public', url.lstrip('/'))
+            else:
+                # Other relative paths: use frappe.utils.get_url
+                return frappe.utils.get_url(url)
+            if os.path.exists(local):
+                return 'file://' + os.path.abspath(local)
+            # Fallback to absolute URL
+            return frappe.utils.get_url(url)
+        return url
+
     def _render_cell_content(self, cell_data, cell_value, cell_w=100, cell_h=40):
         """Render cell content"""
         cell_type = cell_data.get('cell_type', 'static')
@@ -1030,7 +1055,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             return self._render_qrcode_content(cell_value, cell_data, cell_w, cell_h)
         elif cell_type == 'image':
             if cell_value:
-                return f'<img src="{frappe.utils.escape_html(cell_value)}" style="max-width:100%;max-height:100%;object-fit:contain;">'
+                img_url = self._resolve_image_url(cell_value)
+                return f'<img src="{frappe.utils.escape_html(img_url)}" style="max-width:100%;max-height:100%;object-fit:contain;">'
             return ''
         else:
             return frappe.utils.escape_html(cell_value)
