@@ -1,5 +1,19 @@
 /* Super Print Designer - Print Designer Styles */
 
+/* === Reset zhiz_super beautify CSS interference === */
+.spd-container,
+.spd-container .frappe-control,
+.spd-container .form-group { all: revert !important; display: revert !important; }
+.spd-toolbar,
+.spd-toolbar .spd-controls,
+.spd-toolbar .spd-actions { display: flex !important; flex-direction: row !important; }
+.spd-toolbar label { display: inline !important; white-space: nowrap !important; margin: 0 !important; font-weight: 600 !important; font-size: 12px !important; }
+.spd-toolbar .btn { display: inline-flex !important; align-items: center !important; white-space: nowrap !important; }
+.spd-toolbar .btn i { margin-right: 3px !important; }
+.spd-props,
+.spd-props .frappe-control,
+.spd-props .form-group { all: revert !important; display: revert !important; }
+
 /* ==================== Print Page Layout (shared by print & batch-print) ==================== */
 .super-print-layout { display:flex; height:calc(100vh - 120px); margin:-15px; }
 .super-print-sidebar { width:200px; min-width:200px; background:#fff; border-right:1px solid #e0e0e0; display:flex; flex-direction:column; }
