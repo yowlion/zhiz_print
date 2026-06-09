@@ -663,6 +663,7 @@ class SuperPrintDesigner {
         if (cell?._merged) return;
         if (!cell) this.createCellData(row, col);
         this.renderCellProperties(cellId);
+        container?.querySelector('.spd-props')?.classList.add('visible');
         this.refreshGrid();
     }
 
@@ -673,6 +674,7 @@ class SuperPrintDesigner {
         this.currentCell = null;
         this.selectedCells = [];
         const container = document.getElementById(this.designContainerId);
+        container?.querySelector('.spd-props')?.classList.add('visible');
         const typeControls = container?.querySelector('.spd-row-type-controls');
         if (typeControls) typeControls.style.display = '';
         const insertRowBtn = container?.querySelector('#spd-insert-row-btn');
@@ -704,6 +706,7 @@ class SuperPrintDesigner {
         if (insertColBtn) insertColBtn.style.display = '';
         if (deleteColBtn) deleteColBtn.style.display = '';
         this.renderColProperties(col);
+        container?.querySelector('.spd-props')?.classList.add('visible');
         this.refreshGrid();
     }
 
