@@ -204,9 +204,27 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     @staticmethod
     def _eval_logic_code(expr, doc=None, row=None):
-        """Evaluate logic code expression with doc and row context."""
+        """Evaluate logic code expression with doc and row context.
+
+        Exposes:
+        - doc: current document
+        - row: current child table row (Data-Driven Row)
+        - frappe: frappe module (for advanced use)
+        - get_value(doctype, name, field): fast SQL single-field lookup, returns '' on None/empty
+        """
         try:
-            local_vars = {'doc': doc, 'row': row}
+            def get_value(doctype, name, field):
+                if not name:
+                    return ''
+                v = frappe.db.get_value(doctype, name, field)
+                return '' if v is None else str(v)
+
+            local_vars = {
+                'doc': doc,
+                'row': row,
+                'frappe': frappe,
+                'get_value': get_value,
+            }
             result = frappe.safe_eval(expr, {}, local_vars)
             return str(result) if result is not None else ''
         except Exception:
