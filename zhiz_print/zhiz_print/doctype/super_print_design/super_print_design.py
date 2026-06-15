@@ -977,7 +977,17 @@ class SuperPrintDesign(frappe.model.document.Document):
                         # Constrain image to cell dimensions; do not let PNG natural size push the row
                         img_max_w = cell_w
                         img_max_h = cell_h
-                        margin_css = 'margin:0 auto;'
+                        # Parse text-align from cell css_style so img honors left/right alignment
+                        align = 'center'
+                        for prop in (cell_data.get('css_style') or '').split(';'):
+                            prop = prop.strip()
+                            if prop.startswith('text-align:'):
+                                align = prop.split(':', 1)[1].strip().lower()
+                                break
+                        margin_css = {
+                            'left':  'margin:0 auto 0 0;',
+                            'right': 'margin:0 0 0 auto;',
+                        }.get(align, 'margin:0 auto;')
                         content = (
                             f'<img src="{img_src}" style="display:block;'
                             f'width:{img_max_w}px;height:{img_max_h}px;'
