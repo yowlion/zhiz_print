@@ -557,8 +557,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                           cell_map=None, col_styles=None, doc=None,
                           row_display_map=None, font_size=None):
         """Auto pagination based on row_type"""
-        margin_top = cint(paper.margin_top) or 10 if paper else 10
-        margin_bottom = cint(paper.margin_bottom) or 10 if paper else 10
+        margin_top = cint(paper.margin_top) if paper else 10
+        margin_bottom = cint(paper.margin_bottom) if paper else 10
 
         available_mm = (paper.height if paper else 297) - \
             margin_top - margin_bottom
@@ -694,10 +694,10 @@ class SuperPrintDesign(frappe.model.document.Document):
     def _build_pages_html(self, pages, cell_map, cell_grid, row_styles, col_styles,
                           query_results, doc, row_type_map, row_display_map, paper, params=None):
         """Build HTML for all pages, each page as a fixed-size container"""
-        margin_top = cint(paper.margin_top) or 10
-        margin_bottom = cint(paper.margin_bottom) or 10
-        margin_left = cint(paper.margin_left) or 15
-        margin_right = cint(paper.margin_right) or 15
+        margin_top = cint(paper.margin_top)
+        margin_bottom = cint(paper.margin_bottom)
+        margin_left = cint(paper.margin_left)
+        margin_right = cint(paper.margin_right)
 
         paper_h_px = paper.height * PX_PER_MM
         paper_w_px = paper.width * PX_PER_MM
@@ -821,14 +821,19 @@ class SuperPrintDesign(frappe.model.document.Document):
             row_va = va_match.group(1)
             row_css = _re.sub(r'vertical-align\s*:\s*\w+\s*;?', '', row_css).strip()
 
-        row_style_attr = f'height:{row_style.get("height", 20)}px;'
+        row_h_value = row_style.get("height", 20)
+        row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
 
         # For data-driven rows, use estimated content height to match pagination
         if data_item:
             estimated_h = self._get_row_height(row_data, row_styles, cell_map, col_styles,
                                                 doc, row_display_map, self.font_size or 13)
-            if estimated_h > row_style.get("height", 20):
-                row_style_attr = f'height:{estimated_h}px;'
+            if estimated_h > row_h_value:
+                row_h_value = estimated_h
+                row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
+
+        # Per-cell height constraint passed to <td> generation
+        cell_h_constraint = f'height:{row_h_value}px;max-height:{row_h_value}px;overflow:hidden;'
 
         if row_css:
             row_style_attr += row_css
@@ -865,7 +870,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 colspan_attr = f'colspan="{cell_data["colspan"]}"' if cell_data['colspan'] > 1 else ''
 
                 # Build styles
-                style_attr = 'line-height:1;'
+                style_attr = cell_h_constraint + 'line-height:1;'
                 font_size = row_style.get(
                     'font_size') or (self.font_size or 12)
                 style_attr += f'font-size:{font_size}px;'
@@ -952,29 +957,23 @@ class SuperPrintDesign(frappe.model.document.Document):
                 content = self._render_cell_content(
                     cell_data, cell_value, cell_w, cell_h)
 
-                # Image-type cells: rendered with background-image, completely excluded from document flow
+                # Image-type cells: explicit <img> with fixed dimensions to prevent row oversize
                 cell_type = cell_data.get('cell_type', 'static')
                 if cell_type in ('barcode', 'qrcode', 'image') and content and '<img' in content:
                     import re as _re
                     src_match = _re.search(r'src="([^"]*)"', content)
                     if src_match:
                         img_src = src_match.group(1)
-                        # Parse text-align alignment
-                        css_style = cell_data.get('css_style', '')
-                        align = 'center'
-                        for prop in css_style.split(';'):
-                            prop = prop.strip()
-                            if prop.startswith('text-align:'):
-                                align = prop.split(':', 1)[1].strip()
-                                break
-                        # background-image does not affect cell dimensions
-                        # Ensure style_attr ends with ; to prevent attribute concatenation
-                        if not style_attr.rstrip().endswith(';'):
-                            style_attr += ';'
-                        style_attr += (
-                            f'background:url(\'{img_src}\') no-repeat {align} center/contain;'
+                        # Constrain image to cell dimensions; do not let PNG natural size push the row
+                        img_max_w = cell_w
+                        img_max_h = cell_h
+                        margin_css = 'margin:0 auto;'
+                        content = (
+                            f'<img src="{img_src}" style="display:block;'
+                            f'width:{img_max_w}px;height:{img_max_h}px;'
+                            f'max-width:{img_max_w}px;max-height:{img_max_h}px;'
+                            f'object-fit:contain;{margin_css}">'
                         )
-                        content = '&nbsp;'
 
                     # Suppress ghost borders from merge areas (WeasyPrint border-collapse compatibility)
                     border_suppress = ''
@@ -995,7 +994,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 html += f'<td {rowspan_attr} {colspan_attr} style="{style_attr}">{content}</td>'
             else:
                 # Empty cell - also needs merge border suppression
-                empty_style = 'line-height:1;'
+                empty_style = cell_h_constraint + 'line-height:1;'
                 col_style = col_styles.get(str(col), {})
                 if row_va:
                     empty_style += f'vertical-align:{row_va};'
