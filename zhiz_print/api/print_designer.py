@@ -1058,11 +1058,20 @@ def _apply_cell_format(cell, styles):
 
     # Alignment
     align_kw = {}
+    # Valid horizontal values per openpyxl; defensive against malformed CSS
+    # (e.g. css_style missing trailing ';' before appended border-left:none)
+    _valid_h = ('left', 'right', 'center', 'justify', 'general',
+                'distributed', 'fill', 'centerContinuous')
     if 'text-align' in styles:
-        align_kw['horizontal'] = styles['text-align']
+        ta = str(styles['text-align']).strip().lower()
+        if ta in _valid_h:
+            align_kw['horizontal'] = ta
     if 'vertical-align' in styles:
-        v = styles['vertical-align']
-        align_kw['vertical'] = 'center' if v == 'middle' else v
+        v = str(styles['vertical-align']).strip().lower()
+        if v == 'middle':
+            align_kw['vertical'] = 'center'
+        elif v in ('top', 'bottom', 'justify', 'distributed'):
+            align_kw['vertical'] = v
     if styles.get('white-space') in ('pre-wrap', 'pre', 'normal'):
         align_kw['wrap_text'] = True
     elif styles.get('white-space') == 'nowrap':
