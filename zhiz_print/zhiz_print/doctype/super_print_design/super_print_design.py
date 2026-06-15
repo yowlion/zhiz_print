@@ -1063,6 +1063,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             escaped = frappe.utils.escape_html(cell_value)
             if not escaped:
                 return escaped
+            escaped = re.sub(r' {2,}', lambda m: '&nbsp;' * len(m.group()), escaped)
             return re.sub(r'\r\n|\r|\n', '<br>', escaped)
 
     def _render_barcode_content(self, value, cell_data, cell_w=100, cell_h=40):
