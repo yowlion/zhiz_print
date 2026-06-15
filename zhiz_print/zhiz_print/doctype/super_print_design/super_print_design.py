@@ -888,7 +888,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if row_va:
                     style_attr += f'vertical-align:{row_va};'
                 if cell_data.get('css_style'):
-                    style_attr += cell_data['css_style']
+                    _cell_css = cell_data['css_style'].strip()
+                    if _cell_css and not _cell_css.endswith(';'):
+                        _cell_css += ';'
+                    style_attr += _cell_css
 
                 # Get cell value
                 cell_value = cell_data.get('cell_value', '')
@@ -1013,7 +1016,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if row_va:
                     empty_style += f'vertical-align:{row_va};'
                 if col_style.get('css_style'):
-                    empty_style += col_style['css_style']
+                    _col_css = col_style['css_style'].strip()
+                    if _col_css and not _col_css.endswith(';'):
+                        _col_css += ';'
+                    empty_style += _col_css
                 # Empty cell also checks merge borders
                 if col > 1:
                     left_merged = cell_grid[grid_row][grid_col - 1] if grid_row < len(
