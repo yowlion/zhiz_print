@@ -522,9 +522,19 @@ class SuperPrintDesign(frappe.model.document.Document):
             if not cell_value or cell_value.startswith(MERGED_PREFIX):
                 continue
 
-            cell_value = self._replace_doc_placeholders(cell_value, doc)
-            if data_item:
-                cell_value = self._replace_child_table_placeholders(cell_value, data_item)
+            # Logic cells: cell_value is a Python expression string, must eval first
+            cell_type = cell_data.get('cell_type', 'static')
+            if cell_type == 'logic':
+                try:
+                    cell_value = self._eval_logic_code(cell_value, doc, data_item)
+                except Exception:
+                    continue
+                if not cell_value:
+                    continue
+            else:
+                cell_value = self._replace_doc_placeholders(cell_value, doc)
+                if data_item:
+                    cell_value = self._replace_child_table_placeholders(cell_value, data_item)
 
             if not cell_value:
                 continue
