@@ -977,22 +977,16 @@ class SuperPrintDesign(frappe.model.document.Document):
                         # Constrain image to cell dimensions; do not let PNG natural size push the row
                         img_max_w = cell_w
                         img_max_h = cell_h
-                        # Parse text-align from cell css_style so img honors left/right alignment
-                        align = 'center'
-                        for prop in (cell_data.get('css_style') or '').split(';'):
-                            prop = prop.strip()
-                            if prop.startswith('text-align:'):
-                                align = prop.split(':', 1)[1].strip().lower()
-                                break
-                        margin_css = {
-                            'left':  'margin:0 auto 0 0;',
-                            'right': 'margin:0 0 0 auto;',
-                        }.get(align, 'margin:0 auto;')
+                        # Inline <img> honors <td> text-align (set via css_style) for left/right alignment.
+                        # Wrap in line-height:0/font-size:0 div to suppress inline baseline gap that
+                        # otherwise inflates row height. Height locked to cell_h prevents row oversize.
                         content = (
-                            f'<img src="{img_src}" style="display:block;'
-                            f'width:{img_max_w}px;height:{img_max_h}px;'
+                            f'<div style="line-height:0;font-size:0;">'
+                            f'<img src="{img_src}" style="'
+                            f'height:{img_max_h}px;'
                             f'max-width:{img_max_w}px;max-height:{img_max_h}px;'
-                            f'object-fit:contain;{margin_css}">'
+                            f'object-fit:contain;vertical-align:top;">'
+                            f'</div>'
                         )
 
                     # Suppress ghost borders from merge areas (WeasyPrint border-collapse compatibility)
