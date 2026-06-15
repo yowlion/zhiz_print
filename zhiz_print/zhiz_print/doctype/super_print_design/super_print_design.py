@@ -1060,7 +1060,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                 return f'<img src="{frappe.utils.escape_html(cell_value)}" style="max-width:100%;max-height:100%;object-fit:contain;">'
             return ''
         else:
-            return frappe.utils.escape_html(cell_value)
+            escaped = frappe.utils.escape_html(cell_value)
+            if not escaped:
+                return escaped
+            return re.sub(r'\r\n|\r|\n', '<br>', escaped)
 
     def _render_barcode_content(self, value, cell_data, cell_w=100, cell_h=40):
         """Render barcode"""

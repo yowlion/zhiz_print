@@ -510,7 +510,7 @@ class SuperPrintDesigner {
                     } else if (!hasValue) {
                         content = '';
                     } else {
-                        content = '<div class="super-zprint-cell-content">' + this.escapeHtml(cell_value) + '</div>';
+                        content = '<div class="super-zprint-cell-content">' + this.escapeHtml(cell_value).replace(/\r\n|\r|\n/g, '<br>') + '</div>';
                     }
 
                     const selectedClass = this.currentCell === cellId ? ' selected' : '';
