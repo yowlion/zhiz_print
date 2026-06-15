@@ -1261,6 +1261,8 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
             continue
 
         col = 1
+        row_max_lines = 1  # Track max line count for row height auto-fit
+        row_max_font_pt = 10.5  # Default font size (~14px → 10.5pt)
         for cell_elem in tr.find_all(['td', 'th']):
             while occupied.get((excel_row, col)):
                 col += 1
@@ -1268,8 +1270,12 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
             colspan = int(cell_elem.get('colspan', 1))
             rowspan = int(cell_elem.get('rowspan', 1))
 
-            # Get text
-            text = cell_elem.get_text(strip=True)
+            # Replace <br> with \n BEFORE text extraction to preserve newlines
+            for br in cell_elem.find_all('br'):
+                br.replace_with('\n')
+            # Get text — DO NOT use strip=True (would strip &nbsp; leading indent)
+            # Only strip leading/trailing newlines
+            text = cell_elem.get_text().strip('\n\r')
             if not text and cell_elem.find('img'):
                 text = cell_elem.find('img').get('alt', '')
 
@@ -1277,6 +1283,20 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
             cell_styles = _get_element_styles(cell_elem, css_rules)
             if cell_elem.name == 'th' and 'font-weight' not in cell_styles:
                 cell_styles['font-weight'] = 'bold'
+
+            # Auto-enable wrap_text for multi-line text (unless white-space explicitly set)
+            if '\n' in text and 'white-space' not in cell_styles:
+                cell_styles['white-space'] = 'pre-wrap'
+
+            # Track line count and font size for row height auto-fit (rowspan=1 cells only)
+            if rowspan == 1 and text:
+                lines = text.count('\n') + 1
+                if lines > row_max_lines:
+                    row_max_lines = lines
+            if 'font-size' in cell_styles:
+                fs_pt = _css_font_size_to_pt(cell_styles['font-size'])
+                if fs_pt and fs_pt > row_max_font_pt:
+                    row_max_font_pt = fs_pt
 
             # Check background image (QR/barcode/image cells)
             bg_img = _extract_background_image(cell_styles)
@@ -1314,12 +1334,18 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 
             col += colspan
 
-        # Row height
+        # Row height: take max of CSS height and content-required height
         row_styles = _get_element_styles(tr, css_rules)
-        if 'height' in row_styles:
-            h = _css_height_to_excel(row_styles['height'])
-            if h:
-                ws.row_dimensions[excel_row].height = h
+        css_h_pt = _css_height_to_excel(row_styles['height']) if 'height' in row_styles else None
+        required_h_pt = row_max_lines * row_max_font_pt * 1.3
+        if css_h_pt is not None:
+            # CSS height present: ensure at least enough for content
+            final_h = max(css_h_pt, required_h_pt)
+            ws.row_dimensions[excel_row].height = round(final_h, 2)
+        elif row_max_lines > 1:
+            # No CSS height but multi-line content: set required height
+            ws.row_dimensions[excel_row].height = round(required_h_pt, 2)
+        # else: no CSS height and single line — leave unset for Excel auto-fit
 
         excel_row += 1
 
