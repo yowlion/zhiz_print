@@ -5,6 +5,7 @@
 from __future__ import unicode_literals
 import frappe
 import json
+import os
 import re
 
 
@@ -341,3 +342,70 @@ def generate_qrcode_base64(value, width=100, height=100):
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), 'QR code generation failed')
 		return None
+
+
+# Maximum image size to embed as base64 data URI (10MB) — larger images fall back to URL mode
+IMAGE_BASE64_MAX_SIZE = 10 * 1024 * 1024
+
+
+def image_to_base64_src(src_value):
+	"""Convert image URL or local file path to base64 data URI for self-contained PDF rendering.
+
+	Supported inputs:
+	- ``data:`` URI (returned as-is, idempotent)
+	- ``http://`` / ``https://`` URLs (downloaded via requests)
+	- ``/files/...`` Frappe public files (resolved against site public path)
+	- ``/private/files/...`` Frappe private files (resolved against site private path)
+
+	Falls back to the original src on any failure so rendering degrades to URL mode gracefully.
+	Returns None if input is empty.
+	"""
+	if not src_value:
+		return None
+
+	src = src_value.strip()
+	if not src:
+		return None
+
+	if src.startswith('data:'):
+		return src
+
+	try:
+		import mimetypes
+		import base64
+
+		if src.startswith(('http://', 'https://')):
+			import requests
+			resp = requests.get(src, timeout=10, verify=False, allow_redirects=True)
+			resp.raise_for_status()
+			img_data = resp.content
+			mime = (resp.headers.get('Content-Type') or '').split(';')[0].strip()
+			if not mime or not mime.startswith('image/'):
+				mime = mimetypes.guess_type(src)[0] or 'image/png'
+		elif src.startswith('/private/files/'):
+			file_name = os.path.basename(src)
+			file_path = os.path.join(frappe.get_site_path('private', 'files'), file_name)
+			with open(file_path, 'rb') as f:
+				img_data = f.read()
+			mime = mimetypes.guess_type(file_path)[0] or 'image/png'
+		elif src.startswith('/files/'):
+			file_name = os.path.basename(src)
+			file_path = os.path.join(frappe.get_site_path('public', 'files'), file_name)
+			with open(file_path, 'rb') as f:
+				img_data = f.read()
+			mime = mimetypes.guess_type(file_path)[0] or 'image/png'
+		else:
+			return src
+
+		if len(img_data) > IMAGE_BASE64_MAX_SIZE:
+			frappe.log_error(
+				message=f'Size={len(img_data)} > {IMAGE_BASE64_MAX_SIZE}',
+				title=f'Image to base64 skipped (oversize): {src[:80]}'
+			)
+			return src
+
+		encoded = base64.b64encode(img_data).decode('ascii')
+		return f'data:{mime};base64,{encoded}'
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), f'Image to base64 failed: {src[:80]}')
+		return src

@@ -12,7 +12,7 @@ from frappe import _
 from frappe.utils import cint
 from zhiz_print.utils.query_executor import (
     is_merged_cell, extract_master_id,
-    generate_barcode_base64, generate_qrcode_base64,
+    generate_barcode_base64, generate_qrcode_base64, image_to_base64_src,
     execute_query_code, parse_parameters, replace_dynamic_params,
     _is_function_path, _call_query_function, format_query_result
 )
@@ -1067,7 +1067,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             return self._render_qrcode_content(cell_value, cell_data, cell_w, cell_h)
         elif cell_type == 'image':
             if cell_value:
-                return f'<img src="{frappe.utils.escape_html(cell_value)}" style="max-width:100%;max-height:100%;object-fit:contain;">'
+                if cint(frappe.db.get_single_value("Zprint Setting", "explicit_image_preview")):
+                    img_src = image_to_base64_src(cell_value) or cell_value
+                else:
+                    img_src = frappe.utils.escape_html(cell_value)
+                return f'<img src="{img_src}" style="max-width:100%;max-height:100%;object-fit:contain;">'
             return ''
         else:
             escaped = frappe.utils.escape_html(cell_value)

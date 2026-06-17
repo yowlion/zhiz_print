@@ -334,3 +334,6 @@ No matching template found,未找到匹配的模板
 Priority,优先级
 "Lower number means higher priority. Used for template ordering and auto-match selection.",数字越小优先级越高。用于模板排序和自动匹配选择。
 Logic Code,条件表达式
+Image Rendering,图片渲染
+Use Explicit Image Rendering,使用显式方式渲染图片
+"When enabled, images are embedded as base64 data URIs for self-contained PDF output. Otherwise referenced by URL.",启用后图片以 base64 数据 URI 内嵌到 PDF 输出中，否则使用 URL 引用方式。

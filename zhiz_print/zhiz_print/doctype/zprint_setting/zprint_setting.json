@@ -10,6 +10,8 @@
     "print_enable_mode",
     "column_break_print_engine",
     "pdf_engine_mode",
+    "section_break_image_render",
+    "explicit_image_preview",
     "section_break_print_doctypes",
     "print_enabled_doctypes",
     "section_break_export",
@@ -55,6 +57,20 @@
       "fieldtype": "Select",
       "label": "PDF Engine Mode",
       "options": "WeasyPrint\nwkhtmltopdf\nChromium"
+    },
+    {
+      "depends_on": "eval:doc.enable_super_print_page",
+      "fieldname": "section_break_image_render",
+      "fieldtype": "Section Break",
+      "label": "Image Rendering"
+    },
+    {
+      "default": "0",
+      "depends_on": "eval:doc.enable_super_print_page",
+      "description": "When enabled, images are embedded as base64 data URIs for self-contained PDF output. Otherwise referenced by URL.",
+      "fieldname": "explicit_image_preview",
+      "fieldtype": "Check",
+      "label": "Use Explicit Image Rendering"
     },
     {
       "depends_on": "eval:doc.enable_super_print_page && doc.print_enable_mode==='Enable for Specific'",
