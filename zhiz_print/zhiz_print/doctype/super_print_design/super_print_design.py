@@ -211,6 +211,10 @@ class SuperPrintDesign(frappe.model.document.Document):
         - row: current child table row (Data-Driven Row)
         - frappe: frappe module (for advanced use)
         - get_value(doctype, name, field): fast SQL single-field lookup, returns '' on None/empty
+        - fmt(value, precision=2): format numeric value as fixed-decimal string
+          (str.format is blocked by safe_eval — "format is an unsafe attribute")
+        - flt(value): alias for frappe.utils.flt (safe_eval blocks frappe.utils.* attribute access)
+        - max/min/round: builtins (safe_eval hides them by default)
         """
         try:
             def get_value(doctype, name, field):
@@ -219,11 +223,22 @@ class SuperPrintDesign(frappe.model.document.Document):
                 v = frappe.db.get_value(doctype, name, field)
                 return '' if v is None else str(v)
 
+            def fmt(value, precision=2):
+                try:
+                    return f"%.{precision}f" % frappe.utils.flt(value)
+                except Exception:
+                    return str(value) if value is not None else ''
+
             local_vars = {
                 'doc': doc,
                 'row': row,
                 'frappe': frappe,
                 'get_value': get_value,
+                'fmt': fmt,
+                'flt': frappe.utils.flt,
+                'max': max,
+                'min': min,
+                'round': round,
             }
             result = frappe.safe_eval(expr, {}, local_vars)
             return str(result) if result is not None else ''
