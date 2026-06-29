@@ -197,7 +197,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
 def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Generate merged PDF for multiple documents by concatenating HTML first."""
     from zhiz_print.api.print_designer import (
-        _check_license, _render_print_html, _pdf_response,
+        _check_license, _check_draft_no_print, _render_print_html, _pdf_response,
         _fix_merged_cell_borders_for_pdf, _prepare_html_for_wkhtmltopdf,
     )
 
@@ -221,6 +221,13 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
 
     if auto_match:
         doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
+        # Filter out draft designs (draft_no_print == 1). cint() coerces INT(1) col.
+        doc_matches = {
+            dn: info for dn, info in doc_matches.items()
+            if frappe.utils.cint(frappe.db.get_value("Super Print Design", info["name"], "draft_no_print")) != 1
+        }
+        if not doc_matches:
+            frappe.throw(_("All matched designs are drafts and cannot be printed. Please uncheck 'Draft No Print' in the design(s) first."), frappe.PermissionError)
 
         for idx, docname in enumerate(docnames):
             matched = doc_matches.get(docname)
@@ -260,6 +267,7 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
     else:
         if not design_name:
             frappe.throw(_("Design name is required"))
+        _check_draft_no_print(design_name)
         design = frappe.get_doc("Super Print Design", design_name)
 
         for idx, docname in enumerate(docnames):
@@ -369,7 +377,7 @@ def _generate_chromium_pdf(html, design):
 @frappe.whitelist()
 def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Export multi-sheet Excel for multiple documents."""
-    from zhiz_print.api.print_designer import _check_license
+    from zhiz_print.api.print_designer import _check_license, _check_draft_no_print
     from io import BytesIO
     from bs4 import BeautifulSoup
     import openpyxl
@@ -392,6 +400,11 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
 
     if auto_match:
         doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
+        # Filter out draft designs (draft_no_print == 1). cint() coerces INT(1) col.
+        doc_matches = {
+            dn: info for dn, info in doc_matches.items()
+            if frappe.utils.cint(frappe.db.get_value("Super Print Design", info["name"], "draft_no_print")) != 1
+        }
 
         for idx, docname in enumerate(docnames):
             matched = doc_matches.get(docname)
@@ -414,6 +427,7 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
     else:
         if not design_name:
             frappe.throw(_("Design name is required"))
+        _check_draft_no_print(design_name)
         design = frappe.get_doc("Super Print Design", design_name)
 
         for idx, docname in enumerate(docnames):

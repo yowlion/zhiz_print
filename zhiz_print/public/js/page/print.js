@@ -130,6 +130,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	// ==================== Toolbar Override ====================
 
+	_is_draft_design() {
+		const v = this.current_design_info?.draft_no_print;
+		return v === 1 || v === '1' || v === true;
+	}
+
 	setup_toolbar() {
 		if (!this.is_super_print_mode) {
 			super.setup_toolbar();
@@ -144,13 +149,23 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		$(this.page.inner_toolbar).find('.inner-page-message').remove();
 
 		// Keep only: Print primary button + Export buttons (based on settings)
-		this.page.set_primary_action(__('Print'), () => this.printit(), 'printer');
-		const pd = frappe.boot.zhiz_print?.print_designer;
-		if (pd?.allow_export_pdf !== false) {
-			this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
-		}
-		if (pd?.allow_export_excel !== false) {
-			this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
+		// Draft designs (draft_no_print) are preview-only: no Print / Export buttons.
+		if (this._is_draft_design()) {
+			this.page.set_primary_action(__('Draft — Preview Only'), () => {
+				frappe.show_alert({
+					message: __('This design is marked as draft. Preview only — printing and export are disabled. Uncheck "Draft No Print" in the design to enable.'),
+					indicator: 'orange',
+				});
+			}, 'lock');
+		} else {
+			this.page.set_primary_action(__('Print'), () => this.printit(), 'printer');
+			const pd = frappe.boot.zhiz_print?.print_designer;
+			if (pd?.allow_export_pdf !== false) {
+				this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
+			}
+			if (pd?.allow_export_excel !== false) {
+				this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
+			}
 		}
 
 		// Zoom controls
@@ -293,6 +308,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		this.current_design = design.name;
 		this.current_design_info = design;
+		this.setup_toolbar();
 
 		// Parameter dialog
 		if (design.has_parameters && design.parameters?.length > 0) {
@@ -574,6 +590,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	}
 
 	async super_printit() {
+		if (this._is_draft_design()) {
+			frappe.show_alert({
+				message: __('This design is marked as draft. Preview only — printing is disabled.'),
+				indicator: 'orange',
+			});
+			return;
+		}
 		if (!this.current_preview_html) {
 			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			return;
@@ -629,6 +652,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	}
 
 	async generate_super_pdf() {
+		if (this._is_draft_design()) {
+			frappe.show_alert({
+				message: __('This design is marked as draft. Preview only — PDF export is disabled.'),
+				indicator: 'orange',
+			});
+			return;
+		}
 		if (!this.current_design) {
 			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			return;
@@ -654,6 +684,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 
 	async export_super_excel() {
+		if (this._is_draft_design()) {
+			frappe.show_alert({
+				message: __('This design is marked as draft. Preview only — Excel export is disabled.'),
+				indicator: 'orange',
+			});
+			return;
+		}
 		if (!this.current_design) {
 			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
 			return;

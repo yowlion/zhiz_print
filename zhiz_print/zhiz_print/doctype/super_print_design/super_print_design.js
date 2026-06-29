@@ -263,15 +263,28 @@ class SuperPrintDesigner {
             }
         }
 
-        // Fill empty cells
+        // Fill empty cells — inherit row_display / row_type from sibling cells in the same row
+        // (these are row-level attributes stored per-cell; auto-fill cells must stay consistent
+        // with user-configured siblings or the live preview / dropdown will read the wrong value)
         for (let row = 0; row < this.rows; row++) {
+            let inheritedDisplay = '';
+            let inheritedType = '';
+            for (let col = 0; col < this.cols; col++) {
+                const c = this.grid[row][col];
+                if (c && !c._merged) {
+                    if (!inheritedDisplay && c.row_display) inheritedDisplay = c.row_display;
+                    if (!inheritedType && c.row_type) inheritedType = c.row_type;
+                }
+            }
             for (let col = 0; col < this.cols; col++) {
                 if (!this.grid[row][col]) {
                     const cellId = `R${row + 1}C${col + 1}`;
                     const cellData = {
                         cell_id: cellId, row: row + 1, col: col + 1,
                         rowspan: 1, colspan: 1, cell_type: 'static',
-                        cell_value: '', css_style: defaultCellStyle
+                        cell_value: '', css_style: defaultCellStyle,
+                        row_type: inheritedType || '',
+                        row_display: inheritedDisplay || ''
                     };
                     this.grid[row][col] = cellData;
                     this.cellDataMap[cellId] = cellData;
@@ -460,9 +473,10 @@ class SuperPrintDesigner {
             }
             let rowStyleAttr = 'height:' + (rowStyle.height || 20) + 'px;';
             if (rowCss) rowStyleAttr += rowCss;
-            // Row display effect
-            const firstCellInRow = this.grid[row - 1]?.[0];
-            const rowDisplay = firstCellInRow?.row_display || '';
+            // Row display effect — use getFirstNonMergedCell which prefers cells with
+            // non-empty row_display, so auto-filled blank cells don't mask the row's actual setting
+            const rowDisplayCell = this.getFirstNonMergedCell(row);
+            const rowDisplay = rowDisplayCell?.row_display || '';
             if (rowDisplay === 'Fixed Height') rowStyleAttr += 'overflow:hidden;white-space:nowrap;';
             else if (rowDisplay === 'Auto Shrink Font') rowStyleAttr += 'overflow:hidden;';
             rowStyleAttr += 'line-height:1;';
@@ -863,6 +877,14 @@ class SuperPrintDesigner {
     // ==================== Row Type / Row Display Effect ====================
 
     getFirstNonMergedCell(row) {
+        // Pass 1: prefer a cell whose row_display is non-empty — auto-filled blank cells
+        // (e.g. R{row}C1 under a rowspan) often carry empty row_display and would
+        // otherwise make the dropdown / live preview read the wrong value.
+        for (let c = 0; c < this.cols; c++) {
+            const cell = this.grid[row - 1]?.[c];
+            if (cell && !cell._merged && cell.row_display) return cell;
+        }
+        // Pass 2: fall back to any non-merged cell
         for (let c = 0; c < this.cols; c++) {
             const cell = this.grid[row - 1]?.[c];
             if (cell && !cell._merged) return cell;
@@ -1923,7 +1945,8 @@ class SuperPrintDesigner {
     createBlankItem(row, col) {
         return {
             cell_id: 'R' + row + 'C' + col, row, col, rowspan: 1, colspan: 1,
-            cell_type: 'static', cell_value: '', css_style: this.getDefaultCellCss()
+            cell_type: 'static', cell_value: '', css_style: this.getDefaultCellCss(),
+            row_type: '', row_display: ''
         };
     }
 

@@ -13,6 +13,8 @@
     "enabled",
     "column_break_priority",
     "priority",
+    "column_break_draft",
+    "draft_no_print",
     "section_basic",
     "design_name",
     "target_doctype",
@@ -93,6 +95,19 @@
       "in_list_view": 1,
       "in_standard_filter": 1,
       "description": "Lower number means higher priority. Used for template ordering and auto-match selection."
+    },
+    {
+      "fieldname": "column_break_draft",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "1",
+      "fieldname": "draft_no_print",
+      "fieldtype": "Check",
+      "label": "Draft No Print",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "When checked, design can be previewed but cannot be printed or exported (PDF / Excel / batch). Uncheck to make the design live."
     },
     {
       "fieldname": "section_basic",

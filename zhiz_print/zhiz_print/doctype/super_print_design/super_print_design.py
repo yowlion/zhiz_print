@@ -349,16 +349,24 @@ class SuperPrintDesign(frappe.model.document.Document):
     # ==================== Row Metadata ====================
 
     def _build_row_metadata(self):
-        """Build row-level mapping from design_items"""
+        """Build row-level mapping from design_items.
+
+        row_display / row_type are stored per-cell but applied per-row.
+        We use FIRST-non-empty-wins (instead of last-write-wins) so that
+        auto-generated blank cells (which often have empty row_display)
+        don't override values set on user-configured cells in the same row.
+        Iteration order is Frappe's idx order which roughly follows creation
+        order — user-configured cells typically have lower idx than auto-fill cells.
+        """
         row_type_map = {}
         row_display_map = {}
         if self.design_items:
             for item in self.design_items:
                 rt = (item.row_type or '').strip()
                 rd = (item.row_display or '').strip()
-                if rt and rt != 'Normal Row':
+                if rt and rt != 'Normal Row' and item.row not in row_type_map:
                     row_type_map[item.row] = rt
-                if rd:
+                if rd and item.row not in row_display_map:
                     row_display_map[item.row] = rd
         return row_type_map, row_display_map
 
@@ -548,15 +556,39 @@ class SuperPrintDesign(frappe.model.document.Document):
             if cell_w <= 0:
                 continue
 
-            # Subtract 2px border (1px each side with border-collapse)
-            effective_w = max(1, cell_w - 2)
+            # Subtract border + padding safety margin (border-collapse 1px each side + cell padding slack)
+            # was cell_w - 2, which underestimated wrap-triggering at the critical width boundary
+            effective_w = max(1, cell_w - 6)
 
-            # Calculate actual text width: Chinese ~font_size, others ~font_size*0.55
+            # Per-category char width estimation (more accurate than flat 0.55 for ASCII-heavy text)
+            # Browser metrics (Microsoft YaHei, Arial) approximated as ratio of font-size:
+            # - CJK chars: ~1.00
+            # - Digits 0-9: ~0.60 (numbers in specs/quantities often sit near the wrap boundary)
+            # - Uppercase A-Z: ~0.65 (W/M/@ wider)
+            # - Lowercase a-z: ~0.50
+            # - Symbols (*, /, -, ., etc.): ~0.45
             text = str(cell_value)
             cn_chars = len(_re.findall(r'[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]', text))
-            other_chars = len(text) - cn_chars
-            total_text_width = cn_chars * actual_font_size + other_chars * actual_font_size * 0.55
-            lines_needed = max(1, math.ceil(total_text_width / effective_w))
+            digit_chars = len(_re.findall(r'[0-9]', text))
+            upper_chars = len(_re.findall(r'[A-Z]', text))
+            lower_chars = len(_re.findall(r'[a-z]', text))
+            symbol_chars = len(text) - cn_chars - digit_chars - upper_chars - lower_chars
+            total_text_width = (
+                cn_chars * actual_font_size
+                + digit_chars * actual_font_size * 0.60
+                + upper_chars * actual_font_size * 0.65
+                + lower_chars * actual_font_size * 0.50
+                + symbol_chars * actual_font_size * 0.45
+            )
+
+            # Critical-width protection: when text width falls in 85%-100% of cell width,
+            # browsers trigger word-break:break-all wrapping even though math says it fits.
+            # Treat as 2 lines to match actual render behavior and avoid silent row clipping.
+            ratio = total_text_width / effective_w if effective_w > 0 else 1.0
+            if 0.85 <= ratio <= 1.0:
+                lines_needed = 2
+            else:
+                lines_needed = max(1, math.ceil(total_text_width / effective_w))
             content_height = lines_needed * actual_font_size
 
             max_content_height = max(max_content_height, content_height)

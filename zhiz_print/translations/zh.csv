@@ -337,3 +337,12 @@ Logic Code,条件表达式
 Image Rendering,图片渲染
 Use Explicit Image Rendering,使用显式方式渲染图片
 "When enabled, images are embedded as base64 data URIs for self-contained PDF output. Otherwise referenced by URL.",启用后图片以 base64 数据 URI 内嵌到 PDF 输出中，否则使用 URL 引用方式。
+Draft No Print,草稿不能打印
+"When checked, design can be previewed but cannot be printed or exported (PDF / Excel / batch). Uncheck to make the design live.",勾选后该设计仅可预览，不能打印或导出（PDF / Excel / 批量），取消勾选可正式启用该设计。
+Draft — Preview Only,草稿 — 仅可预览
+"This design is marked as draft. Preview only — printing and export are disabled. Uncheck \"Draft No Print\" in the design to enable.",该设计标记为草稿。仅可预览 — 打印和导出已禁用。请在设计中取消勾选"草稿不能打印"以启用。
+"This design is marked as draft. Preview only — printing is disabled.",该设计标记为草稿。仅可预览 — 打印已禁用。
+"This design is marked as draft. Preview only — PDF export is disabled.",该设计标记为草稿。仅可预览 — PDF 导出已禁用。
+"This design is marked as draft. Preview only — Excel export is disabled.",该设计标记为草稿。仅可预览 — Excel 导出已禁用。
+"Design '{0}' is marked as draft and cannot be printed or exported. Please uncheck 'Draft No Print' in the design first.",设计"{0}"标记为草稿，不能打印或导出。请先在设计中取消勾选"草稿不能打印"。
+"All matched designs are drafts and cannot be printed. Please uncheck 'Draft No Print' in the design(s) first.",所有匹配的设计均为草稿，不能打印。请先在设计中取消勾选"草稿不能打印"。

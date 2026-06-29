@@ -24,6 +24,25 @@ def _check_license():
         ))
 
 
+def _check_draft_no_print(design_name):
+    """Hard server-side gate: block print/export on draft designs.
+
+    Returns True (passes) when design is printable; raises PermissionError when
+    draft_no_print == 1. Tolerates NULL/0 (existing records pre-migration or
+    designs explicitly unchecked) to avoid false positives.
+
+    Note: db.get_value returns int for INT(1) columns, so use cint() to coerce
+    rather than string comparison which would silently pass (1 != "1").
+    """
+    if not design_name:
+        return
+    if cint(frappe.db.get_value("Super Print Design", design_name, "draft_no_print")) == 1:
+        frappe.throw(
+            _("Design '{0}' is marked as draft and cannot be printed or exported. Please uncheck 'Draft No Print' in the design first.").format(design_name),
+            frappe.PermissionError,
+        )
+
+
 @frappe.whitelist()
 def get_available_designs(doctype, docname=None):
     """Get list of available print designs for a DocType"""
@@ -44,7 +63,7 @@ def get_available_designs(doctype, docname=None):
             "target_doctype": doctype,
             "enabled": 1,
         },
-        fields=["name", "design_name", "print_paper", "priority"],
+        fields=["name", "design_name", "print_paper", "priority", "draft_no_print"],
         order_by="priority asc, design_name"
     )
 
@@ -276,6 +295,7 @@ def _pdf_response(pdf_bytes, filename):
 def generate_print_pdf(doctype, docname, design_name, params=None):
     """Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting."""
     _check_license()
+    _check_draft_no_print(design_name)
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
     if engine_mode == "WeasyPrint":
         return _generate_print_pdf_weasyprint(doctype, docname, design_name, params)
@@ -1376,6 +1396,7 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 def export_print_excel(doctype, docname, design_name=None, params=None):
     """Export print design data to Excel file download."""
     _check_license()
+    _check_draft_no_print(design_name)
     from io import BytesIO
     from frappe.utils.xlsxutils import make_xlsx
     from bs4 import BeautifulSoup
