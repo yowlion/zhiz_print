@@ -56,6 +56,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         this.current_params = {};
         this.preview_results = [];
         this.preview_errors = [];
+        this.preview_skipped = [];
     }
 
     async setup_page() {
@@ -315,6 +316,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
             this.preview_results = result.message.results || [];
             this.preview_errors = result.message.errors || [];
+            this.preview_skipped = result.message.skipped || [];
 
             if (this.preview_results.length === 0) {
                 area.innerHTML =
@@ -435,6 +437,24 @@ zhiz_print.BatchPrintView = class BatchPrintView {
                     this.preview_errors.map((e) => "<li>" + this.esc(e.docname) + ": " + this.esc(e.error) + "</li>").join("") +
                     "</ul>";
                 pagesContainer.appendChild(errBox);
+            }
+
+            // Show skipped drafts at bottom (info, not error — policy-driven, not a failure)
+            if (this.preview_skipped && this.preview_skipped.length > 0) {
+                const skipBox = document.createElement("div");
+                skipBox.className = "sp-batch-skipped-summary";
+                skipBox.innerHTML =
+                    '<i class="fa fa-info-circle" style="color:#1976d2"></i> ' +
+                    this.esc(String(this.preview_skipped.length)) + " " +
+                    __("document(s) skipped as draft (design disables draft printing)") +
+                    "<ul>" +
+                    this.preview_skipped.map((s) => {
+                        let label = this.esc(s.docname);
+                        if (s.design_label) label += " — " + this.esc(s.design_label);
+                        return "<li>" + label + "</li>";
+                    }).join("") +
+                    "</ul>";
+                pagesContainer.appendChild(skipBox);
             }
 
             area.appendChild(pagesContainer);

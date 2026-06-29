@@ -113,7 +113,7 @@ def check_batch_print_enabled(doctype):
 @frappe.whitelist()
 def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Render preview HTML for multiple documents."""
-    from zhiz_print.api.print_designer import _check_license, _render_print_html
+    from zhiz_print.api.print_designer import _check_license, _render_print_html, _is_draft_blocked
 
     _check_license()
 
@@ -128,6 +128,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
 
     results = []
     errors = []
+    skipped = []
 
     if auto_match:
         doc_matches, _matched_set = _auto_match_designs_for_docs(doctype, docnames)
@@ -137,8 +138,23 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
             if not matched:
                 errors.append({"docname": docname, "error": "No matching template found"})
                 continue
+            dname = matched["name"]
+            # v15.04.27: skip drafts when design has draft_no_print=1 — preview, PDF, Excel all
+            # apply the same per-doc policy so what you see matches what you can export.
             try:
-                dname = matched["name"]
+                if _is_draft_blocked(dname, frappe.get_doc(doctype, docname)):
+                    skipped.append({
+                        "docname": docname,
+                        "design_name": dname,
+                        "design_label": matched.get("design_name", dname),
+                        "reason": "draft",
+                    })
+                    continue
+            except Exception as e:
+                frappe.log_error(f"Batch draft check failed for {doctype} {docname}: {e}")
+                errors.append({"docname": docname, "error": str(e)})
+                continue
+            try:
                 html, _ctx = _render_print_html(doctype, docname, dname, params, skip_px_scaling=True)
                 results.append({
                     "docname": docname,
@@ -172,6 +188,20 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
             margin_right = paper.margin_right or 0
 
         for docname in docnames:
+            # v15.04.27: skip drafts per-doc — submitted docs proceed, drafts are listed in `skipped`.
+            try:
+                if _is_draft_blocked(design_name, frappe.get_doc(doctype, docname)):
+                    skipped.append({
+                        "docname": docname,
+                        "design_name": design_name,
+                        "design_label": design.design_name,
+                        "reason": "draft",
+                    })
+                    continue
+            except Exception as e:
+                frappe.log_error(f"Batch draft check failed for {doctype} {docname}: {e}")
+                errors.append({"docname": docname, "error": str(e)})
+                continue
             try:
                 html, _ctx = _render_print_html(doctype, docname, design_name, params, skip_px_scaling=True)
                 results.append({
@@ -190,7 +220,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
                 frappe.log_error(f"Batch render failed for {doctype} {docname}: {e}")
                 errors.append({"docname": docname, "error": str(e)})
 
-    return {"results": results, "errors": errors}
+    return {"results": results, "errors": errors, "skipped": skipped}
 
 
 @frappe.whitelist()
