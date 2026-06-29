@@ -24,21 +24,34 @@ def _check_license():
         ))
 
 
-def _check_draft_no_print(design_name):
-    """Hard server-side gate: block print/export on draft designs.
+def _is_draft_blocked(design_name, doc=None):
+    """Returns True if printing should be blocked for this doc under this design.
 
-    Returns True (passes) when design is printable; raises PermissionError when
-    draft_no_print == 1. Tolerates NULL/0 (existing records pre-migration or
-    designs explicitly unchecked) to avoid false positives.
+    Semantic (v15.04.25): draft_no_print is a per-design toggle that protects
+    *draft documents* (docstatus=0) from being printed/exported. It is NOT about
+    the design itself being a draft. Submitted documents pass through even when
+    the design has draft_no_print=1.
 
-    Note: db.get_value returns int for INT(1) columns, so use cint() to coerce
-    rather than string comparison which would silently pass (1 != "1").
+    db.get_value returns int for INT(1) columns, so use cint() to coerce rather
+    than string comparison which would silently pass (1 != "1").
     """
-    if not design_name:
-        return
-    if cint(frappe.db.get_value("Super Print Design", design_name, "draft_no_print")) == 1:
+    if not design_name or doc is None:
+        return False
+    if cint(frappe.db.get_value("Super Print Design", design_name, "draft_no_print")) != 1:
+        return False
+    return cint(getattr(doc, "docstatus", 0) or 0) == 0
+
+
+def _check_draft_no_print(design_name, doc=None):
+    """Hard server-side gate: block print/export when design has draft_no_print=1
+    AND the document is in draft state (docstatus=0). Raises PermissionError.
+
+    v15.04.25 semantic change: previously this threw whenever draft_no_print=1
+    regardless of doc state. Now it only throws for draft documents.
+    """
+    if _is_draft_blocked(design_name, doc):
         frappe.throw(
-            _("Design '{0}' is marked as draft and cannot be printed or exported. Please uncheck 'Draft No Print' in the design first.").format(design_name),
+            _("Document '{0}' is in draft state and design '{1}' has 'Draft No Print' enabled. Submit the document before printing or exporting.").format(getattr(doc, "name", "?"), design_name),
             frappe.PermissionError,
         )
 
@@ -295,7 +308,7 @@ def _pdf_response(pdf_bytes, filename):
 def generate_print_pdf(doctype, docname, design_name, params=None):
     """Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting."""
     _check_license()
-    _check_draft_no_print(design_name)
+    _check_draft_no_print(design_name, frappe.get_doc(doctype, docname))
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
     if engine_mode == "WeasyPrint":
         return _generate_print_pdf_weasyprint(doctype, docname, design_name, params)
@@ -1396,7 +1409,7 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 def export_print_excel(doctype, docname, design_name=None, params=None):
     """Export print design data to Excel file download."""
     _check_license()
-    _check_draft_no_print(design_name)
+    _check_draft_no_print(design_name, frappe.get_doc(doctype, docname))
     from io import BytesIO
     from frappe.utils.xlsxutils import make_xlsx
     from bs4 import BeautifulSoup

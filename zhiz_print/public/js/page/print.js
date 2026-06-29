@@ -130,9 +130,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	// ==================== Toolbar Override ====================
 
-	_is_draft_design() {
-		const v = this.current_design_info?.draft_no_print;
-		return v === 1 || v === '1' || v === true;
+	_is_preview_only() {
+		// v15.04.25: draft_no_print is a per-design toggle that blocks printing
+		// when the *document* is in draft state (docstatus=0). Submitted docs
+		// print normally even when the design has draft_no_print=1.
+		const designFlagged = this.current_design_info?.draft_no_print;
+		const isDesignFlagged = designFlagged === 1 || designFlagged === '1' || designFlagged === true;
+		const docstatus = parseInt(this.frm?.doc?.docstatus || 0, 10);
+		return isDesignFlagged && docstatus === 0;
 	}
 
 	setup_toolbar() {
@@ -149,11 +154,12 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		$(this.page.inner_toolbar).find('.inner-page-message').remove();
 
 		// Keep only: Print primary button + Export buttons (based on settings)
-		// Draft designs (draft_no_print) are preview-only: no Print / Export buttons.
-		if (this._is_draft_design()) {
-			this.page.set_primary_action(__('Draft — Preview Only'), () => {
+		// v15.04.25: hide Print / Export when doc is draft (docstatus=0) and design
+		// has draft_no_print=1. Submitted documents always show full toolbar.
+		if (this._is_preview_only()) {
+			this.page.set_primary_action(__('Draft Document — Preview Only'), () => {
 				frappe.show_alert({
-					message: __('This design is marked as draft. Preview only — printing and export are disabled. Uncheck "Draft No Print" in the design to enable.'),
+					message: __('This document is in draft state (not submitted). Printing and export are disabled by the design\'s "Draft No Print" setting. Submit the document first.'),
 					indicator: 'orange',
 				});
 			}, 'lock');
@@ -590,7 +596,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	}
 
 	async super_printit() {
-		if (this._is_draft_design()) {
+		if (this._is_preview_only()) {
 			frappe.show_alert({
 				message: __('This design is marked as draft. Preview only — printing is disabled.'),
 				indicator: 'orange',
@@ -652,7 +658,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	}
 
 	async generate_super_pdf() {
-		if (this._is_draft_design()) {
+		if (this._is_preview_only()) {
 			frappe.show_alert({
 				message: __('This design is marked as draft. Preview only — PDF export is disabled.'),
 				indicator: 'orange',
@@ -684,7 +690,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 
 	async export_super_excel() {
-		if (this._is_draft_design()) {
+		if (this._is_preview_only()) {
 			frappe.show_alert({
 				message: __('This design is marked as draft. Preview only — Excel export is disabled.'),
 				indicator: 'orange',

@@ -130,7 +130,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
     errors = []
 
     if auto_match:
-        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
+        doc_matches, _matched_set = _auto_match_designs_for_docs(doctype, docnames)
 
         for docname in docnames:
             matched = doc_matches.get(docname)
@@ -139,7 +139,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
                 continue
             try:
                 dname = matched["name"]
-                html, _ = _render_print_html(doctype, docname, dname, params, skip_px_scaling=True)
+                html, _ctx = _render_print_html(doctype, docname, dname, params, skip_px_scaling=True)
                 results.append({
                     "docname": docname,
                     "html": html,
@@ -173,7 +173,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
 
         for docname in docnames:
             try:
-                html, _ = _render_print_html(doctype, docname, design_name, params, skip_px_scaling=True)
+                html, _ctx = _render_print_html(doctype, docname, design_name, params, skip_px_scaling=True)
                 results.append({
                     "docname": docname,
                     "html": html,
@@ -197,7 +197,8 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
 def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Generate merged PDF for multiple documents by concatenating HTML first."""
     from zhiz_print.api.print_designer import (
-        _check_license, _check_draft_no_print, _render_print_html, _pdf_response,
+        _check_license, _check_draft_no_print, _is_draft_blocked,
+        _render_print_html, _pdf_response,
         _fix_merged_cell_borders_for_pdf, _prepare_html_for_wkhtmltopdf,
     )
 
@@ -220,14 +221,16 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
     import re
 
     if auto_match:
-        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
-        # Filter out draft designs (draft_no_print == 1). cint() coerces INT(1) col.
+        doc_matches, _matched_set = _auto_match_designs_for_docs(doctype, docnames)
+        # v15.04.25: draft_no_print now blocks per-doc (docstatus=0), not per-design.
+        # Filter doc_matches so that any (doc, design) pair where the doc is draft
+        # AND the design has draft_no_print=1 is dropped. Submitted docs keep all designs.
         doc_matches = {
             dn: info for dn, info in doc_matches.items()
-            if frappe.utils.cint(frappe.db.get_value("Super Print Design", info["name"], "draft_no_print")) != 1
+            if not _is_draft_blocked(info["name"], frappe.get_doc(doctype, dn))
         }
         if not doc_matches:
-            frappe.throw(_("All matched designs are drafts and cannot be printed. Please uncheck 'Draft No Print' in the design(s) first."), frappe.PermissionError)
+            frappe.throw(_("All matched documents are in draft state and cannot be printed. Submit them first."), frappe.PermissionError)
 
         for idx, docname in enumerate(docnames):
             matched = doc_matches.get(docname)
@@ -235,7 +238,7 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
                 continue
             try:
                 dname = matched["name"]
-                html, _ = _render_print_html(doctype, docname, dname, params)
+                html, _ctx = _render_print_html(doctype, docname, dname, params)
                 body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
                 style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
 
@@ -267,12 +270,15 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
     else:
         if not design_name:
             frappe.throw(_("Design name is required"))
-        _check_draft_no_print(design_name)
+        # v15.04.25: per-doc draft check moved into loop — submitted docs proceed,
+        # draft docs are skipped individually so users can mix statuses in a batch.
         design = frappe.get_doc("Super Print Design", design_name)
 
         for idx, docname in enumerate(docnames):
             try:
-                html, _ = _render_print_html(doctype, docname, design_name, params)
+                if _is_draft_blocked(design_name, frappe.get_doc(doctype, docname)):
+                    continue
+                html, _ctx = _render_print_html(doctype, docname, design_name, params)
                 body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
                 style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
 
@@ -290,7 +296,7 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
                 frappe.log_error(f"Batch PDF render failed for {doctype} {docname}: {e}")
 
         if success_count == 0:
-            frappe.throw(_("All documents failed to generate PDF"))
+            frappe.throw(_("All documents are in draft state and cannot be printed. Submit them first."))
 
         combined_html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n'
         combined_html += "\n".join(styles_collected)
@@ -377,7 +383,7 @@ def _generate_chromium_pdf(html, design):
 @frappe.whitelist()
 def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_match=False):
     """Export multi-sheet Excel for multiple documents."""
-    from zhiz_print.api.print_designer import _check_license, _check_draft_no_print
+    from zhiz_print.api.print_designer import _check_license, _check_draft_no_print, _is_draft_blocked
     from io import BytesIO
     from bs4 import BeautifulSoup
     import openpyxl
@@ -399,11 +405,11 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
     errors = []
 
     if auto_match:
-        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
-        # Filter out draft designs (draft_no_print == 1). cint() coerces INT(1) col.
+        doc_matches, _matched_set = _auto_match_designs_for_docs(doctype, docnames)
+        # v15.04.25: per-doc draft check (docstatus=0 + draft_no_print=1 → blocked).
         doc_matches = {
             dn: info for dn, info in doc_matches.items()
-            if frappe.utils.cint(frappe.db.get_value("Super Print Design", info["name"], "draft_no_print")) != 1
+            if not _is_draft_blocked(info["name"], frappe.get_doc(doctype, dn))
         }
 
         for idx, docname in enumerate(docnames):
@@ -427,13 +433,17 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
     else:
         if not design_name:
             frappe.throw(_("Design name is required"))
-        _check_draft_no_print(design_name)
+        # v15.04.25: per-doc draft check moved into loop.
         design = frappe.get_doc("Super Print Design", design_name)
 
         for idx, docname in enumerate(docnames):
             try:
                 if not frappe.has_permission(doctype, "print", docname):
                     errors.append({"docname": docname, "error": "No print permission"})
+                    continue
+
+                if _is_draft_blocked(design_name, frappe.get_doc(doctype, docname)):
+                    errors.append({"docname": docname, "error": "Document is in draft state"})
                     continue
 
                 html = design.get_preview_for_document(doc_name=docname, params=params)
@@ -508,7 +518,7 @@ def batch_record_print_log(doctype, docnames, design_name=None, params=None, exp
     # Resolve per-doc design_name for auto_match
     doc_design_map = {}
     if auto_match:
-        doc_matches, _ = _auto_match_designs_for_docs(doctype, docnames)
+        doc_matches, _matched_set = _auto_match_designs_for_docs(doctype, docnames)
         for docname, matched in doc_matches.items():
             doc_design_map[docname] = matched["name"]
 
