@@ -346,3 +346,10 @@ Draft — Preview Only,草稿 — 仅可预览
 "This design is marked as draft. Preview only — Excel export is disabled.",该设计标记为草稿。仅可预览 — Excel 导出已禁用。
 "Design '{0}' is marked as draft and cannot be printed or exported. Please uncheck 'Draft No Print' in the design first.",设计"{0}"标记为草稿，不能打印或导出。请先在设计中取消勾选"草稿不能打印"。
 "All matched designs are drafts and cannot be printed. Please uncheck 'Draft No Print' in the design(s) first.",所有匹配的设计均为草稿，不能打印。请先在设计中取消勾选"草稿不能打印"。
+"Draft Document — Preview Only","草稿单据，仅预览"
+"This document is in draft state (not submitted). Printing and export are disabled by the design's ""Draft No Print"" setting. Submit the document first.","该单据处于草稿状态(未提交)。设计的""草稿不能打印""设置已禁用打印和导出。请先提交该单据。"
+"No documents can be exported. All selected documents are in draft state or have no matching template.","没有可导出的单据。所选单据全部处于草稿状态或没有匹配的模板。"
+"document(s) skipped as draft (design disables draft printing)",已跳过的草稿单据(设计禁用了草稿打印)
+"draft skipped",草稿已跳过
+"to preview",待预览
+"failed",失败

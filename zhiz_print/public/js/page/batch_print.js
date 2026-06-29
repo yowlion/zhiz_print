@@ -318,6 +318,10 @@ zhiz_print.BatchPrintView = class BatchPrintView {
             this.preview_errors = result.message.errors || [];
             this.preview_skipped = result.message.skipped || [];
 
+            // Reflect skipped/error counts in the top info bar so the user sees the
+            // policy-applied summary right away, not only at the bottom of the preview.
+            this._update_info_bar();
+
             if (this.preview_results.length === 0) {
                 area.innerHTML =
                     '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> ' +
@@ -480,6 +484,32 @@ zhiz_print.BatchPrintView = class BatchPrintView {
                 this.esc(e.message || String(e)) +
                 "</div>";
         }
+    }
+
+    _update_info_bar() {
+        const bar = document.getElementById("sp-batch-info-bar");
+        if (!bar) return;
+        // Strip any previously appended status pills (keep only the original doctype/sep/count).
+        bar.querySelectorAll(".sp-batch-info-status").forEach((n) => n.remove());
+        const status = [];
+        if (this.preview_results && this.preview_results.length > 0) {
+            status.push(this.esc(String(this.preview_results.length)) + " " + __("to preview"));
+        }
+        if (this.preview_skipped && this.preview_skipped.length > 0) {
+            status.push('<span style="color:#1976d2">' +
+                this.esc(String(this.preview_skipped.length)) + " " + __("draft skipped") +
+                "</span>");
+        }
+        if (this.preview_errors && this.preview_errors.length > 0) {
+            status.push('<span style="color:#e53935">' +
+                this.esc(String(this.preview_errors.length)) + " " + __("failed") +
+                "</span>");
+        }
+        if (status.length === 0) return;
+        const span = document.createElement("span");
+        span.className = "sp-batch-info-status";
+        span.innerHTML = '<span class="sp-batch-info-sep">/</span>' + status.join('<span class="sp-batch-info-sep">·</span>');
+        bar.appendChild(span);
     }
 
     _build_single_page_html(pageEl, fullDoc, previewW, previewH) {

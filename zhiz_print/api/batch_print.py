@@ -415,7 +415,6 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
     """Export multi-sheet Excel for multiple documents."""
     from zhiz_print.api.print_designer import _check_license, _check_draft_no_print, _is_draft_blocked
     from io import BytesIO
-    from bs4 import BeautifulSoup
     import openpyxl
     from zhiz_print.api.print_designer import _extract_css_rules, _write_table_to_excel, _set_column_widths
 
@@ -454,7 +453,7 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
 
                 design = frappe.get_doc("Super Print Design", matched["name"])
                 html = design.get_preview_for_document(doc_name=docname, params=params)
-                _write_doc_to_sheet(wb, html, docname, css_rules=None)
+                _write_doc_to_sheet(wb, html, docname)
             except Exception as e:
                 frappe.log_error(f"Batch Excel failed for {doctype} {docname}: {e}")
                 errors.append({"docname": docname, "error": str(e)})
@@ -477,48 +476,18 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
                     continue
 
                 html = design.get_preview_for_document(doc_name=docname, params=params)
-                soup = BeautifulSoup(html, 'html.parser')
-                css_rules = _extract_css_rules(soup)
-
-                sheet_name = str(docname)[:31]
-                ws = wb.create_sheet(title=sheet_name)
-
-                pages = []
-                for page_div in soup.find_all('div', class_='print-page'):
-                    content_div = page_div.find('div', class_='print-page-content')
-                    if not content_div:
-                        continue
-                    table = content_div.find('table', class_='print-form-table')
-                    if table:
-                        pages.append(table)
-
-                if not pages:
-                    ws.cell(row=1, column=1, value="No Data")
-                    continue
-
-                header_count = 0
-                if len(pages) > 1:
-                    rows_1 = [tr.get_text(strip=True) for tr in pages[0].find_all('tr')]
-                    rows_2 = [tr.get_text(strip=True) for tr in pages[1].find_all('tr')]
-                    for i in range(min(len(rows_1), len(rows_2))):
-                        if rows_1[i] == rows_2[i]:
-                            header_count = i + 1
-                        else:
-                            break
-
-                current_row = 1
-                for page_idx, table in enumerate(pages):
-                    skip = header_count if page_idx > 0 else 0
-                    if page_idx == 0:
-                        _set_column_widths(ws, table, css_rules)
-                    rows_written = _write_table_to_excel(ws, table, current_row, css_rules, skip_rows=skip)
-                    current_row += rows_written
-
+                _write_doc_to_sheet(wb, html, docname)
             except Exception as e:
                 frappe.log_error(f"Batch Excel failed for {doctype} {docname}: {e}")
                 errors.append({"docname": docname, "error": str(e)})
 
         label = design.design_name
+
+    # v15.04.28: guard against empty workbook — happens when every doc was filtered
+    # (drafts) or skipped (no permission / no template). Without this guard openpyxl
+    # raises "At least one sheet must be visible" on save.
+    if len(wb.worksheets) == 0:
+        frappe.throw(_("No documents can be exported. All selected documents are in draft state or have no matching template."))
 
     output = BytesIO()
     wb.save(output)
@@ -527,6 +496,55 @@ def batch_export_excel(doctype, docnames, design_name=None, params=None, auto_ma
     frappe.local.response.filename = f"batch-{doctype}-{len(docnames)}docs-{label}.xlsx"
     frappe.local.response.filecontent = output.getvalue()
     frappe.local.response.type = "binary"
+
+
+def _write_doc_to_sheet(wb, html, docname, css_rules=None):
+    """Render one document's HTML into a new openpyxl sheet.
+
+    Extracted from batch_export_excel so the auto_match and named-design branches
+    share the same sheet-building logic. css_rules is computed from the HTML when
+    not supplied (callers in batch_export_excel pass None).
+    """
+    from bs4 import BeautifulSoup
+    from zhiz_print.api.print_designer import _extract_css_rules, _write_table_to_excel, _set_column_widths
+
+    soup = BeautifulSoup(html, 'html.parser')
+    if css_rules is None:
+        css_rules = _extract_css_rules(soup)
+
+    sheet_name = str(docname)[:31]
+    ws = wb.create_sheet(title=sheet_name)
+
+    pages = []
+    for page_div in soup.find_all('div', class_='print-page'):
+        content_div = page_div.find('div', class_='print-page-content')
+        if not content_div:
+            continue
+        table = content_div.find('table', class_='print-form-table')
+        if table:
+            pages.append(table)
+
+    if not pages:
+        ws.cell(row=1, column=1, value="No Data")
+        return
+
+    header_count = 0
+    if len(pages) > 1:
+        rows_1 = [tr.get_text(strip=True) for tr in pages[0].find_all('tr')]
+        rows_2 = [tr.get_text(strip=True) for tr in pages[1].find_all('tr')]
+        for i in range(min(len(rows_1), len(rows_2))):
+            if rows_1[i] == rows_2[i]:
+                header_count = i + 1
+            else:
+                break
+
+    current_row = 1
+    for page_idx, table in enumerate(pages):
+        skip = header_count if page_idx > 0 else 0
+        if page_idx == 0:
+            _set_column_widths(ws, table, css_rules)
+        rows_written = _write_table_to_excel(ws, table, current_row, css_rules, skip_rows=skip)
+        current_row += rows_written
 
 
 @frappe.whitelist()
