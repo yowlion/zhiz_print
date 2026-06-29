@@ -106,6 +106,7 @@ def get_available_designs(doctype, docname=None):
             "paper_height": paper_info.get("height"),
             "has_parameters": has_params > 0,
             "parameters": get_design_parameters(d.name),
+            "draft_no_print": cint(d.draft_no_print),
         })
 
     return result
