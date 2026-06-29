@@ -203,13 +203,49 @@ class SuperPrintDesign(frappe.model.document.Document):
     # ==================== Placeholder Replacement ====================
 
     @staticmethod
+    def _build_safe_eval_locals(doc=None, row=None):
+        """Build local_vars dict for frappe.safe_eval.
+
+        Centralizes the workarounds for safe_eval's three traps (see buglog bug-008):
+        - str.format blocked ("format is an unsafe attribute") -> expose fmt() based on %
+        - frappe.utils.* attribute access blocked -> expose flt directly
+        - builtins hidden by default -> expose max/min/round
+
+        Used by both _eval_logic_code (cell value expressions) and
+        check_enable_conditions (advanced filter conditions) so users can write
+        the same helpers in both places, e.g.
+            get_value("Item", doc.production_item, "classification") == "滑板"
+        """
+        def get_value(doctype, name, field):
+            if not name:
+                return ''
+            v = frappe.db.get_value(doctype, name, field)
+            return '' if v is None else str(v)
+
+        def fmt(value, precision=2):
+            try:
+                return f"%.{precision}f" % frappe.utils.flt(value)
+            except Exception:
+                return str(value) if value is not None else ''
+
+        return {
+            'doc': doc,
+            'row': row,
+            'frappe': frappe,
+            'get_value': get_value,
+            'fmt': fmt,
+            'flt': frappe.utils.flt,
+            'max': max,
+            'min': min,
+            'round': round,
+        }
+
+    @staticmethod
     def _eval_logic_code(expr, doc=None, row=None):
         """Evaluate logic code expression with doc and row context.
 
-        Exposes:
-        - doc: current document
-        - row: current child table row (Data-Driven Row)
-        - frappe: frappe module (for advanced use)
+        Exposes (via _build_safe_eval_locals):
+        - doc, row, frappe
         - get_value(doctype, name, field): fast SQL single-field lookup, returns '' on None/empty
         - fmt(value, precision=2): format numeric value as fixed-decimal string
           (str.format is blocked by safe_eval — "format is an unsafe attribute")
@@ -217,29 +253,7 @@ class SuperPrintDesign(frappe.model.document.Document):
         - max/min/round: builtins (safe_eval hides them by default)
         """
         try:
-            def get_value(doctype, name, field):
-                if not name:
-                    return ''
-                v = frappe.db.get_value(doctype, name, field)
-                return '' if v is None else str(v)
-
-            def fmt(value, precision=2):
-                try:
-                    return f"%.{precision}f" % frappe.utils.flt(value)
-                except Exception:
-                    return str(value) if value is not None else ''
-
-            local_vars = {
-                'doc': doc,
-                'row': row,
-                'frappe': frappe,
-                'get_value': get_value,
-                'fmt': fmt,
-                'flt': frappe.utils.flt,
-                'max': max,
-                'min': min,
-                'round': round,
-            }
+            local_vars = SuperPrintDesign._build_safe_eval_locals(doc, row)
             result = frappe.safe_eval(expr, {}, local_vars)
             return str(result) if result is not None else ''
         except Exception:
@@ -1264,10 +1278,20 @@ body {{
         # Support eval: prefix and JS syntax
         if condition.startswith('eval:'):
             condition = condition[5:].strip()
-        condition = condition.replace('===', '==').replace('!==', '!=').replace('||', ' or ').replace('&&', ' and ')
+        # Normalize JS-style operators to Python. Note: ' & ' / ' | ' (with spaces)
+        # only — avoids mangling brand names like "AT&T" written without spaces.
+        condition = (condition
+                     .replace('===', '==')
+                     .replace('!==', '!=')
+                     .replace('||', ' or ')
+                     .replace('&&', ' and ')
+                     .replace(' & ', ' and ')
+                     .replace(' | ', ' or '))
 
         try:
-            return frappe.safe_eval(condition, {}, {'doc': doc, 'user': frappe.session.user})
+            local_vars = SuperPrintDesign._build_safe_eval_locals(doc)
+            local_vars['user'] = frappe.session.user
+            return frappe.safe_eval(condition, {}, local_vars)
         except Exception:
             frappe.log_error(frappe.get_traceback(),
                              f'Enable condition evaluation failed: {design_name}')
