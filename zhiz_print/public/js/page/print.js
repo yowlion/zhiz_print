@@ -193,7 +193,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		const currentOrient = this.current_orientation || this.current_design_info?.orientation || 'Auto';
 		this.current_orientation = currentOrient;
 		const orientHtml = '<div class="sp-orient-controls" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;padding-left:12px;border-left:1px solid #d0d0d0;">'
-			+ '<span style="font-size:11px;color:#555;">' + __('Orientation') + ':</span>'
+			+ '<span style="font-size:11px;color:#555;">' + __('Print Direction') + ':</span>'
 			+ '<select id="sp-orient-select" class="form-control" style="width:auto;height:24px;font-size:11px;padding:0 6px;">'
 			+ '<option value="Auto"' + (currentOrient === 'Auto' ? ' selected' : '') + '>' + __('Auto') + '</option>'
 			+ '<option value="Force Landscape"' + (currentOrient === 'Force Landscape' ? ' selected' : '') + '>' + __('Force Landscape') + '</option>'

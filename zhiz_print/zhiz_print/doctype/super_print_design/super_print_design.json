@@ -15,6 +15,8 @@
     "priority",
     "column_break_draft",
     "draft_no_print",
+    "column_break_orientation",
+    "orientation",
     "section_basic",
     "design_name",
     "target_doctype",
@@ -110,6 +112,18 @@
       "description": "When checked, design can be previewed but cannot be printed or exported (PDF / Excel / batch). Uncheck to make the design live."
     },
     {
+      "fieldname": "column_break_orientation",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "orientation",
+      "fieldtype": "Select",
+      "label": "Print Direction",
+      "options": "\nAuto\nForce Landscape\nForce Portrait",
+      "default": "Auto",
+      "description": "Override paper orientation. Auto uses paper width/height as-is. Force Landscape ensures width > height. Force Portrait ensures width < height."
+    },
+    {
       "fieldname": "section_basic",
       "fieldtype": "Section Break",
       "label": "Basic Information"
@@ -153,15 +167,6 @@
       "label": "Paper Type",
       "options": "Super Print Paper",
       "reqd": 1
-    },
-    {
-      "fieldname": "orientation",
-      "fieldtype": "Select",
-      "label": "Orientation",
-      "options": "\nAuto\nForce Landscape\nForce Portrait",
-      "default": "Auto",
-      "description": "Override paper orientation. Auto uses paper width/height as-is. Force Landscape ensures width > height. Force Portrait ensures width < height.",
-      "depends_on": "eval:doc.print_paper"
     },
     {
       "fieldname": "column_break_condition",
