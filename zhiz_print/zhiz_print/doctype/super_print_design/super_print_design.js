@@ -654,6 +654,7 @@ class SuperPrintDesigner {
 
         // Multi-page tab events
         container.querySelector('#spd-add-page-btn')?.addEventListener('click', () => this.addPage());
+        container.querySelector('#spd-duplicate-page-btn')?.addEventListener('click', () => this.duplicatePage());
         container.querySelector('#spd-remove-page-btn')?.addEventListener('click', () => this.removePage(this.currentPageNo));
         const tabsEl = container.querySelector('#spd-page-tabs');
         if (tabsEl) {
@@ -2185,6 +2186,59 @@ class SuperPrintDesigner {
         this.refreshGrid();
         this.frm.dirty();
         frappe.show_alert({ message: __('Page {0} added').replace('{0}', next), indicator: 'green' });
+    }
+
+    duplicatePage() {
+        const srcPageNo = parseInt(this.currentPageNo);
+        const src = this.pages[srcPageNo];
+        if (!src) return;
+        const next = Object.keys(this.pages).map(p => parseInt(p)).reduce((a, b) => Math.max(a, b), 0) + 1;
+
+        // Build new grid — deep-copy every cell with new page_no and cell_id prefix
+        const grid = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
+        const cellDataMap = {};
+        const idMap = {};  // old cell_id → new cell_id, for merged master_cell_id rewrite
+
+        // Pass 1: clone master cells (non-merged)
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const cell = src.grid[r][c];
+                if (!cell || cell._merged) continue;
+                const newId = `P${next}_R${r + 1}C${c + 1}`;
+                idMap[cell.cell_id] = newId;
+                const copy = {
+                    ...cell,
+                    cell_id: newId,
+                    page_no: next,
+                    row: r + 1,
+                    col: c + 1,
+                };
+                grid[r][c] = copy;
+                cellDataMap[newId] = copy;
+            }
+        }
+        // Pass 2: clone merged markers, rewriting master_cell_id to the new prefix
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const cell = src.grid[r][c];
+                if (cell && cell._merged) {
+                    const newMasterId = idMap[cell.master_cell_id] || cell.master_cell_id;
+                    grid[r][c] = { _merged: true, master_cell_id: newMasterId };
+                }
+            }
+        }
+
+        this.pages[next] = { grid, cellDataMap };
+        this.pageCount = Object.keys(this.pages).length;
+        this.frm.set_value('page_count', this.pageCount);
+        this._activatePage(next);
+        this.renderPageTabs();
+        this.refreshGrid();
+        this.frm.dirty();
+        frappe.show_alert({
+            message: __('Page {0} duplicated from page {1}').replace('{0}', next).replace('{1}', srcPageNo),
+            indicator: 'green'
+        });
     }
 
     removePage(pageNo) {
