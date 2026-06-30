@@ -203,7 +203,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		$toolbar.append(orientHtml);
 		$toolbar.find('#sp-orient-select').on('change', (e) => {
 			this.current_orientation = e.target.value;
-			this.render_preview();
+			// 不重新渲染预览：纸张尺寸固定，方向仅影响点打印时浏览器/打印机对话框中的预览(通过 @page CSS 注入)
 		});
 	}
 
@@ -402,15 +402,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					docname: this.frm.docname,
 					design_name: this.current_design,
 					params: this.current_params || {},
-					orientation: this.current_orientation || 'Auto'
+					// 预览始终用纸张原始尺寸渲染，方向仅影响点打印时的 @page CSS 注入
+					orientation: 'Auto'
 				}
 			});
 
 			if (result.message) {
-				const { html, paper_width, paper_height, margin_top, margin_bottom, margin_left, margin_right, orientation } = result.message;
+				const { html, paper_width, paper_height, margin_top, margin_bottom, margin_left, margin_right } = result.message;
 				this.current_preview_html = html;
-				// Sync effective orientation back to state (in case backend used design default)
-				if (orientation) this.current_orientation = orientation;
 
 				const PX_PER_MM = 4;
 				const previewW = (paper_width || 210) * PX_PER_MM;

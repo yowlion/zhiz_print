@@ -192,7 +192,12 @@ def get_design_parameters(design_name):
 
 @frappe.whitelist()
 def render_print_preview(doctype, docname, design_name, params=None, orientation=None):
-    """Render print preview HTML"""
+    """Render print preview HTML.
+
+    v15.04.30: preview always uses paper's original W×H — orientation override
+    only affects actual print/PDF path (browser print dialog or PDF engine).
+    User can switch orientation in toolbar without re-rendering preview.
+    """
     _check_license()
     if isinstance(params, str):
         try:
@@ -209,23 +214,17 @@ def render_print_preview(doctype, docname, design_name, params=None, orientation
     # Get paper info (with margins)
     paper = frappe.get_doc("Super Print Paper", design.print_paper)
 
-    # Render HTML
+    # Render HTML — no orientation swap applied to preview
     html = design.get_preview_for_document(doc_name=docname, params=params)
-
-    # v15.04.29: apply orientation override (user toolbar wins over design default)
-    effective_orientation = _resolve_orientation(design, orientation)
-    html = _apply_orientation_to_html(html, paper.width, paper.height, effective_orientation)
-    eff_w, eff_h = _effective_dims(paper.width, paper.height, effective_orientation)
 
     return {
         "html": html,
-        "paper_width": eff_w,
-        "paper_height": eff_h,
+        "paper_width": paper.width,
+        "paper_height": paper.height,
         "margin_top": paper.margin_top or 0,
         "margin_bottom": paper.margin_bottom or 0,
         "margin_left": paper.margin_left or 0,
         "margin_right": paper.margin_right or 0,
-        "orientation": effective_orientation,
     }
 
 
