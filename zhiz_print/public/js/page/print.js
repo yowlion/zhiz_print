@@ -652,21 +652,75 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		printFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
 		document.body.appendChild(printFrame);
 
-		// Inject explicit @page CSS for browser print dialog.
-		// v15.04.29: compute effective dims locally from current orientation override so
-		// the print dialog page size matches what the user saw in preview. The preview HTML
-		// already had its internal @page rewritten by the backend; this injection overrides
-		// any default @page the browser might apply.
+		// v15.04.32: 真正旋转内容 90° 适配新方向。
+		// 之前只交换 @page size 会导致内容尺寸不变被截断到多页。
+		// 现在:旋转 .print-page-content,父元素 .print-page 改为新方向的尺寸。
 		let printHtml = this.current_preview_html;
 		const paperInfo = this.current_design_info;
 		if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
 			const orient = this.current_orientation || 'Auto';
-			let effW = paperInfo.paper_width;
-			let effH = paperInfo.paper_height;
-			if (orient === 'Force Landscape' && effW < effH) { [effW, effH] = [effH, effW]; }
-			else if (orient === 'Force Portrait' && effW > effH) { [effW, effH] = [effH, effW]; }
-			const injectCss = '<style>@media print { @page { size: ' + effW + 'mm ' + effH + 'mm; margin: 0; } }</style>';
-			printHtml = printHtml.replace('</head>', injectCss + '\n</head>');
+			const origW = paperInfo.paper_width;
+			const origH = paperInfo.paper_height;
+			let injectCss = '';
+
+			if (orient === 'Force Landscape' && origW < origH) {
+				// 顺时针旋转 90°:横向纸张 = origH × origW
+				injectCss = '<style>@media print {'
+					+ ' @page { size: ' + origH + 'mm ' + origW + 'mm; margin: 0; }'
+					+ ' html, body { margin: 0 !important; padding: 0 !important; }'
+					+ ' .print-pages-wrapper { width: ' + origH + 'mm !important; }'
+					+ ' .print-page {'
+					+ ' width: ' + origH + 'mm !important;'
+					+ ' height: ' + origW + 'mm !important;'
+					+ ' page-break-after: always;'
+					+ ' position: relative;'
+					+ ' overflow: hidden !important;'
+					+ ' }'
+					+ ' .print-page:last-child { page-break-after: auto; }'
+					+ ' .print-page-content {'
+					+ ' position: absolute !important;'
+					+ ' top: 0 !important;'
+					+ ' left: 100% !important;'
+					+ ' right: auto !important;'
+					+ ' bottom: auto !important;'
+					+ ' width: ' + origW + 'mm !important;'
+					+ ' height: ' + origH + 'mm !important;'
+					+ ' transform: rotate(90deg);'
+					+ ' transform-origin: top left;'
+					+ ' }'
+					+ ' }</style>';
+			} else if (orient === 'Force Portrait' && origW > origH) {
+				// 逆时针旋转 90°:纵向纸张 = origH × origW
+				injectCss = '<style>@media print {'
+					+ ' @page { size: ' + origH + 'mm ' + origW + 'mm; margin: 0; }'
+					+ ' html, body { margin: 0 !important; padding: 0 !important; }'
+					+ ' .print-pages-wrapper { width: ' + origH + 'mm !important; }'
+					+ ' .print-page {'
+					+ ' width: ' + origH + 'mm !important;'
+					+ ' height: ' + origW + 'mm !important;'
+					+ ' page-break-after: always;'
+					+ ' position: relative;'
+					+ ' overflow: hidden !important;'
+					+ ' }'
+					+ ' .print-page:last-child { page-break-after: auto; }'
+					+ ' .print-page-content {'
+					+ ' position: absolute !important;'
+					+ ' top: 100% !important;'
+					+ ' left: 0 !important;'
+					+ ' right: auto !important;'
+					+ ' bottom: auto !important;'
+					+ ' width: ' + origW + 'mm !important;'
+					+ ' height: ' + origH + 'mm !important;'
+					+ ' transform: rotate(-90deg);'
+					+ ' transform-origin: top left;'
+					+ ' }'
+					+ ' }</style>';
+			}
+			// Auto: 不注入 CSS,使用 HTML 原始 @page(与内容尺寸匹配,不会切页)
+
+			if (injectCss) {
+				printHtml = printHtml.replace('</head>', injectCss + '\n</head>');
+			}
 		}
 
 		const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
