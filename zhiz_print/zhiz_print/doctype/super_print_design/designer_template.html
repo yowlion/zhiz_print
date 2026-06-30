@@ -3,9 +3,9 @@
     <div class="spd-toolbar">
         <div class="spd-controls">
             <label>{{ _("Rows") }}:</label>
-            <input type="number" id="spd-rows" class="form-control" min="1" max="100" value="{{ rows }}" style="width:70px">
+            <input type="number" id="spd-rows" class="form-control" min="1" max="100" value="{{ rows }}" style="width:48px">
             <label>{{ _("Cols") }}:</label>
-            <input type="number" id="spd-cols" class="form-control" min="1" max="26" value="{{ cols }}" style="width:70px">
+            <input type="number" id="spd-cols" class="form-control" min="1" max="26" value="{{ cols }}" style="width:48px">
             <button class="btn btn-default btn-sm" id="spd-apply-grid"><i class="fa fa-refresh"></i> {{ _("Apply") }}</button>
             <button class="btn btn-default btn-sm" id="spd-insert-row-btn" style="display:none"><i class="fa fa-plus" style="color:#28a745"></i> {{ _("Insert Row") }}</button>
             <button class="btn btn-default btn-sm" id="spd-delete-row-btn" style="display:none"><i class="fa fa-minus" style="color:#dc3545"></i> {{ _("Delete Row") }}</button>
@@ -14,7 +14,7 @@
         </div>
         <div class="spd-controls">
             <label>{{ _("Font") }}:</label>
-            <select id="spd-font" class="form-control" style="width:100px">
+            <select id="spd-font" class="form-control" style="width:90px">
                 {% for f in font_families %}
                 <option value="{{ f.value }}" {% if f.value == font_family %}selected{% endif %}>{{ f.label }}</option>
                 {% endfor %}
