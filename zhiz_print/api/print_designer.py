@@ -888,6 +888,7 @@ def load_design_data(design_name):
             is_merged = bool(item.cell_value and item.cell_value.startswith("||MERGED::"))
             cell_data = {
                 "cell_id": item.cell_id or "",
+                "page_no": cint(item.page_no) if item.page_no else 1,
                 "row": item.row,
                 "col": item.col,
                 "rowspan": item.rowspan or 1,
@@ -913,6 +914,7 @@ def load_design_data(design_name):
     return {
         "rows": doc.rows or 20,
         "columns": doc.columns or 15,
+        "page_count": cint(doc.page_count) if doc.page_count else 1,
         "font_family": doc.font_family or "Microsoft YaHei",
         "font_size": doc.font_size or 12,
         "row_styles": row_styles,

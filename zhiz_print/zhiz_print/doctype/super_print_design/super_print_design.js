@@ -8,6 +8,9 @@ class SuperPrintDesigner {
         this.currentCell = null;
         this.grid = [];
         this.cellDataMap = {};
+        this.pages = {};  // {1: {grid, cellDataMap}, 2: {...}}
+        this.pageCount = frm.doc.page_count || 1;
+        this.currentPageNo = 1;
         this.selectedCells = [];
         this.formatPainterActive = false;
         this.formatPainterSourceCss = null;
@@ -132,12 +135,15 @@ class SuperPrintDesigner {
     loadExistingDesign(serverData) {
         this.initGrid();
         this.cellDataMap = {};
+        this.pages = {};
+        this.currentPageNo = 1;
         const defaultCellStyle = this.getDefaultCellCss();
 
         if (serverData) {
             // Use server-parsed data
             this.rows = serverData.rows || this.rows;
             this.cols = serverData.columns || this.cols;
+            this.pageCount = serverData.page_count || 1;
             this.fontFamily = serverData.font_family || this.fontFamily;
             this.fontSize = serverData.font_size || this.fontSize;
             this.rowStyles = serverData.row_styles || {};
@@ -159,24 +165,38 @@ class SuperPrintDesigner {
                 this.marginRight = parseInt(serverData.paper.margin_right) || this.marginRight;
             }
 
-            // Re-init grid with correct dimensions
-            this.grid = Array(this.rows).fill().map(() => Array(this.cols).fill(null));
+            // Init pages dict with correct dimensions
+            for (let p = 1; p <= this.pageCount; p++) {
+                this.pages[p] = {
+                    grid: Array(this.rows).fill().map(() => Array(this.cols).fill(null)),
+                    cellDataMap: {},
+                };
+            }
 
-            // Parse cells from server
+            // Parse cells from server, grouped by page_no
             if (serverData.cells && serverData.cells.length > 0) {
                 serverData.cells.forEach(cell => {
+                    const pageNo = parseInt(cell.page_no) || 1;
+                    if (!this.pages[pageNo]) {
+                        this.pages[pageNo] = {
+                            grid: Array(this.rows).fill().map(() => Array(this.cols).fill(null)),
+                            cellDataMap: {},
+                        };
+                    }
+                    const page = this.pages[pageNo];
                     const rowIndex = cell.row - 1;
                     const colIndex = cell.col - 1;
                     if (rowIndex < 0 || rowIndex >= this.rows || colIndex < 0 || colIndex >= this.cols) return;
 
                     if (cell.is_merged) {
-                        this.grid[rowIndex][colIndex] = {
+                        page.grid[rowIndex][colIndex] = {
                             _merged: true,
                             master_cell_id: cell.master_cell_id || ''
                         };
                     } else {
                         const cellData = {
                             cell_id: cell.cell_id || `R${cell.row}C${cell.col}`,
+                            page_no: pageNo,
                             row: cell.row, col: cell.col,
                             rowspan: parseInt(cell.rowspan) || 1,
                             colspan: parseInt(cell.colspan) || 1,
@@ -191,15 +211,17 @@ class SuperPrintDesigner {
                             row_type: cell.row_type || '',
                             row_display: cell.row_display || '',
                         };
-                        this.grid[rowIndex][colIndex] = cellData;
-                        this.cellDataMap[cellData.cell_id] = cellData;
+                        page.grid[rowIndex][colIndex] = cellData;
+                        page.cellDataMap[cellData.cell_id] = cellData;
 
                         if (cellData.rowspan > 1 || cellData.colspan > 1) {
-                            this.markMergedCells(cellData);
+                            this._markMergedInPage(page, cellData);
                         }
                     }
                 });
             }
+            // Active page = 1; load its grid/cellDataMap references
+            this._activatePage(1);
         } else {
             // Fallback: parse from frm.doc (new document or server unavailable)
             if (this.frm.doc.row_styles) {
@@ -211,6 +233,7 @@ class SuperPrintDesigner {
             if (this.frm.doc.font_family) {
                 this.fontFamily = this.frm.doc.font_family;
             }
+            this.pageCount = this.frm.doc.page_count || 1;
             this.pageHeaderLeft = this.frm.doc.page_header_left || '';
             this.pageHeaderCenter = this.frm.doc.page_header_center || '';
             this.pageHeaderRight = this.frm.doc.page_header_right || '';
@@ -218,25 +241,45 @@ class SuperPrintDesigner {
             this.pageFooterCenter = this.frm.doc.page_footer_center || '';
             this.pageFooterRight = this.frm.doc.page_footer_right || '';
 
+            // Init pages dict
+            for (let p = 1; p <= this.pageCount; p++) {
+                this.pages[p] = {
+                    grid: Array(this.rows).fill().map(() => Array(this.cols).fill(null)),
+                    cellDataMap: {},
+                };
+            }
+
             if (this.frm.doc.design_items && this.frm.doc.design_items.length > 0) {
                 const sortedItems = [...this.frm.doc.design_items].sort((a, b) => {
+                    const pa = parseInt(a.page_no) || 1;
+                    const pb = parseInt(b.page_no) || 1;
+                    if (pa !== pb) return pa - pb;
                     if (a.row !== b.row) return a.row - b.row;
                     return a.col - b.col;
                 });
 
                 sortedItems.forEach(item => {
+                    const pageNo = parseInt(item.page_no) || 1;
+                    if (!this.pages[pageNo]) {
+                        this.pages[pageNo] = {
+                            grid: Array(this.rows).fill().map(() => Array(this.cols).fill(null)),
+                            cellDataMap: {},
+                        };
+                    }
+                    const page = this.pages[pageNo];
                     const rowIndex = item.row - 1;
                     const colIndex = item.col - 1;
 
                     if (rowIndex >= 0 && rowIndex < this.rows && colIndex >= 0 && colIndex < this.cols) {
                         if (this.isMergedMark(item.cell_value)) {
-                            this.grid[rowIndex][colIndex] = {
+                            page.grid[rowIndex][colIndex] = {
                                 _merged: true,
                                 master_cell_id: this.extractMasterId(item.cell_value)
                             };
                         } else {
                             const cellData = {
                                 cell_id: item.cell_id || `R${item.row}C${item.col}`,
+                                page_no: pageNo,
                                 row: item.row, col: item.col,
                                 rowspan: parseInt(item.rowspan) || 1,
                                 colspan: parseInt(item.colspan) || 1,
@@ -251,49 +294,62 @@ class SuperPrintDesigner {
                                 row_type: item.row_type || '',
                                 row_display: item.row_display || '',
                             };
-                            this.grid[rowIndex][colIndex] = cellData;
-                            this.cellDataMap[cellData.cell_id] = cellData;
+                            page.grid[rowIndex][colIndex] = cellData;
+                            page.cellDataMap[cellData.cell_id] = cellData;
 
                             if (cellData.rowspan > 1 || cellData.colspan > 1) {
-                                this.markMergedCells(cellData);
+                                this._markMergedInPage(page, cellData);
                             }
                         }
                     }
                 });
             }
+            this._activatePage(1);
         }
 
-        // Fill empty cells — inherit row_display / row_type from sibling cells in the same row
+        // Fill empty cells for every page — inherit row_display / row_type from siblings
         // (these are row-level attributes stored per-cell; auto-fill cells must stay consistent
         // with user-configured siblings or the live preview / dropdown will read the wrong value)
-        for (let row = 0; row < this.rows; row++) {
-            let inheritedDisplay = '';
-            let inheritedType = '';
-            for (let col = 0; col < this.cols; col++) {
-                const c = this.grid[row][col];
-                if (c && !c._merged) {
-                    if (!inheritedDisplay && c.row_display) inheritedDisplay = c.row_display;
-                    if (!inheritedType && c.row_type) inheritedType = c.row_type;
+        for (const pageNo of Object.keys(this.pages)) {
+            const page = this.pages[pageNo];
+            for (let row = 0; row < this.rows; row++) {
+                let inheritedDisplay = '';
+                let inheritedType = '';
+                for (let col = 0; col < this.cols; col++) {
+                    const c = page.grid[row][col];
+                    if (c && !c._merged) {
+                        if (!inheritedDisplay && c.row_display) inheritedDisplay = c.row_display;
+                        if (!inheritedType && c.row_type) inheritedType = c.row_type;
+                    }
                 }
-            }
-            for (let col = 0; col < this.cols; col++) {
-                if (!this.grid[row][col]) {
-                    const cellId = `R${row + 1}C${col + 1}`;
-                    const cellData = {
-                        cell_id: cellId, row: row + 1, col: col + 1,
-                        rowspan: 1, colspan: 1, cell_type: 'static',
-                        cell_value: '', css_style: defaultCellStyle,
-                        row_type: inheritedType || '',
-                        row_display: inheritedDisplay || ''
-                    };
-                    this.grid[row][col] = cellData;
-                    this.cellDataMap[cellId] = cellData;
+                for (let col = 0; col < this.cols; col++) {
+                    if (!page.grid[row][col]) {
+                        const cellId = `P${pageNo}_R${row + 1}C${col + 1}`;
+                        const cellData = {
+                            cell_id: cellId, page_no: parseInt(pageNo),
+                            row: row + 1, col: col + 1,
+                            rowspan: 1, colspan: 1, cell_type: 'static',
+                            cell_value: '', css_style: defaultCellStyle,
+                            row_type: inheritedType || '',
+                            row_display: inheritedDisplay || ''
+                        };
+                        page.grid[row][col] = cellData;
+                        page.cellDataMap[cellId] = cellData;
+                    }
                 }
             }
         }
     }
 
-    markMergedCells(cell) {
+    _activatePage(pageNo) {
+        const page = this.pages[pageNo];
+        if (!page) return;
+        this.currentPageNo = pageNo;
+        this.grid = page.grid;
+        this.cellDataMap = page.cellDataMap;
+    }
+
+    _markMergedInPage(page, cell) {
         const startRow = cell.row - 1;
         const startCol = cell.col - 1;
         const rowspan = cell.rowspan || 1;
@@ -301,14 +357,24 @@ class SuperPrintDesigner {
         for (let r = startRow; r < startRow + rowspan; r++) {
             for (let c = startCol; c < startCol + colspan; c++) {
                 if (r === startRow && c === startCol) continue;
-                if (r >= this.grid.length || c >= this.grid[0].length) continue;
-                const existing = this.grid[r][c];
+                if (r >= page.grid.length || c >= page.grid[0].length) continue;
+                const existing = page.grid[r][c];
                 if (existing && !existing._merged) {
-                    delete this.cellDataMap[existing.cell_id];
+                    delete page.cellDataMap[existing.cell_id];
                 }
-                this.grid[r][c] = { _merged: true, master_cell_id: cell.cell_id };
+                page.grid[r][c] = { _merged: true, master_cell_id: cell.cell_id };
             }
         }
+    }
+
+    markMergedCells(cell) {
+        const page = this.pages[this.currentPageNo];
+        if (!page) {
+            // Fallback to legacy behavior if pages dict not yet built
+            this._markMergedInPage({ grid: this.grid, cellDataMap: this.cellDataMap }, cell);
+            return;
+        }
+        this._markMergedInPage(page, cell);
     }
 
     async fetchDesignerHtml() {
@@ -585,6 +651,19 @@ class SuperPrintDesigner {
         container.querySelector('#spd-normal-row-btn')?.addEventListener('click', () => this.setRowType(''));
         container.querySelector('#btn-unmerge-left')?.addEventListener('click', () => this._doUnmerge(false));
         container.querySelector('#btn-unmerge-inherit')?.addEventListener('click', () => this._doUnmerge(true));
+
+        // Multi-page tab events
+        container.querySelector('#spd-add-page-btn')?.addEventListener('click', () => this.addPage());
+        container.querySelector('#spd-remove-page-btn')?.addEventListener('click', () => this.removePage(this.currentPageNo));
+        const tabsEl = container.querySelector('#spd-page-tabs');
+        if (tabsEl) {
+            tabsEl.addEventListener('click', (e) => {
+                const tab = e.target.closest('.spd-page-tab');
+                if (!tab) return;
+                this.switchPage(tab.dataset.page);
+            });
+        }
+        this.renderPageTabs();
 
         // Delegated click events
         container.addEventListener('click', (e) => {
@@ -1383,11 +1462,12 @@ class SuperPrintDesigner {
             }
         } else {
             // Shrink: released cells become independent
+            const pageNo = this.currentPageNo || 1;
             for (let c = startCol + newColspan; c < startCol + oldColspan; c++) {
                 if (c < this.cols) {
-                    const newCellId = 'R' + row + 'C' + (c + 1);
+                    const newCellId = `P${pageNo}_R${row}C${c + 1}`;
                     const newCell = {
-                        cell_id: newCellId, row: row, col: c + 1,
+                        cell_id: newCellId, page_no: pageNo, row: row, col: c + 1,
                         rowspan: 1, colspan: 1, cell_type: 'static',
                         cell_value: '',
                         css_style: this.getDefaultCellCss()
@@ -1436,12 +1516,13 @@ class SuperPrintDesigner {
             }
         } else {
             // Shrink: released cells become independent
+            const pageNo = this.currentPageNo || 1;
             for (let r = startRow + newRowspan; r < startRow + oldRowspan; r++) {
                 for (let c = startCol; c < startCol + (cell.colspan || 1); c++) {
                     if (r < this.rows && c < this.cols) {
-                        const newCellId = 'R' + (r + 1) + 'C' + (c + 1);
+                        const newCellId = `P${pageNo}_R${r + 1}C${c + 1}`;
                         const newCell = {
-                            cell_id: newCellId, row: r + 1, col: c + 1,
+                            cell_id: newCellId, page_no: pageNo, row: r + 1, col: c + 1,
                             rowspan: 1, colspan: 1, cell_type: 'static',
                             cell_value: '',
                             css_style: this.getDefaultCellCss()
@@ -1457,9 +1538,10 @@ class SuperPrintDesigner {
     }
 
     _createFreedCell(row, col, sourceCell, copyContent) {
-        const newCellId = 'R' + row + 'C' + col;
+        const pageNo = sourceCell.page_no || this.currentPageNo || 1;
+        const newCellId = `P${pageNo}_R${row}C${col}`;
         const newCell = {
-            cell_id: newCellId, row: row, col: col,
+            cell_id: newCellId, page_no: pageNo, row: row, col: col,
             rowspan: 1, colspan: 1, cell_type: 'static',
             cell_value: copyContent ? sourceCell.cell_value : '',
             css_style: sourceCell.css_style || ''
@@ -1895,26 +1977,30 @@ class SuperPrintDesigner {
             if (inputCols && inputCols > 0) this.cols = inputCols;
         }
 
-        // Collect only non-merged cells — backend validate_cells() handles merge markers
+        // Collect cells across ALL pages
         const designItems = [];
-        for (let row = 1; row <= this.rows; row++) {
-            for (let col = 1; col <= this.cols; col++) {
-                const cell = this.grid[row - 1]?.[col - 1];
-                if (!cell) {
-                    designItems.push(this.createBlankItem(row, col));
-                } else if (cell._merged) {
-                    continue;
-                } else {
-                    designItems.push({
-                        cell_id: cell.cell_id, row, col,
-                        rowspan: cell.rowspan || 1, colspan: cell.colspan || 1,
-                        cell_type: cell.cell_type || 'static', cell_value: cell.cell_value || '',
-                        cell_options: cell.cell_options || '',
-                        css_style: cell.css_style || '', query_name: cell.query_name || '',
-                        data_key: cell.data_key || '', barcode_format: cell.barcode_format || 'CODE128',
-                        barcode_width: cell.barcode_width || 100, barcode_height: cell.barcode_height || 40,
-                        row_type: cell.row_type || '', row_display: cell.row_display || '',
-                    });
+        const pageNumbers = Object.keys(this.pages).map(p => parseInt(p)).sort((a, b) => a - b);
+        for (const pageNo of pageNumbers) {
+            const page = this.pages[pageNo];
+            for (let row = 1; row <= this.rows; row++) {
+                for (let col = 1; col <= this.cols; col++) {
+                    const cell = page.grid[row - 1]?.[col - 1];
+                    if (!cell) {
+                        designItems.push(this.createBlankItem(row, col, pageNo));
+                    } else if (cell._merged) {
+                        continue;
+                    } else {
+                        designItems.push({
+                            cell_id: cell.cell_id, page_no: pageNo, row, col,
+                            rowspan: cell.rowspan || 1, colspan: cell.colspan || 1,
+                            cell_type: cell.cell_type || 'static', cell_value: cell.cell_value || '',
+                            cell_options: cell.cell_options || '',
+                            css_style: cell.css_style || '', query_name: cell.query_name || '',
+                            data_key: cell.data_key || '', barcode_format: cell.barcode_format || 'CODE128',
+                            barcode_width: cell.barcode_width || 100, barcode_height: cell.barcode_height || 40,
+                            row_type: cell.row_type || '', row_display: cell.row_display || '',
+                        });
+                    }
                 }
             }
         }
@@ -1922,6 +2008,7 @@ class SuperPrintDesigner {
         // Use frm.set_value + frm.save() like zhiz_qm
         this.frm.set_value('rows', this.rows);
         this.frm.set_value('columns', this.cols);
+        this.frm.set_value('page_count', pageNumbers.length);
         this.frm.set_value('row_styles', JSON.stringify(this.rowStyles));
         this.frm.set_value('col_styles', JSON.stringify(this.colStyles));
         this.frm.set_value('font_family', this.fontFamily);
@@ -1936,42 +2023,49 @@ class SuperPrintDesigner {
 
         this.frm.save().then(() => {
             frappe.show_alert({
-                message: __('Design saved') + ', ' + designItems.length + ' ' + __('cells'),
+                message: __('Design saved') + ', ' + designItems.length + ' ' + __('cells') + ', ' + pageNumbers.length + ' ' + __('pages'),
                 indicator: 'green'
             });
         });
     }
 
-    createBlankItem(row, col) {
+    createBlankItem(row, col, pageNo) {
+        pageNo = pageNo || this.currentPageNo || 1;
         return {
-            cell_id: 'R' + row + 'C' + col, row, col, rowspan: 1, colspan: 1,
-            cell_type: 'static', cell_value: '', css_style: this.getDefaultCellCss(),
-            row_type: '', row_display: ''
+            cell_id: `P${pageNo}_R${row}C${col}`, page_no: pageNo, row, col,
+            rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '',
+            css_style: this.getDefaultCellCss(), row_type: '', row_display: ''
         };
     }
 
     createMergedItem(row, col, masterId) {
+        const pageNo = this.currentPageNo || 1;
         return {
-            cell_id: 'R' + row + 'C' + col, row, col, rowspan: 1, colspan: 1,
-            cell_type: 'static', cell_value: '||MERGED::' + (masterId || 'R' + row + 'C' + col) + '||', css_style: ''
+            cell_id: `P${pageNo}_R${row}C${col}`, page_no: pageNo, row, col, rowspan: 1, colspan: 1,
+            cell_type: 'static', cell_value: '||MERGED::' + (masterId || `P${pageNo}_R${row}C${col}`) + '||', css_style: ''
         };
     }
 
     clearDesign() {
         if (!confirm(__('Are you sure you want to clear all designs? This action cannot be undone.'))) return;
-        this.initGrid();
-        this.cellDataMap = {};
+        this.pages = {};
+        this.pageCount = 1;
+        this.currentPageNo = 1;
         this.rowStyles = {};
         this.colStyles = {};
+        this.pages[1] = { grid: Array(this.rows).fill().map(() => Array(this.cols).fill(null)), cellDataMap: {} };
         const defaultCss = this.getDefaultCellCss();
+        const page = this.pages[1];
         for (let r = 1; r <= this.rows; r++) {
             for (let c = 1; c <= this.cols; c++) {
-                const id = 'R' + r + 'C' + c;
-                const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
-                this.grid[r - 1][c - 1] = data;
-                this.cellDataMap[id] = data;
+                const id = `P1_R${r}C${c}`;
+                const data = { cell_id: id, page_no: 1, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
+                page.grid[r - 1][c - 1] = data;
+                page.cellDataMap[id] = data;
             }
         }
+        this._activatePage(1);
+        this.renderPageTabs();
         this.refreshGrid();
         this.frm.dirty();
         frappe.show_alert({ message: __('Design cleared'), indicator: 'yellow' });
@@ -1982,14 +2076,180 @@ class SuperPrintDesigner {
         if (!container) return;
         const newRows = parseInt(container.querySelector('#spd-rows')?.value) || 20;
         const newCols = parseInt(container.querySelector('#spd-cols')?.value) || 15;
+        const oldRows = this.rows;
+        const oldCols = this.cols;
         this.rows = newRows;
         this.cols = newCols;
         this.frm.set_value('rows', newRows);
         this.frm.set_value('columns', newCols);
-        this.loadExistingDesign();
+
+        // Resize grid for every page (preserve existing cells when shrinking/growing)
+        const defaultCss = this.getDefaultCellCss();
+        for (const pageNo of Object.keys(this.pages)) {
+            const page = this.pages[pageNo];
+            const newGrid = Array.from({ length: newRows }, () => Array(newCols).fill(null));
+            const newMap = {};
+            for (let r = 0; r < newRows; r++) {
+                for (let c = 0; c < newCols; c++) {
+                    const existing = page.grid[r]?.[c];
+                    if (existing && !existing._merged) {
+                        // Clamp rowspan/colspan to new bounds
+                        const maxRs = Math.min(existing.rowspan || 1, newRows - r);
+                        const maxCs = Math.min(existing.colspan || 1, newCols - c);
+                        existing.rowspan = Math.max(1, maxRs);
+                        existing.colspan = Math.max(1, maxCs);
+                        newGrid[r][c] = existing;
+                        newMap[existing.cell_id] = existing;
+                    } else if (existing && existing._merged) {
+                        // Will be re-marked below if master still spans here
+                    }
+                }
+            }
+            page.grid = newGrid;
+            page.cellDataMap = newMap;
+            // Re-mark merged cells
+            for (const cell of Object.values(newMap)) {
+                if (cell.rowspan > 1 || cell.colspan > 1) {
+                    this._markMergedInPage(page, cell);
+                }
+            }
+            // Fill blanks
+            for (let r = 0; r < newRows; r++) {
+                for (let c = 0; c < newCols; c++) {
+                    if (!page.grid[r][c]) {
+                        const id = `P${pageNo}_R${r + 1}C${c + 1}`;
+                        const cellData = {
+                            cell_id: id, page_no: parseInt(pageNo), row: r + 1, col: c + 1,
+                            rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '',
+                            css_style: defaultCss, row_type: '', row_display: ''
+                        };
+                        page.grid[r][c] = cellData;
+                        page.cellDataMap[id] = cellData;
+                    }
+                }
+            }
+        }
+        // row_styles: trim/keep keys, do not shift (rows are positional)
+        if (newRows < oldRows) {
+            for (const k of Object.keys(this.rowStyles)) {
+                if (parseInt(k) > newRows) delete this.rowStyles[k];
+            }
+        }
+        if (newCols < oldCols) {
+            for (const k of Object.keys(this.colStyles)) {
+                if (parseInt(k) > newCols) delete this.colStyles[k];
+            }
+        }
+        this._activatePage(this.currentPageNo);
         this.refreshGrid();
         this.frm.dirty();
         frappe.show_alert({ message: __('Grid updated to') + ' ' + newRows + 'x' + newCols, indicator: 'green' });
+    }
+
+    switchPage(pageNo) {
+        pageNo = parseInt(pageNo);
+        if (!this.pages[pageNo]) return;
+        // Clear selection state to avoid stale references
+        this.selectedCells = [];
+        this.selectedRow = null;
+        this.selectedCol = null;
+        this.currentCell = null;
+        this._activatePage(pageNo);
+        this.renderPageTabs();
+        this.refreshGrid();
+        this.frm.dirty();
+    }
+
+    addPage() {
+        const next = Object.keys(this.pages).map(p => parseInt(p)).reduce((a, b) => Math.max(a, b), 0) + 1;
+        const defaultCss = this.getDefaultCellCss();
+        const grid = Array(this.rows).fill().map(() => Array(this.cols).fill(null));
+        const cellDataMap = {};
+        for (let r = 1; r <= this.rows; r++) {
+            for (let c = 1; c <= this.cols; c++) {
+                const id = `P${next}_R${r}C${c}`;
+                const data = {
+                    cell_id: id, page_no: next, row: r, col: c,
+                    rowspan: 1, colspan: 1, cell_type: 'static',
+                    cell_value: '', css_style: defaultCss, row_type: '', row_display: ''
+                };
+                grid[r - 1][c - 1] = data;
+                cellDataMap[id] = data;
+            }
+        }
+        this.pages[next] = { grid, cellDataMap };
+        this.pageCount = Object.keys(this.pages).length;
+        this.frm.set_value('page_count', this.pageCount);
+        this._activatePage(next);
+        this.renderPageTabs();
+        this.refreshGrid();
+        this.frm.dirty();
+        frappe.show_alert({ message: __('Page {0} added').replace('{0}', next), indicator: 'green' });
+    }
+
+    removePage(pageNo) {
+        pageNo = parseInt(pageNo);
+        const keys = Object.keys(this.pages).map(p => parseInt(p)).sort((a, b) => a - b);
+        if (keys.length <= 1) {
+            frappe.show_alert({ message: __('Cannot remove the last page'), indicator: 'red' });
+            return;
+        }
+        if (!confirm(__('Remove page {0}? Its cells will be lost.').replace('{0}', pageNo))) return;
+        delete this.pages[pageNo];
+        // Renumber remaining pages so they stay contiguous starting at 1
+        const sorted = Object.keys(this.pages).map(p => parseInt(p)).sort((a, b) => a - b);
+        const newPages = {};
+        sorted.forEach((oldNo, idx) => {
+            const newNo = idx + 1;
+            const page = this.pages[oldNo];
+            // Rewrite page_no + cell_id prefixes on every cell
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    const cell = page.grid[r][c];
+                    if (cell && !cell._merged) {
+                        cell.page_no = newNo;
+                        const newId = `P${newNo}_R${r + 1}C${c + 1}`;
+                        // Update master_cell_id references in merged markers
+                        for (let rr = 0; rr < this.rows; rr++) {
+                            for (let cc = 0; cc < this.cols; cc++) {
+                                const mc = page.grid[rr][cc];
+                                if (mc && mc._merged && mc.master_cell_id === cell.cell_id) {
+                                    mc.master_cell_id = newId;
+                                }
+                            }
+                        }
+                        delete page.cellDataMap[cell.cell_id];
+                        cell.cell_id = newId;
+                        page.cellDataMap[newId] = cell;
+                    }
+                }
+            }
+            newPages[newNo] = page;
+        });
+        this.pages = newPages;
+        this.pageCount = Object.keys(this.pages).length;
+        this.frm.set_value('page_count', this.pageCount);
+        this._activatePage(1);
+        this.renderPageTabs();
+        this.refreshGrid();
+        this.frm.dirty();
+        frappe.show_alert({ message: __('Page removed'), indicator: 'yellow' });
+    }
+
+    renderPageTabs() {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        const tabsEl = container.querySelector('#spd-page-tabs');
+        if (!tabsEl) return;
+        const keys = Object.keys(this.pages).map(p => parseInt(p)).sort((a, b) => a - b);
+        tabsEl.innerHTML = keys.map(p => {
+            const active = (p === this.currentPageNo) ? 'spd-page-tab-active' : '';
+            return `<button type="button" class="btn btn-xs btn-default spd-page-tab ${active}" data-page="${p}" style="margin-right:4px;">
+                <i class="fa fa-file-o" style="margin-right:3px;"></i>${__('Page')} ${p}
+            </button>`;
+        }).join('');
+        const removeBtn = container.querySelector('#spd-remove-page-btn');
+        if (removeBtn) removeBtn.style.display = keys.length > 1 ? '' : 'none';
     }
 
     refreshGrid() {
@@ -2572,11 +2832,20 @@ class SuperPrintDesigner {
         }
         this.rowStyles = newRowStyles;
 
+        // Re-sync current page's grid/map references (insert/rebuild breaks reference)
+        this._syncCurrentPage();
+
         this.frm.set_value('rows', this.rows);
         this._updateToolbarInputs();
         this.refreshGrid();
         this.frm.dirty();
         frappe.show_alert({ message: __('Row {0} inserted').replace('{0}', row), indicator: 'green' });
+    }
+
+    _syncCurrentPage() {
+        if (!this.pages[this.currentPageNo]) return;
+        this.pages[this.currentPageNo].grid = this.grid;
+        this.pages[this.currentPageNo].cellDataMap = this.cellDataMap;
     }
 
     insertColAt(col) {
@@ -2651,6 +2920,8 @@ class SuperPrintDesigner {
             else { newColStyles[c] = val; }
         }
         this.colStyles = newColStyles;
+
+        this._syncCurrentPage();
 
         this.frm.set_value('columns', this.cols);
         this._updateToolbarInputs();
@@ -2767,6 +3038,8 @@ class SuperPrintDesigner {
         this.rowStyles = newRowStyles;
 
         this.selectedRow = null;
+        this._syncCurrentPage();
+
         this.frm.set_value('rows', this.rows);
         this._updateToolbarInputs();
         this.refreshGrid();
@@ -2857,6 +3130,8 @@ class SuperPrintDesigner {
         this.colStyles = newColStyles;
 
         this.selectedCol = null;
+        this._syncCurrentPage();
+
         this.frm.set_value('columns', this.cols);
         this._updateToolbarInputs();
         this.refreshGrid();

@@ -40,6 +40,12 @@
             <button class="btn btn-primary btn-sm" id="spd-save-btn"><i class="fa fa-save"></i> {{ _("Save") }}</button>
         </div>
     </div>
+    <div class="spd-page-bar">
+        <span class="spd-page-label"><i class="fa fa-files-o"></i> {{ _("Pages") }}:</span>
+        <div class="spd-page-tabs" id="spd-page-tabs"></div>
+        <button class="btn btn-default btn-xs" id="spd-add-page-btn" title="{{ _('Add Page') }}"><i class="fa fa-plus" style="color:#28a745"></i></button>
+        <button class="btn btn-default btn-xs" id="spd-remove-page-btn" style="display:none" title="{{ _('Remove Current Page') }}"><i class="fa fa-minus" style="color:#dc3545"></i></button>
+    </div>
     <div class="spd-main">
         <div class="spd-grid-wrap">
             <div class="spd-paper-preview">
