@@ -592,12 +592,72 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         printFrame.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;";
         document.body.appendChild(printFrame);
 
-        // Set orientation
-        const paperInfo = this.current_design_info;
-        if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
-            const orient = paperInfo.paper_width > paperInfo.paper_height ? "landscape" : "portrait";
-            const injectCss = '<style>@media print { @page { size: ' + orient + "; margin: 0; } }</style>";
-            allHtml = allHtml.replace("</head>", injectCss + "\n</head>");
+        // v15.04.33: batch print rotates by DESIGN direction (read from the first
+        // preview result's orientation). PDF/Excel exports do not rotate — only
+        // the browser print path does. Preview pane already shows unrotated paper.
+        const first = this.preview_results[0];
+        const paperW = first?.paper_width;
+        const paperH = first?.paper_height;
+        const orient = first?.orientation || "Auto";
+        if (paperW && paperH) {
+            let injectCss = "";
+            if (orient === "Force Landscape" && paperW < paperH) {
+                // 顺时针旋转 90°:横向纸张 = paperH × paperW
+                injectCss = '<style>@media print {'
+                    + ' @page { size: ' + paperH + 'mm ' + paperW + 'mm; margin: 0; }'
+                    + ' html, body { margin: 0 !important; padding: 0 !important; }'
+                    + ' .print-pages-wrapper { width: ' + paperH + 'mm !important; }'
+                    + ' .print-page {'
+                    + ' width: ' + paperH + 'mm !important;'
+                    + ' height: ' + paperW + 'mm !important;'
+                    + ' page-break-after: always;'
+                    + ' position: relative;'
+                    + ' overflow: hidden !important;'
+                    + ' }'
+                    + ' .print-page:last-child { page-break-after: auto; }'
+                    + ' .print-page-content {'
+                    + ' position: absolute !important;'
+                    + ' top: 0 !important;'
+                    + ' left: 100% !important;'
+                    + ' right: auto !important;'
+                    + ' bottom: auto !important;'
+                    + ' width: ' + paperW + 'mm !important;'
+                    + ' height: ' + paperH + 'mm !important;'
+                    + ' transform: rotate(90deg);'
+                    + ' transform-origin: top left;'
+                    + ' }'
+                    + ' }</style>';
+            } else if (orient === "Force Portrait" && paperW > paperH) {
+                // 逆时针旋转 90°:纵向纸张 = paperH × paperW
+                injectCss = '<style>@media print {'
+                    + ' @page { size: ' + paperH + 'mm ' + paperW + 'mm; margin: 0; }'
+                    + ' html, body { margin: 0 !important; padding: 0 !important; }'
+                    + ' .print-pages-wrapper { width: ' + paperH + 'mm !important; }'
+                    + ' .print-page {'
+                    + ' width: ' + paperH + 'mm !important;'
+                    + ' height: ' + paperW + 'mm !important;'
+                    + ' page-break-after: always;'
+                    + ' position: relative;'
+                    + ' overflow: hidden !important;'
+                    + ' }'
+                    + ' .print-page:last-child { page-break-after: auto; }'
+                    + ' .print-page-content {'
+                    + ' position: absolute !important;'
+                    + ' top: 100% !important;'
+                    + ' left: 0 !important;'
+                    + ' right: auto !important;'
+                    + ' bottom: auto !important;'
+                    + ' width: ' + paperW + 'mm !important;'
+                    + ' height: ' + paperH + 'mm !important;'
+                    + ' transform: rotate(-90deg);'
+                    + ' transform-origin: top left;'
+                    + ' }'
+                    + ' }</style>';
+            }
+            // Auto: 不注入 CSS,使用 HTML 原始 @page
+            if (injectCss) {
+                allHtml = allHtml.replace("</head>", injectCss + "\n</head>");
+            }
         }
 
         const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;

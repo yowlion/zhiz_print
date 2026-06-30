@@ -189,22 +189,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		$toolbar.find('#sp-zoom-reset').on('click', () => this.reset_zoom());
 		$toolbar.find('#sp-zoom-input').on('change', (e) => this.set_zoom(parseInt(e.target.value) || 100));
 
-		// v15.04.29: orientation selector — default from design, user can override before print
-		const currentOrient = this.current_orientation || this.current_design_info?.orientation || 'Auto';
-		this.current_orientation = currentOrient;
-		const orientHtml = '<div class="sp-orient-controls" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;padding-left:12px;border-left:1px solid #d0d0d0;">'
-			+ '<span style="font-size:11px;color:#555;">' + __('Print Direction') + ':</span>'
-			+ '<select id="sp-orient-select" class="form-control" style="width:auto;height:24px;font-size:11px;padding:0 6px;">'
-			+ '<option value="Auto"' + (currentOrient === 'Auto' ? ' selected' : '') + '>' + __('Auto') + '</option>'
-			+ '<option value="Force Landscape"' + (currentOrient === 'Force Landscape' ? ' selected' : '') + '>' + __('Force Landscape') + '</option>'
-			+ '<option value="Force Portrait"' + (currentOrient === 'Force Portrait' ? ' selected' : '') + '>' + __('Force Portrait') + '</option>'
-			+ '</select>'
-			+ '</div>';
-		$toolbar.append(orientHtml);
-		$toolbar.find('#sp-orient-select').on('change', (e) => {
-			this.current_orientation = e.target.value;
-			// 不重新渲染预览：纸张尺寸固定，方向仅影响点打印时浏览器/打印机对话框中的预览(通过 @page CSS 注入)
-		});
+		// v15.04.33: orientation dropdown removed — single print uses design's
+		// orientation directly; PDF/Excel exports never rotate. Toolbar override
+		// is no longer meaningful, so the control is gone to avoid confusion.
 	}
 
 
@@ -331,9 +318,6 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		this.current_design = design.name;
 		this.current_design_info = design;
-		// v15.04.29: reset orientation override when switching templates — each design
-		// brings its own default. User can still override via toolbar afterwards.
-		this.current_orientation = design.orientation || 'Auto';
 		this.setup_toolbar();
 
 		// Parameter dialog
@@ -652,13 +636,12 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		printFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
 		document.body.appendChild(printFrame);
 
-		// v15.04.32: 真正旋转内容 90° 适配新方向。
-		// 之前只交换 @page size 会导致内容尺寸不变被截断到多页。
-		// 现在:旋转 .print-page-content,父元素 .print-page 改为新方向的尺寸。
+		// v15.04.33: single print rotates by DESIGN direction (not toolbar override).
+		// PDF/Excel exports do not rotate — only the browser print path does.
 		let printHtml = this.current_preview_html;
 		const paperInfo = this.current_design_info;
 		if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
-			const orient = this.current_orientation || 'Auto';
+			const orient = paperInfo.orientation || 'Auto';
 			const origW = paperInfo.paper_width;
 			const origH = paperInfo.paper_height;
 			let injectCss = '';
@@ -755,13 +738,14 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
-		// Use unified PDF endpoint (backend auto-selects engine)
+		// v15.04.33: single PDF does NOT rotate — force 'Auto' so the design's
+		// saved orientation is not applied by the backend PDF engine.
 		const params = new URLSearchParams({
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
 			design_name: this.current_design,
 			params: JSON.stringify(this.current_params || {}),
-			orientation: this.current_orientation || 'Auto'
+			orientation: 'Auto'
 		});
 		const url = '/api/method/zhiz_print.api.print_designer.generate_print_pdf?' + params;
 		const w = window.open(url, '_blank');

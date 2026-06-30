@@ -16,7 +16,7 @@ def _auto_match_designs_for_docs(doctype, docnames):
     designs = frappe.get_all(
         "Super Print Design",
         filters={"target_doctype": doctype, "enabled": 1},
-        fields=["name", "design_name", "print_paper", "priority"],
+        fields=["name", "design_name", "print_paper", "priority", "orientation"],
         order_by="priority asc, design_name",
     )
 
@@ -39,6 +39,8 @@ def _auto_match_designs_for_docs(doctype, docnames):
                 d["margin_bottom"] = paper.margin_bottom or 0
                 d["margin_left"] = paper.margin_left or 0
                 d["margin_right"] = paper.margin_right or 0
+        # v15.04.33: orientation for batch rendering
+        d["orientation"] = d.get("orientation") or "Auto"
         design_map[d.name] = d
 
     doc_matches = {}
@@ -155,7 +157,13 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
                 errors.append({"docname": docname, "error": str(e)})
                 continue
             try:
-                html, _ctx = _render_print_html(doctype, docname, dname, params, skip_px_scaling=True)
+                # v15.04.33: preview uses original paper W×H — pass 'Auto' so the
+                # design's saved orientation is NOT applied to preview HTML.
+                # Browser print path reads `orientation` field and rotates via CSS.
+                html, _ctx = _render_print_html(
+                    doctype, docname, dname, params,
+                    skip_px_scaling=True, orientation_override="Auto",
+                )
                 results.append({
                     "docname": docname,
                     "html": html,
@@ -167,6 +175,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
                     "margin_bottom": matched.get("margin_bottom", 0),
                     "margin_left": matched.get("margin_left", 0),
                     "margin_right": matched.get("margin_right", 0),
+                    "orientation": matched.get("orientation", "Auto"),
                 })
             except Exception as e:
                 frappe.log_error(f"Batch render failed for {doctype} {docname}: {e}")
@@ -203,7 +212,12 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
                 errors.append({"docname": docname, "error": str(e)})
                 continue
             try:
-                html, _ctx = _render_print_html(doctype, docname, design_name, params, skip_px_scaling=True)
+                # v15.04.33: preview uses original paper W×H — pass 'Auto' so the
+                # design's saved orientation is NOT applied to preview HTML.
+                html, _ctx = _render_print_html(
+                    doctype, docname, design_name, params,
+                    skip_px_scaling=True, orientation_override="Auto",
+                )
                 results.append({
                     "docname": docname,
                     "html": html,
@@ -215,6 +229,7 @@ def batch_render_preview(doctype, docnames, design_name=None, params=None, auto_
                     "margin_bottom": margin_bottom,
                     "margin_left": margin_left,
                     "margin_right": margin_right,
+                    "orientation": design.orientation or "Auto",
                 })
             except Exception as e:
                 frappe.log_error(f"Batch render failed for {doctype} {docname}: {e}")
@@ -268,7 +283,12 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
                 continue
             try:
                 dname = matched["name"]
-                html, _ctx = _render_print_html(doctype, docname, dname, params)
+                # v15.04.33: batch PDF does NOT rotate — force 'Auto' so the
+                # design's saved orientation is NOT applied to PDF HTML.
+                html, _ctx = _render_print_html(
+                    doctype, docname, dname, params,
+                    orientation_override="Auto",
+                )
                 body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
                 style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
 
@@ -308,7 +328,11 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
             try:
                 if _is_draft_blocked(design_name, frappe.get_doc(doctype, docname)):
                     continue
-                html, _ctx = _render_print_html(doctype, docname, design_name, params)
+                # v15.04.33: batch PDF does NOT rotate — force 'Auto'.
+                html, _ctx = _render_print_html(
+                    doctype, docname, design_name, params,
+                    orientation_override="Auto",
+                )
                 body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
                 style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
 
@@ -333,6 +357,9 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
         combined_html += '\n</head>\n<body>\n'
         combined_html += "\n".join(html_parts)
         combined_html += '\n</body>\n</html>'
+
+    # v15.04.33: batch PDF does NOT apply orientation rotation — only browser
+    # print path rotates. PDF engines receive the design's original paper size.
 
     # Generate single PDF using the selected engine
     if engine_mode == "WeasyPrint":
