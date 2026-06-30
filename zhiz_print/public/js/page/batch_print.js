@@ -592,35 +592,8 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         printFrame.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;";
         document.body.appendChild(printFrame);
 
-        // v15.04.34: batch print — same as single print.
-        // 只交换 @page,不旋转内容(transform: rotate 会破坏实际走纸方向)。
-        // .print-page 强制匹配新 @page 尺寸 + overflow:hidden 把溢出边缘截掉,
-        // 避免内容超出新纸高产生空白第二页。
-        const first = this.preview_results[0];
-        const paperW = first?.paper_width;
-        const paperH = first?.paper_height;
-        const orient = first?.orientation || "Auto";
-        if (paperW && paperH) {
-            let effW = paperW;
-            let effH = paperH;
-            let swapped = false;
-            if (orient === "Force Landscape" && effW < effH) { [effW, effH] = [effH, effW]; swapped = true; }
-            else if (orient === "Force Portrait" && effW > effH) { [effW, effH] = [effH, effW]; swapped = true; }
-
-            if (swapped) {
-                const injectCss = '<style>@media print {'
-                    + ' @page { size: ' + effW + 'mm ' + effH + 'mm; margin: 0; }'
-                    + ' html, body { margin: 0 !important; padding: 0 !important; }'
-                    + ' .print-page {'
-                    + ' width: ' + effW + 'mm !important;'
-                    + ' height: ' + effH + 'mm !important;'
-                    + ' overflow: hidden !important;'
-                    + ' page-break-after: avoid !important;'
-                    + ' }'
-                    + ' }</style>';
-                allHtml = allHtml.replace("</head>", injectCss + "\n</head>");
-            }
-        }
+        // v15.04.39: 浏览器批量打印直接使用 HTML 原始 @page(paper 原始宽高),
+        // 不再做 Force Landscape/Portrait 交换 — 多页打印方式已解决方向问题。
 
         const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
         frameDoc.open();

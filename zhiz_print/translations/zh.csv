@@ -353,11 +353,7 @@ Draft — Preview Only,草稿 — 仅可预览
 "draft skipped",草稿已跳过
 "to preview",待预览
 "failed",失败
-"Print Direction","打印方向"
 "Auto","自动选择"
-"Force Landscape","强制横向"
-"Force Portrait","强制纵向"
-"Override paper orientation. Auto uses paper width/height as-is. Force Landscape ensures width > height. Force Portrait ensures width < height.","覆盖纸张方向。自动选择使用纸张原始宽高；强制横向确保宽 > 高；强制纵向确保宽 < 高。"
 "Page Count","页数"
 "Number of logical pages per print job. Each page renders as a separate .print-page div. Use 1 for single-page designs.","每次打印任务的逻辑页数。每页渲染为独立的 .print-page 区块。单页设计请填 1。"
 "Page","页码"

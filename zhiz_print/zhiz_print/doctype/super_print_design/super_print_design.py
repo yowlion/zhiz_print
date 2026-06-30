@@ -1236,8 +1236,6 @@ class SuperPrintDesign(frappe.model.document.Document):
             for col in range(1, (self.columns or 1) + 1)
         )
 
-        orientation = 'landscape' if paper_width > paper_height else 'portrait'
-
         html_template = """<!DOCTYPE html>
 <html>
 <head>

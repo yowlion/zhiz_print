@@ -188,10 +188,6 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		$toolbar.find('#sp-zoom-out').on('click', () => this.adjust_zoom(-10));
 		$toolbar.find('#sp-zoom-reset').on('click', () => this.reset_zoom());
 		$toolbar.find('#sp-zoom-input').on('change', (e) => this.set_zoom(parseInt(e.target.value) || 100));
-
-		// v15.04.33: orientation dropdown removed — single print uses design's
-		// orientation directly; PDF/Excel exports never rotate. Toolbar override
-		// is no longer meaningful, so the control is gone to avoid confusion.
 	}
 
 
@@ -386,8 +382,6 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					docname: this.frm.docname,
 					design_name: this.current_design,
 					params: this.current_params || {},
-					// 预览始终用纸张原始尺寸渲染，方向仅影响点打印时的 @page CSS 注入
-					orientation: 'Auto'
 				}
 			});
 
@@ -636,36 +630,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		printFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
 		document.body.appendChild(printFrame);
 
-		// v15.04.34: 回到 v15.04.31 的"只交换 @page,不旋转内容"策略。
-		// 关键教训:transform: rotate 会让浏览器把"内容视觉方向"作为信号传给打印机
-		// 驱动,与 @page 写的方向叠加后变成双重旋转,实际走纸方向反而回退成纵向。
-		// v15.04.31 方向对但有空白第二页 — 这里通过强制 .print-page 匹配新 @page
-		// 尺寸 + overflow:hidden 把溢出的少量边缘(通常 2mm)截掉,避免产生第二页。
+		// v15.04.39: 浏览器打印直接使用 HTML 原始 @page(paper 原始宽高),
+		// 不再做 Force Landscape/Portrait 交换 — 多页打印方式已解决方向问题。
 		let printHtml = this.current_preview_html;
-		const paperInfo = this.current_design_info;
-		if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
-			const orient = paperInfo.orientation || 'Auto';
-			let effW = paperInfo.paper_width;
-			let effH = paperInfo.paper_height;
-			let swapped = false;
-			if (orient === 'Force Landscape' && effW < effH) { [effW, effH] = [effH, effW]; swapped = true; }
-			else if (orient === 'Force Portrait' && effW > effH) { [effW, effH] = [effH, effW]; swapped = true; }
-
-			if (swapped) {
-				const injectCss = '<style>@media print {'
-					+ ' @page { size: ' + effW + 'mm ' + effH + 'mm; margin: 0; }'
-					+ ' html, body { margin: 0 !important; padding: 0 !important; }'
-					+ ' .print-page {'
-					+ ' width: ' + effW + 'mm !important;'
-					+ ' height: ' + effH + 'mm !important;'
-					+ ' overflow: hidden !important;'
-					+ ' page-break-after: avoid !important;'
-					+ ' }'
-					+ ' }</style>';
-				printHtml = printHtml.replace('</head>', injectCss + '\n</head>');
-			}
-			// Auto 或无需交换: 不注入,使用 HTML 原始 @page
-		}
 
 		const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
 		frameDoc.open();
@@ -699,14 +666,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
-		// v15.04.33: single PDF does NOT rotate — force 'Auto' so the design's
-		// saved orientation is not applied by the backend PDF engine.
 		const params = new URLSearchParams({
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
 			design_name: this.current_design,
 			params: JSON.stringify(this.current_params || {}),
-			orientation: 'Auto'
 		});
 		const url = '/api/method/zhiz_print.api.print_designer.generate_print_pdf?' + params;
 		const w = window.open(url, '_blank');
