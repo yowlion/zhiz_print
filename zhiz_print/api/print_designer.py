@@ -142,7 +142,7 @@ def get_available_designs(doctype, docname=None):
             "target_doctype": doctype,
             "enabled": 1,
         },
-        fields=["name", "design_name", "print_paper", "priority", "draft_no_print", "orientation"],
+        fields=["name", "design_name", "print_paper", "priority", "draft_no_print", "orientation", "page_count"],
         order_by="priority asc, design_name"
     )
 
@@ -174,6 +174,7 @@ def get_available_designs(doctype, docname=None):
             "parameters": get_design_parameters(d.name),
             "draft_no_print": cint(d.draft_no_print),
             "orientation": d.orientation or "Auto",
+            "page_count": cint(d.page_count) if hasattr(d, "page_count") and d.page_count else 1,
         })
 
     return result

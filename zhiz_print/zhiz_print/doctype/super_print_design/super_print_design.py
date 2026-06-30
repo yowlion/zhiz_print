@@ -53,41 +53,49 @@ class SuperPrintDesign(frappe.model.document.Document):
         self.validate_cells()
 
     def ensure_full_coverage(self):
-        """Ensure design items cover all cells (rows * columns)"""
+        """Ensure design items cover all cells (pages * rows * columns)"""
         if not self.rows or not self.columns:
             return
+
+        page_count = cint(getattr(self, "page_count", 1)) or 1
 
         existing_cells = {}
         if self.design_items:
             for item in self.design_items:
-                existing_cells[f"{item.row}_{item.col}"] = item
+                # Backfill page_no=1 for legacy items missing the field
+                if not item.page_no:
+                    item.page_no = 1
+                existing_cells[f"{item.page_no}_{item.row}_{item.col}"] = item
 
-        required_count = self.rows * self.columns
+        required_count = page_count * self.rows * self.columns
         current_count = len(self.design_items) if self.design_items else 0
 
-        # Fill missing cells
+        # Fill missing cells across all pages
         if current_count < required_count:
-            for r in range(1, self.rows + 1):
-                for c in range(1, self.columns + 1):
-                    key = f"{r}_{c}"
-                    if key not in existing_cells:
-                        self.append("design_items", {
-                            "cell_id": f"R{r}C{c}",
-                            "row": r,
-                            "col": c,
-                            "rowspan": 1,
-                            "colspan": 1,
-                            "cell_type": "static",
-                            "cell_value": "",
-                            "cell_options": "",
-                            "css_style": ""
-                        })
+            for p in range(1, page_count + 1):
+                for r in range(1, self.rows + 1):
+                    for c in range(1, self.columns + 1):
+                        key = f"{p}_{r}_{c}"
+                        if key not in existing_cells:
+                            self.append("design_items", {
+                                "cell_id": f"P{p}R{r}C{c}",
+                                "page_no": p,
+                                "row": r,
+                                "col": c,
+                                "rowspan": 1,
+                                "colspan": 1,
+                                "cell_type": "static",
+                                "cell_value": "",
+                                "cell_options": "",
+                                "css_style": ""
+                            })
 
-        # Remove excess cells
+        # Remove excess cells (page_no out of range, or row/col exceeds grid)
         elif current_count > required_count:
             to_remove = []
             for item in self.design_items:
-                if item.row > self.rows or item.col > self.columns:
+                p = cint(item.page_no) or 1
+                if p > page_count or item.row > self.rows or item.col > self.columns:
                     to_remove.append(item)
             for item in to_remove:
                 self.remove(item)
@@ -99,11 +107,13 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         position_map = {}
         for item in self.design_items:
+            if not item.page_no:
+                item.page_no = 1
             if not item.cell_id:
-                item.cell_id = f"R{item.row}C{item.col}"
+                item.cell_id = f"P{item.page_no}R{item.row}C{item.col}"
             if item.row < 1 or item.col < 1:
                 frappe.throw(f"Row/column numbers for cell {item.cell_id} must be greater than 0")
-            position_map[f"{item.row}_{item.col}"] = item
+            position_map[f"{item.page_no}_{item.row}_{item.col}"] = item
 
         for item in self.design_items:
             rowspan = cint(item.rowspan or 1)
@@ -117,11 +127,12 @@ class SuperPrintDesign(frappe.model.document.Document):
                 frappe.throw(f"Colspan for cell {item.cell_id} exceeds grid range")
 
             is_self_merged = is_merged_cell(item.cell_value or "")
+            page = item.page_no
 
             # Process colspan
             if colspan > 1:
                 for c in range(item.col + 1, item.col + colspan):
-                    pos_key = f"{item.row}_{c}"
+                    pos_key = f"{page}_{item.row}_{c}"
                     if pos_key in position_map:
                         position_map[pos_key].cell_value = f"{MERGED_PREFIX}{item.cell_id}{MERGED_SUFFIX}"
                         position_map[pos_key].cell_type = "static"
@@ -130,14 +141,14 @@ class SuperPrintDesign(frappe.model.document.Document):
             elif not is_self_merged:
                 right_col = item.col + 1
                 if right_col <= self.columns:
-                    right_key = f"{item.row}_{right_col}"
+                    right_key = f"{page}_{item.row}_{right_col}"
                     if right_key in position_map and is_merged_cell(position_map[right_key].cell_value or ""):
                         position_map[right_key].cell_value = ""
 
             # Process rowspan
             if rowspan > 1:
                 for r in range(item.row + 1, item.row + rowspan):
-                    pos_key = f"{r}_{item.col}"
+                    pos_key = f"{page}_{r}_{item.col}"
                     if pos_key in position_map:
                         position_map[pos_key].cell_value = f"{MERGED_PREFIX}{item.cell_id}{MERGED_SUFFIX}"
                         position_map[pos_key].cell_type = "static"
@@ -146,7 +157,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             elif not is_self_merged:
                 bottom_row = item.row + 1
                 if bottom_row <= self.rows:
-                    bottom_key = f"{bottom_row}_{item.col}"
+                    bottom_key = f"{page}_{bottom_row}_{item.col}"
                     if bottom_key in position_map and is_merged_cell(position_map[bottom_key].cell_value or ""):
                         position_map[bottom_key].cell_value = ""
 
@@ -377,7 +388,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Row Metadata ====================
 
-    def _build_row_metadata(self):
+    def _build_row_metadata(self, page_no=None):
         """Build row-level mapping from design_items.
 
         row_display / row_type are stored per-cell but applied per-row.
@@ -386,11 +397,15 @@ class SuperPrintDesign(frappe.model.document.Document):
         don't override values set on user-configured cells in the same row.
         Iteration order is Frappe's idx order which roughly follows creation
         order — user-configured cells typically have lower idx than auto-fill cells.
+
+        v15.04.35: Optional page_no filter — only consider items on this logical page.
         """
         row_type_map = {}
         row_display_map = {}
         if self.design_items:
             for item in self.design_items:
+                if page_no is not None and cint(item.page_no or 1) != page_no:
+                    continue
                 rt = (item.row_type or '').strip()
                 rd = (item.row_display or '').strip()
                 if rt and rt != 'Normal Row' and item.row not in row_type_map:
@@ -401,7 +416,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Row Expansion (Data-Driven Rows) ====================
 
-    def _build_expanded_rows_v2(self, cell_map, row_styles, doc, query_results):
+    def _build_expanded_rows_v2(self, cell_map, row_styles, doc, query_results, page_no=None):
         """Build expanded row list based on row_type and child table/query data"""
         all_rows = list(range(1, self.rows + 1))
 
@@ -410,6 +425,8 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         if self.design_items:
             for item in self.design_items:
+                if page_no is not None and cint(item.page_no or 1) != page_no:
+                    continue
                 row_num = item.row
                 rt = (item.row_type or '').strip()
                 cv = item.cell_value or ''
@@ -688,69 +705,62 @@ class SuperPrintDesign(frappe.model.document.Document):
             paper_width = paper.width
             paper_height = paper.height
 
-            # Build row metadata
-            row_type_map, row_display_map = self._build_row_metadata()
+            page_count = cint(getattr(self, "page_count", 1)) or 1
 
-            # Build cell mapping
-            cell_map = {}
-            if self.design_items:
-                for item in self.design_items:
-                    if is_merged_cell(item.cell_value or ""):
-                        continue
-                    cell_map[f"{item.row}_{item.col}"] = {
-                        'cell_id': item.cell_id,
-                        'row': item.row,
-                        'col': item.col,
-                        'rowspan': item.rowspan or 1,
-                        'colspan': item.colspan or 1,
-                        'cell_type': item.cell_type or 'static',
-                        'cell_value': item.cell_value or '',
-                        'cell_options': item.cell_options or '',
-                        'css_style': item.css_style or '',
-                        'data_key': item.data_key or '',
-                        'query_name': item.query_name or '',
-                        'barcode_format': item.barcode_format or 'CODE128',
-                        'barcode_width': item.barcode_width or 100,
-                        'barcode_height': item.barcode_height or 40,
-                    }
+            # Aggregate pages from all logical page_no's
+            all_pages = []
+            cell_grids_by_page = {}
+            cell_maps_by_page = {}
 
-            # Build expanded rows
-            all_rows_data = self._build_expanded_rows_v2(
-                cell_map, row_styles, doc, query_results)
+            for page_no in range(1, page_count + 1):
+                cell_map = self._build_cell_map_for_page(page_no)
 
-            # Build placeholder grid (two passes: place all cells first, then mark merge areas)
-            cell_grid = [[None] * self.columns for _ in range(self.rows)]
-            for cell in cell_map.values():
-                r = cell['row'] - 1
-                c = cell['col'] - 1
-                if 0 <= r < self.rows and 0 <= c < self.columns:
-                    cell_grid[r][c] = cell
-            for cell in cell_map.values():
-                r = cell['row'] - 1
-                c = cell['col'] - 1
-                for dr in range(cell['rowspan'] or 1):
-                    for dc in range(cell['colspan'] or 1):
-                        if dr == 0 and dc == 0:
-                            continue
-                        nr, nc = r + dr, c + dc
-                        if 0 <= nr < self.rows and 0 <= nc < self.columns:
-                            cell_grid[nr][nc] = {
-                                'is_merged': True,
-                                'merge_origin_row': cell['row'],
-                                'merge_origin_col': cell['col'],
-                                'merge_rowspan': cell['rowspan'] or 1,
-                                'merge_colspan': cell['colspan'] or 1,
-                            }
+                # Build row metadata scoped to this page's items
+                row_type_map, row_display_map = self._build_row_metadata(page_no=page_no)
 
-            # Pagination
-            pages = self._paginate_rows_v2(
-                all_rows_data, row_type_map, row_styles, paper,
-                cell_map=cell_map, col_styles=col_styles, doc=doc,
-                row_display_map=row_display_map, font_size=self.font_size or 13)
+                # Build expanded rows
+                all_rows_data = self._build_expanded_rows_v2(
+                    cell_map, row_styles, doc, query_results, page_no=page_no)
 
-            # Generate HTML for each page
+                # Build placeholder grid (two passes)
+                cell_grid = [[None] * self.columns for _ in range(self.rows)]
+                for cell in cell_map.values():
+                    r = cell['row'] - 1
+                    c = cell['col'] - 1
+                    if 0 <= r < self.rows and 0 <= c < self.columns:
+                        cell_grid[r][c] = cell
+                for cell in cell_map.values():
+                    r = cell['row'] - 1
+                    c = cell['col'] - 1
+                    for dr in range(cell['rowspan'] or 1):
+                        for dc in range(cell['colspan'] or 1):
+                            if dr == 0 and dc == 0:
+                                continue
+                            nr, nc = r + dr, c + dc
+                            if 0 <= nr < self.rows and 0 <= nc < self.columns:
+                                cell_grid[nr][nc] = {
+                                    'is_merged': True,
+                                    'merge_origin_row': cell['row'],
+                                    'merge_origin_col': cell['col'],
+                                    'merge_rowspan': cell['rowspan'] or 1,
+                                    'merge_colspan': cell['colspan'] or 1,
+                                }
+
+                # Pagination for this logical page
+                pages = self._paginate_rows_v2(
+                    all_rows_data, row_type_map, row_styles, paper,
+                    cell_map=cell_map, col_styles=col_styles, doc=doc,
+                    row_display_map=row_display_map, font_size=self.font_size or 13)
+
+                # Tag each paginated result with this page_no
+                for p in pages:
+                    all_pages.append((page_no, p))
+                cell_grids_by_page[page_no] = cell_grid
+                cell_maps_by_page[page_no] = cell_map
+
+            # Generate HTML for all pages
             body_html = self._build_pages_html(
-                pages, cell_map, cell_grid, row_styles, col_styles,
+                all_pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                 query_results, doc, row_type_map, row_display_map, paper, params=params
             )
 
@@ -760,11 +770,43 @@ class SuperPrintDesign(frappe.model.document.Document):
             frappe.log_error(frappe.get_traceback(), 'Build preview HTML failed')
             return f'<div class="alert alert-danger">Preview failed: {frappe.utils.escape_html(str(e))}</div>'
 
+    def _build_cell_map_for_page(self, page_no):
+        """Build cell mapping for a specific logical page (filtered by page_no)"""
+        cell_map = {}
+        if self.design_items:
+            for item in self.design_items:
+                if cint(item.page_no or 1) != page_no:
+                    continue
+                if is_merged_cell(item.cell_value or ""):
+                    continue
+                cell_map[f"{item.row}_{item.col}"] = {
+                    'cell_id': item.cell_id,
+                    'page_no': page_no,
+                    'row': item.row,
+                    'col': item.col,
+                    'rowspan': item.rowspan or 1,
+                    'colspan': item.colspan or 1,
+                    'cell_type': item.cell_type or 'static',
+                    'cell_value': item.cell_value or '',
+                    'cell_options': item.cell_options or '',
+                    'css_style': item.css_style or '',
+                    'data_key': item.data_key or '',
+                    'query_name': item.query_name or '',
+                    'barcode_format': item.barcode_format or 'CODE128',
+                    'barcode_width': item.barcode_width or 100,
+                    'barcode_height': item.barcode_height or 40,
+                }
+        return cell_map
+
     # ==================== Per-Page HTML Build (with Header/Footer Positioning) ====================
 
-    def _build_pages_html(self, pages, cell_map, cell_grid, row_styles, col_styles,
+    def _build_pages_html(self, pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                           query_results, doc, row_type_map, row_display_map, paper, params=None):
-        """Build HTML for all pages, each page as a fixed-size container"""
+        """Build HTML for all pages, each page as a fixed-size container
+
+        v15.04.35: pages is a list of (page_no, rows) tuples.
+        cell_maps_by_page / cell_grids_by_page are dicts keyed by page_no.
+        """
         margin_top = cint(paper.margin_top)
         margin_bottom = cint(paper.margin_bottom)
         margin_left = cint(paper.margin_left)
@@ -775,33 +817,35 @@ class SuperPrintDesign(frappe.model.document.Document):
         header_area_h = margin_top * PX_PER_MM
         footer_area_h = margin_bottom * PX_PER_MM
         content_top = header_area_h
-        content_pad_lr = f'{margin_left * PX_PER_MM}px {margin_right * PX_PER_MM}px'
-        header_pad_lr = f'2px {margin_right * PX_PER_MM}px 2px {margin_left * PX_PER_MM}px'
 
         total_pages = len(pages)
         pages_html = []
 
-        for page_idx, page_rows in enumerate(pages):
+        for page_idx, page_entry in enumerate(pages):
+            if isinstance(page_entry, tuple):
+                page_no, page_rows = page_entry
+            else:
+                page_no, page_rows = 1, page_entry
             page_num = page_idx + 1
             is_last = (page_idx == total_pages - 1)
 
-            page_html = f'<div class="print-page" style="width:{paper_w_px:.1f}px;height:{paper_h_px:.1f}px;position:relative;overflow:hidden;{"page-break-after:always;" if not is_last else ""}box-sizing:border-box;">'
+            cell_map = cell_maps_by_page.get(page_no, {})
+            cell_grid = cell_grids_by_page.get(page_no)
 
-            # Header area: from paper top to top margin (left/center/right columns)
+            page_html = f'<div class="print-page" data-page-no="{page_no}" style="width:{paper_w_px:.1f}px;height:{paper_h_px:.1f}px;position:relative;overflow:hidden;{"page-break-after:always;" if not is_last else ""}box-sizing:border-box;">'
+
+            # Header area
             has_header = getattr(self, 'page_header_left', '') or getattr(
                 self, 'page_header_center', '') or getattr(self, 'page_header_right', '')
             if has_header:
                 header_left = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_header_left',
-                            '') or '', page_num, total_pages
+                    getattr(self, 'page_header_left', '') or '', page_num, total_pages
                 )
                 header_center = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_header_center',
-                            '') or '', page_num, total_pages
+                    getattr(self, 'page_header_center', '') or '', page_num, total_pages
                 )
                 header_right = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_header_right',
-                            '') or '', page_num, total_pages
+                    getattr(self, 'page_header_right', '') or '', page_num, total_pages
                 )
                 page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:center;">'
                 page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{header_left}</div>'
@@ -809,7 +853,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 page_html += f'<div style="flex:1;text-align:right;padding-right:{margin_right * PX_PER_MM:.1f}px;">{header_right}</div>'
                 page_html += '</div>'
 
-            # Content area: from top margin to bottom margin
+            # Content area
             page_html += f'<div class="print-page-content" style="position:absolute;top:{content_top:.1f}px;left:0;right:0;bottom:{footer_area_h:.1f}px;padding:0 {margin_right * PX_PER_MM:.1f}px 0 {margin_left * PX_PER_MM:.1f}px;overflow:hidden;">'
             page_html += '<table class="print-form-table">'
             page_html += self._build_colgroup(col_styles)
@@ -820,21 +864,18 @@ class SuperPrintDesign(frappe.model.document.Document):
                 )
             page_html += '</table></div>'
 
-            # Footer area: from bottom margin to paper bottom (left/center/right columns)
+            # Footer area
             has_footer = getattr(self, 'page_footer_left', '') or getattr(
                 self, 'page_footer_center', '') or getattr(self, 'page_footer_right', '')
             if has_footer:
                 footer_left = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_footer_left',
-                            '') or '', page_num, total_pages
+                    getattr(self, 'page_footer_left', '') or '', page_num, total_pages
                 )
                 footer_center = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_footer_center',
-                            '') or '', page_num, total_pages
+                    getattr(self, 'page_footer_center', '') or '', page_num, total_pages
                 )
                 footer_right = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_footer_right',
-                            '') or '', page_num, total_pages
+                    getattr(self, 'page_footer_right', '') or '', page_num, total_pages
                 )
                 page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:center;">'
                 page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{footer_left}</div>'

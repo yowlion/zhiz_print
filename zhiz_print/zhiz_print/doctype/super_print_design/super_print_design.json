@@ -201,6 +201,17 @@
       "label": "Columns"
     },
     {
+      "fieldname": "column_break_grid_page",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "1",
+      "fieldname": "page_count",
+      "fieldtype": "Int",
+      "label": "Page Count",
+      "description": "Number of logical pages per print job. Each page renders as a separate .print-page div. Use 1 for single-page designs."
+    },
+    {
       "fieldname": "column_break_grid_b",
       "fieldtype": "Column Break"
     },

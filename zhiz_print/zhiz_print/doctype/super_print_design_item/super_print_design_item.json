@@ -41,6 +41,14 @@
       "read_only": 1
     },
     {
+      "default": "1",
+      "fieldname": "page_no",
+      "fieldtype": "Int",
+      "in_list_view": 1,
+      "label": "Page",
+      "reqd": 1
+    },
+    {
       "fieldname": "row",
       "fieldtype": "Int",
       "in_list_view": 1,
