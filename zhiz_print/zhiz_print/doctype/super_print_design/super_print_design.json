@@ -155,6 +155,15 @@
       "reqd": 1
     },
     {
+      "fieldname": "orientation",
+      "fieldtype": "Select",
+      "label": "Orientation",
+      "options": "\nAuto\nForce Landscape\nForce Portrait",
+      "default": "Auto",
+      "description": "Override paper orientation. Auto uses paper width/height as-is. Force Landscape ensures width > height. Force Portrait ensures width < height.",
+      "depends_on": "eval:doc.print_paper"
+    },
+    {
       "fieldname": "column_break_condition",
       "fieldtype": "Column Break"
     },

@@ -56,6 +56,72 @@ def _check_draft_no_print(design_name, doc=None):
         )
 
 
+# v15.04.29: orientation override — Auto / Force Landscape / Force Portrait.
+# Auto = paper width/height as-is (backward compat). Force Landscape swaps when w<h.
+# Force Portrait swaps when w>h. Effective dimensions feed @page CSS and PDF page size.
+PX_PER_MM = 4
+
+
+def _resolve_orientation(design, override=None):
+    """User toolbar override wins; else design's saved orientation; else Auto."""
+    if override and override != "Auto":
+        return override
+    saved = getattr(design, "orientation", None) if design else None
+    return saved or "Auto"
+
+
+def _effective_dims(width, height, orientation):
+    """Apply orientation policy to (width, height). Returns (eff_w, eff_h)."""
+    if orientation == "Force Landscape" and width < height:
+        return height, width
+    if orientation == "Force Portrait" and width > height:
+        return height, width
+    return width, height
+
+
+def _apply_orientation_to_html(html, paper_width, paper_height, orientation):
+    """Rewrite @page size and .print-page dimensions to match effective orientation.
+
+    Called after _render_print_html produces the HTML. Only rewrites when dimensions
+    actually swap (orientation != Auto AND width/height are on the wrong side)."""
+    eff_w, eff_h = _effective_dims(paper_width, paper_height, orientation)
+    if (eff_w, eff_h) == (paper_width, paper_height):
+        return html
+
+    eff_w_int = int(eff_w) if float(eff_w).is_integer() else eff_w
+    eff_h_int = int(eff_h) if float(eff_h).is_integer() else eff_h
+    eff_w_px = int(round(eff_w * PX_PER_MM))
+    eff_h_px = int(round(eff_h * PX_PER_MM))
+    orig_w_px = int(round(paper_width * PX_PER_MM))
+    orig_h_px = int(round(paper_height * PX_PER_MM))
+
+    # @page size: Wmm Hmm
+    html = re.sub(
+        r'(@page\s*\{[^}]*?size:\s*)[\d.]+\s*mm\s+[\d.]+\s*mm',
+        lambda m: m.group(1) + f"{eff_w_int}mm {eff_h_int}mm",
+        html, count=1, flags=re.DOTALL
+    )
+    # .print-pages-wrapper width: Wmm
+    html = re.sub(
+        r'(\.print-pages-wrapper\s*\{[^}]*?width:\s*)[\d.]+\s*mm',
+        lambda m: m.group(1) + f"{eff_w_int}mm",
+        html, count=1, flags=re.DOTALL
+    )
+    # .print-pages-wrapper .print-page { width: Wpx; height: Hpx; }
+    html = re.sub(
+        r'(\.print-pages-wrapper\s+\.print-page\s*\{[^}]*?width:\s*)[\d.]+\s*px(\s*;\s*height:\s*)[\d.]+\s*px',
+        lambda m: m.group(1) + f"{eff_w_px}px" + m.group(2) + f"{eff_h_px}px",
+        html, count=1, flags=re.DOTALL
+    )
+    # Some designs use combined page wrapper without descendant selector — handle both
+    html = re.sub(
+        r'(\.print-page\s*\{[^}]*?width:\s*)' + str(orig_w_px) + r'\s*px(\s*;\s*height:\s*)' + str(orig_h_px) + r'\s*px',
+        lambda m: m.group(1) + f"{eff_w_px}px" + m.group(2) + f"{eff_h_px}px",
+        html, count=1, flags=re.DOTALL
+    )
+    return html
+
+
 @frappe.whitelist()
 def get_available_designs(doctype, docname=None):
     """Get list of available print designs for a DocType"""
@@ -76,7 +142,7 @@ def get_available_designs(doctype, docname=None):
             "target_doctype": doctype,
             "enabled": 1,
         },
-        fields=["name", "design_name", "print_paper", "priority", "draft_no_print"],
+        fields=["name", "design_name", "print_paper", "priority", "draft_no_print", "orientation"],
         order_by="priority asc, design_name"
     )
 
@@ -107,6 +173,7 @@ def get_available_designs(doctype, docname=None):
             "has_parameters": has_params > 0,
             "parameters": get_design_parameters(d.name),
             "draft_no_print": cint(d.draft_no_print),
+            "orientation": d.orientation or "Auto",
         })
 
     return result
@@ -124,7 +191,7 @@ def get_design_parameters(design_name):
 
 
 @frappe.whitelist()
-def render_print_preview(doctype, docname, design_name, params=None):
+def render_print_preview(doctype, docname, design_name, params=None, orientation=None):
     """Render print preview HTML"""
     _check_license()
     if isinstance(params, str):
@@ -145,14 +212,20 @@ def render_print_preview(doctype, docname, design_name, params=None):
     # Render HTML
     html = design.get_preview_for_document(doc_name=docname, params=params)
 
+    # v15.04.29: apply orientation override (user toolbar wins over design default)
+    effective_orientation = _resolve_orientation(design, orientation)
+    html = _apply_orientation_to_html(html, paper.width, paper.height, effective_orientation)
+    eff_w, eff_h = _effective_dims(paper.width, paper.height, effective_orientation)
+
     return {
         "html": html,
-        "paper_width": paper.width,
-        "paper_height": paper.height,
+        "paper_width": eff_w,
+        "paper_height": eff_h,
         "margin_top": paper.margin_top or 0,
         "margin_bottom": paper.margin_bottom or 0,
         "margin_left": paper.margin_left or 0,
         "margin_right": paper.margin_right or 0,
+        "orientation": effective_orientation,
     }
 
 
@@ -246,7 +319,7 @@ def _resolve_image_urls_for_pdf(html):
     return html
 
 
-def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False):
+def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False, orientation_override=None):
     """Common function: render print HTML and apply px scaling, shared by PDF engines.
     Returns (html, design) tuple."""
     import os
@@ -263,6 +336,12 @@ def _render_print_html(doctype, docname, design_name, params=None, skip_px_scali
         frappe.throw(_("No print permission"), frappe.PermissionError)
 
     html = design.get_preview_for_document(doc_name=docname, params=params)
+
+    # v15.04.29: apply orientation override to @page CSS and .print-page dimensions
+    if design.print_paper:
+        paper = frappe.get_doc("Super Print Paper", design.print_paper)
+        effective_orientation = _resolve_orientation(design, orientation_override)
+        html = _apply_orientation_to_html(html, paper.width, paper.height, effective_orientation)
 
     if not skip_px_scaling:
         # WeasyPrint px->mm conversion rate: 25.4/96 ~ 0.264583 mm/px
@@ -306,24 +385,24 @@ def _pdf_response(pdf_bytes, filename):
 
 
 @frappe.whitelist()
-def generate_print_pdf(doctype, docname, design_name, params=None):
+def generate_print_pdf(doctype, docname, design_name, params=None, orientation=None):
     """Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting."""
     _check_license()
     _check_draft_no_print(design_name, frappe.get_doc(doctype, docname))
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
     if engine_mode == "WeasyPrint":
-        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params)
+        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params, orientation)
     elif engine_mode == "Chromium":
-        return _generate_print_pdf_chromium(doctype, docname, design_name, params)
+        return _generate_print_pdf_chromium(doctype, docname, design_name, params, orientation)
     else:
-        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params)
+        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params, orientation)
 
 
-def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None):
+def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, orientation_override=None):
     """Generate PDF using WeasyPrint, browser inline preview"""
     from weasyprint import HTML as WeasyHTML
 
-    html, design = _render_print_html(doctype, docname, design_name, params)
+    html, design = _render_print_html(doctype, docname, design_name, params, orientation_override=orientation_override)
 
     # PDF-specific: fix ghost borders of merged cells
     html = _fix_merged_cell_borders_for_pdf(html)
@@ -448,11 +527,11 @@ def _prepare_html_for_wkhtmltopdf(html):
     return html
 
 
-def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
+def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, orientation_override=None):
     """Generate PDF using wkhtmltopdf, browser inline preview"""
     import pdfkit
 
-    html, design = _render_print_html(doctype, docname, design_name, params)
+    html, design = _render_print_html(doctype, docname, design_name, params, orientation_override=orientation_override)
 
     # wkhtmltopdf preprocessing: SVG->PNG, background shorthand fix, flex->table
     html = _prepare_html_for_wkhtmltopdf(html)
@@ -474,8 +553,11 @@ def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
     }
     if design.print_paper:
         paper = frappe.get_doc("Super Print Paper", design.print_paper)
-        options["page-width"] = f"{paper.width}mm"
-        options["page-height"] = f"{paper.height}mm"
+        # v15.04.29: apply orientation override to physical page dimensions
+        effective_orientation = _resolve_orientation(design, orientation_override)
+        eff_w, eff_h = _effective_dims(paper.width, paper.height, effective_orientation)
+        options["page-width"] = f"{eff_w}mm"
+        options["page-height"] = f"{eff_h}mm"
 
     try:
         pdf_bytes = pdfkit.from_string(html, False, options=options)
@@ -485,13 +567,13 @@ def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
         frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
-def _generate_print_pdf_chromium(doctype, docname, design_name, params=None):
+def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, orientation_override=None):
     """Generate PDF using Chromium headless, browser inline preview"""
     import os
     import subprocess
     import tempfile
 
-    html, design = _render_print_html(doctype, docname, design_name, params)
+    html, design = _render_print_html(doctype, docname, design_name, params, orientation_override=orientation_override)
 
     # PDF-specific: convert relative image URLs to file:// paths
     html = _resolve_image_urls_for_pdf(html)
@@ -535,9 +617,12 @@ def _generate_print_pdf_chromium(doctype, docname, design_name, params=None):
         ]
         if design.print_paper:
             paper = frappe.get_doc('Super Print Paper', design.print_paper)
+            # v15.04.29: apply orientation override
+            effective_orientation = _resolve_orientation(design, orientation_override)
+            eff_w, eff_h = _effective_dims(paper.width, paper.height, effective_orientation)
             chrome_args.append('--print-to-pdf-options=' + json.dumps({
-                'paperWidth': round(paper.width / 25.4, 4),
-                'paperHeight': round(paper.height / 25.4, 4),
+                'paperWidth': round(eff_w / 25.4, 4),
+                'paperHeight': round(eff_h / 25.4, 4),
                 'marginTop': 0, 'marginBottom': 0, 'marginLeft': 0, 'marginRight': 0,
             }))
         chrome_args.append('file://' + html_path)

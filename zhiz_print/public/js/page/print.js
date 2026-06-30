@@ -188,6 +188,23 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		$toolbar.find('#sp-zoom-out').on('click', () => this.adjust_zoom(-10));
 		$toolbar.find('#sp-zoom-reset').on('click', () => this.reset_zoom());
 		$toolbar.find('#sp-zoom-input').on('change', (e) => this.set_zoom(parseInt(e.target.value) || 100));
+
+		// v15.04.29: orientation selector — default from design, user can override before print
+		const currentOrient = this.current_orientation || this.current_design_info?.orientation || 'Auto';
+		this.current_orientation = currentOrient;
+		const orientHtml = '<div class="sp-orient-controls" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;padding-left:12px;border-left:1px solid #d0d0d0;">'
+			+ '<span style="font-size:11px;color:#555;">' + __('Orientation') + ':</span>'
+			+ '<select id="sp-orient-select" class="form-control" style="width:auto;height:24px;font-size:11px;padding:0 6px;">'
+			+ '<option value="Auto"' + (currentOrient === 'Auto' ? ' selected' : '') + '>' + __('Auto') + '</option>'
+			+ '<option value="Force Landscape"' + (currentOrient === 'Force Landscape' ? ' selected' : '') + '>' + __('Force Landscape') + '</option>'
+			+ '<option value="Force Portrait"' + (currentOrient === 'Force Portrait' ? ' selected' : '') + '>' + __('Force Portrait') + '</option>'
+			+ '</select>'
+			+ '</div>';
+		$toolbar.append(orientHtml);
+		$toolbar.find('#sp-orient-select').on('change', (e) => {
+			this.current_orientation = e.target.value;
+			this.render_preview();
+		});
 	}
 
 
@@ -314,6 +331,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		this.current_design = design.name;
 		this.current_design_info = design;
+		// v15.04.29: reset orientation override when switching templates — each design
+		// brings its own default. User can still override via toolbar afterwards.
+		this.current_orientation = design.orientation || 'Auto';
 		this.setup_toolbar();
 
 		// Parameter dialog
@@ -381,13 +401,16 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					doctype: this.frm.doctype,
 					docname: this.frm.docname,
 					design_name: this.current_design,
-					params: this.current_params || {}
+					params: this.current_params || {},
+					orientation: this.current_orientation || 'Auto'
 				}
 			});
 
 			if (result.message) {
-				const { html, paper_width, paper_height, margin_top, margin_bottom, margin_left, margin_right } = result.message;
+				const { html, paper_width, paper_height, margin_top, margin_bottom, margin_left, margin_right, orientation } = result.message;
 				this.current_preview_html = html;
+				// Sync effective orientation back to state (in case backend used design default)
+				if (orientation) this.current_orientation = orientation;
 
 				const PX_PER_MM = 4;
 				const previewW = (paper_width || 210) * PX_PER_MM;
@@ -630,11 +653,20 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		printFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
 		document.body.appendChild(printFrame);
 
-		// Inject explicit orientation for browser print dialog
+		// Inject explicit @page CSS for browser print dialog.
+		// v15.04.29: compute effective dims locally from current orientation override so
+		// the print dialog page size matches what the user saw in preview. The preview HTML
+		// already had its internal @page rewritten by the backend; this injection overrides
+		// any default @page the browser might apply.
 		let printHtml = this.current_preview_html;
 		const paperInfo = this.current_design_info;
 		if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
-			const injectCss = '<style>@media print { @page { size: ' + paperInfo.paper_width + 'mm ' + paperInfo.paper_height + 'mm; margin: 0; } }</style>';
+			const orient = this.current_orientation || 'Auto';
+			let effW = paperInfo.paper_width;
+			let effH = paperInfo.paper_height;
+			if (orient === 'Force Landscape' && effW < effH) { [effW, effH] = [effH, effW]; }
+			else if (orient === 'Force Portrait' && effW > effH) { [effW, effH] = [effH, effW]; }
+			const injectCss = '<style>@media print { @page { size: ' + effW + 'mm ' + effH + 'mm; margin: 0; } }</style>';
 			printHtml = printHtml.replace('</head>', injectCss + '\n</head>');
 		}
 
@@ -675,7 +707,8 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
 			design_name: this.current_design,
-			params: JSON.stringify(this.current_params || {})
+			params: JSON.stringify(this.current_params || {}),
+			orientation: this.current_orientation || 'Auto'
 		});
 		const url = '/api/method/zhiz_print.api.print_designer.generate_print_pdf?' + params;
 		const w = window.open(url, '_blank');
