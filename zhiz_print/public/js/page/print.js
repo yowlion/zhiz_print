@@ -371,11 +371,17 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		if (!this.current_design) return;
 
 		const area = document.getElementById('sp-preview-area');
-
 		area.innerHTML = '<div class="sp-loading"><i class="fa fa-spinner fa-spin fa-2x" style="color:#2196f3"></i><p class="text-muted" style="margin-top:10px">' + __('Rendering preview...') + '</p></div>';
 
+		const dimsOf = (msg) => ({
+			paper_width: msg.paper_width, paper_height: msg.paper_height,
+			margin_top: msg.margin_top, margin_bottom: msg.margin_bottom,
+			margin_left: msg.margin_left, margin_right: msg.margin_right,
+		});
+
 		try {
-			const result = await frappe.call({
+			// Step 1: estimation fallback + measurement scaffold
+			const r1 = await frappe.call({
 				method: 'zhiz_print.api.print_designer.render_print_preview',
 				args: {
 					doctype: this.frm.doctype,
@@ -384,120 +390,260 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					params: this.current_params || {},
 				}
 			});
+			if (!r1.message) return;
+			const msg1 = r1.message;
+			const dims = dimsOf(msg1);
 
-			if (result.message) {
-				const { html, paper_width, paper_height, margin_top, margin_bottom, margin_left, margin_right } = result.message;
-				this.current_preview_html = html;
+			// Render estimation immediately (also the safety net if precise fails)
+			this.current_preview_html = msg1.html;
+			this.current_break_map = null;
+			this._render_pages_html_into_preview(msg1.html, dims);
 
-				const PX_PER_MM = 4;
-				const previewW = (paper_width || 210) * PX_PER_MM;
-				const previewH = (paper_height || 297) * PX_PER_MM;
-				const mTop = (margin_top || 0) * PX_PER_MM;
-				const mBottom = (margin_bottom || 0) * PX_PER_MM;
-				const mLeft = (margin_left || 0) * PX_PER_MM;
-				const mRight = (margin_right || 0) * PX_PER_MM;
-				const containerWidth = area.offsetWidth - 40;
-				const scale = Math.min(1, containerWidth / previewW);
-				this.base_scale = scale;
-				if (!this.user_zoom) this.user_zoom = 100;
-				const finalScale = scale * (this.user_zoom / 100);
-
-				// Parse .print-page elements in HTML and render page by page
-				const parser = new DOMParser();
-				const parsed = parser.parseFromString(html, 'text/html');
-				const printPages = parsed.querySelectorAll('.print-page');
-
-				area.innerHTML = '';
-				const pagesContainer = document.createElement('div');
-				pagesContainer.className = 'sp-pages-container';
-				pagesContainer.style.cssText = 'transform:scale(' + finalScale + ');transform-origin:top center;display:flex;flex-direction:column;align-items:center;gap:20px;padding-bottom:20px;';
-
-				// Build all page structures first, mount to DOM, then write iframe content
-				const pageWrappers = [];
-
-				if (printPages.length > 0) {
-					// Multi-page mode: each page gets its own paper container
-					printPages.forEach((pageEl, idx) => {
-						const pageWrapper = document.createElement('div');
-						pageWrapper.className = 'sp-paper-wrapper';
-						pageWrapper.style.cssText =
-							'width:' + previewW + 'px;' +
-							'height:' + previewH + 'px;' +
-							'background:white;' +
-							'box-shadow:0 2px 16px rgba(0,0,0,.12);' +
-							'position:relative;' +
-							'overflow:hidden;' +
-							'flex-shrink:0;';
-
-						// Margin dashed line
-						const marginLine = document.createElement('div');
-						marginLine.className = 'sp-margin-line';
-						marginLine.style.cssText =
-							'position:absolute;' +
-							'top:' + mTop + 'px;left:' + mLeft + 'px;' +
-							'right:' + mRight + 'px;bottom:' + mBottom + 'px;' +
-							'border:1px dashed rgba(0,120,215,0.4);' +
-							'pointer-events:none;z-index:10;';
-						pageWrapper.appendChild(marginLine);
-
-						// Page content iframe
-						const iframe = document.createElement('iframe');
-						iframe.className = 'sp-iframe';
-						iframe.style.cssText = 'width:100%;height:100%;border:none;overflow:hidden;';
-			iframe.scrolling = 'no';
-						pageWrapper.appendChild(iframe);
-
-						pagesContainer.appendChild(pageWrapper);
-						pageWrappers.push({ iframe, pageEl });
-					});
-				} else {
-					// No page-break markers, treat as single page
-					const pageWrapper = document.createElement('div');
-					pageWrapper.className = 'sp-paper-wrapper';
-					pageWrapper.style.cssText =
-						'width:' + previewW + 'px;' +
-						'min-height:' + previewH + 'px;' +
-						'background:white;' +
-						'box-shadow:0 2px 16px rgba(0,0,0,.12);' +
-						'position:relative;';
-
-					const marginLine = document.createElement('div');
-					marginLine.className = 'sp-margin-line';
-					marginLine.style.cssText =
-						'position:absolute;' +
-						'top:' + mTop + 'px;left:' + mLeft + 'px;' +
-						'right:' + mRight + 'px;bottom:' + mBottom + 'px;' +
-						'border:1px dashed rgba(0,120,215,0.4);' +
-						'pointer-events:none;z-index:10;';
-					pageWrapper.appendChild(marginLine);
-
-					const iframe = document.createElement('iframe');
-					iframe.className = 'sp-iframe';
-					iframe.style.cssText = 'width:100%;height:' + previewH + 'px;border:none;';
-					pageWrapper.appendChild(iframe);
-					pagesContainer.appendChild(pageWrapper);
-					pageWrappers.push({ iframe, pageEl: null });
+			// Step 2: client-measured precise pagination
+			if (msg1.measurement_html && msg1.content_h_px) {
+				try {
+					const measured = await this._measure_row_heights(msg1.measurement_html, msg1.content_w_px);
+					if (measured && Object.keys(measured.heights).length) {
+						const breakMap = this._compute_break_map(measured, msg1);
+						if (breakMap) {
+							const r2 = await frappe.call({
+								method: 'zhiz_print.api.print_designer.render_print_preview',
+								args: {
+									doctype: this.frm.doctype,
+									docname: this.frm.docname,
+									design_name: this.current_design,
+									params: this.current_params || {},
+									page_break_map: breakMap.page_break_map,
+									row_heights: breakMap.row_heights,
+								}
+							});
+							if (r2.message && r2.message.precise) {
+								this.current_preview_html = r2.message.html;
+								this.current_break_map = breakMap;
+								this._render_pages_html_into_preview(r2.message.html, dimsOf(r2.message));
+							}
+						}
+					}
+				} catch (me) {
+					// Precise path failed — keep estimation fallback rendered above
+					console.warn('zhiz_print: precise pagination unavailable, using estimation fallback', me);
 				}
-
-				// Mount to DOM first so iframe can access contentDocument
-				area.appendChild(pagesContainer);
-
-				// Wait for browser to initialize iframes before writing content
-				requestAnimationFrame(() => {
-					pageWrappers.forEach(({ iframe, pageEl }) => {
-						const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-						iframeDoc.open();
-						iframeDoc.write(pageEl
-							? this._build_single_page_html(pageEl, parsed, previewW, previewH)
-							: html);
-						iframeDoc.close();
-					});
-				});
 			}
 		} catch (e) {
 			console.error('Preview render failed:', e);
 			area.innerHTML = '<div class="alert alert-danger" style="margin:20px"><i class="fa fa-exclamation-circle"></i> Preview render failed: ' + this.escapeHtml(e.message || String(e)) + '</div>';
 		}
+	}
+
+	// Render a server-produced print HTML (one or more .print-page) into the preview area.
+	_render_pages_html_into_preview(html, dims) {
+		const area = document.getElementById('sp-preview-area');
+		const { paper_width, paper_height, margin_top, margin_bottom, margin_left, margin_right } = dims || {};
+
+		const PX_PER_MM = 4;
+		const previewW = (paper_width || 210) * PX_PER_MM;
+		const previewH = (paper_height || 297) * PX_PER_MM;
+		const mTop = (margin_top || 0) * PX_PER_MM;
+		const mBottom = (margin_bottom || 0) * PX_PER_MM;
+		const mLeft = (margin_left || 0) * PX_PER_MM;
+		const mRight = (margin_right || 0) * PX_PER_MM;
+		const containerWidth = area.offsetWidth - 40;
+		const scale = Math.min(1, containerWidth / previewW);
+		this.base_scale = scale;
+		if (!this.user_zoom) this.user_zoom = 100;
+		const finalScale = scale * (this.user_zoom / 100);
+
+		const parser = new DOMParser();
+		const parsed = parser.parseFromString(html, 'text/html');
+		const printPages = parsed.querySelectorAll('.print-page');
+
+		area.innerHTML = '';
+		const pagesContainer = document.createElement('div');
+		pagesContainer.className = 'sp-pages-container';
+		pagesContainer.style.cssText = 'transform:scale(' + finalScale + ');transform-origin:top center;display:flex;flex-direction:column;align-items:center;gap:20px;padding-bottom:20px;';
+
+		const pageWrappers = [];
+
+		if (printPages.length > 0) {
+			// Multi-page mode: each page gets its own paper container
+			printPages.forEach((pageEl, idx) => {
+				const pageWrapper = document.createElement('div');
+				pageWrapper.className = 'sp-paper-wrapper';
+				pageWrapper.style.cssText =
+					'width:' + previewW + 'px;' +
+					'height:' + previewH + 'px;' +
+					'background:white;' +
+					'box-shadow:0 2px 16px rgba(0,0,0,.12);' +
+					'position:relative;' +
+					'overflow:hidden;' +
+					'flex-shrink:0;';
+
+				const marginLine = document.createElement('div');
+				marginLine.className = 'sp-margin-line';
+				marginLine.style.cssText =
+					'position:absolute;' +
+					'top:' + mTop + 'px;left:' + mLeft + 'px;' +
+					'right:' + mRight + 'px;bottom:' + mBottom + 'px;' +
+					'border:1px dashed rgba(0,120,215,0.4);' +
+					'pointer-events:none;z-index:10;';
+				pageWrapper.appendChild(marginLine);
+
+				const iframe = document.createElement('iframe');
+				iframe.className = 'sp-iframe';
+				iframe.style.cssText = 'width:100%;height:100%;border:none;overflow:hidden;';
+				iframe.scrolling = 'no';
+				pageWrapper.appendChild(iframe);
+
+				pagesContainer.appendChild(pageWrapper);
+				pageWrappers.push({ iframe, pageEl });
+			});
+		} else {
+			const pageWrapper = document.createElement('div');
+			pageWrapper.className = 'sp-paper-wrapper';
+			pageWrapper.style.cssText =
+				'width:' + previewW + 'px;' +
+				'min-height:' + previewH + 'px;' +
+				'background:white;' +
+				'box-shadow:0 2px 16px rgba(0,0,0,.12);' +
+				'position:relative;';
+
+			const marginLine = document.createElement('div');
+			marginLine.className = 'sp-margin-line';
+			marginLine.style.cssText =
+				'position:absolute;' +
+				'top:' + mTop + 'px;left:' + mLeft + 'px;' +
+				'right:' + mRight + 'px;bottom:' + mBottom + 'px;' +
+				'border:1px dashed rgba(0,120,215,0.4);' +
+				'pointer-events:none;z-index:10;';
+			pageWrapper.appendChild(marginLine);
+
+			const iframe = document.createElement('iframe');
+			iframe.className = 'sp-iframe';
+			iframe.style.cssText = 'width:100%;height:' + previewH + 'px;border:none;';
+			pageWrapper.appendChild(iframe);
+			pagesContainer.appendChild(pageWrapper);
+			pageWrappers.push({ iframe, pageEl: null });
+		}
+
+		area.appendChild(pagesContainer);
+
+		requestAnimationFrame(() => {
+			pageWrappers.forEach(({ iframe, pageEl }) => {
+				const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+				iframeDoc.open();
+				iframeDoc.write(pageEl
+					? this._build_single_page_html(pageEl, parsed, previewW, previewH)
+					: html);
+				iframeDoc.close();
+			});
+		});
+	}
+
+	// v15.10.01: render the measurement scaffold off-screen and record each row's real
+	// offsetHeight (ground truth from the browser layout engine) keyed by (page_no, serial).
+	_timeout(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+	async _measure_row_heights(measurement_html, content_w_px) {
+		const mframe = document.createElement('iframe');
+		mframe.className = 'sp-measure-iframe';
+		mframe.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + (content_w_px || 800) + 'px;height:0;border:0;opacity:0;pointer-events:none;';
+		document.body.appendChild(mframe);
+		try {
+			const mdoc = mframe.contentDocument || mframe.contentWindow.document;
+			mdoc.open();
+			mdoc.write(measurement_html);
+			mdoc.close();
+			// Wait for fonts (avoid height drift after font swap) + a layout pass
+			if (mdoc.fonts && mdoc.fonts.ready) {
+				await Promise.race([mdoc.fonts.ready, this._timeout(2000)]);
+			} else {
+				await this._timeout(300);
+			}
+			await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+			const heights = {}, kinds = {}, order = {}, links = {};
+			const trs = mdoc.querySelectorAll('tr[data-serial]');
+			trs.forEach(tr => {
+				const pg = parseInt(tr.dataset.pg, 10);
+				const serial = parseInt(tr.dataset.serial, 10);
+				if (!heights[pg]) { heights[pg] = {}; kinds[pg] = {}; order[pg] = []; links[pg] = []; }
+				heights[pg][serial] = tr.offsetHeight;
+				kinds[pg][serial] = tr.dataset.kind || 'data';
+				order[pg].push(serial);
+				// Capture rowspan links so merged-cell groups stay atomic during packing
+				tr.querySelectorAll('td[rowspan]').forEach(td => {
+					const rs = parseInt(td.getAttribute('rowspan') || '1', 10);
+					if (rs > 1) links[pg].push([serial, rs]);
+				});
+			});
+			return { heights, kinds, order, links };
+		} finally {
+			if (mframe.parentNode) mframe.parentNode.removeChild(mframe);
+		}
+	}
+
+	// Greedy bin-pack: title rows repeat on every page; data rows flow and break when the
+	// next row (or atomic rowspan group) no longer fits the measured content area.
+	_compute_break_map(measured, msg) {
+		const { heights, kinds, order, links } = measured;
+		const content_h_px = msg.content_h_px;
+		const page_count = msg.page_count || Object.keys(heights).length || 1;
+		const page_break_map = {};
+		const row_heights = {};
+
+		for (let pg = 1; pg <= page_count; pg++) {
+			const H = heights[pg];
+			if (!H) continue;
+			const ord = order[pg] || [];
+			const titleSerials = ord.filter(s => kinds[pg][s] === 'title');
+			const dataSerials = ord.filter(s => kinds[pg][s] !== 'title');
+			const titleH = titleSerials.reduce((a, s) => a + (H[s] || 0), 0);
+
+			// Per-row locked heights (all serials) for the server rebuild
+			const rh = {};
+			ord.forEach(s => { rh[s] = H[s] || 0; });
+			row_heights[pg] = rh;
+
+			const groupOf = this._build_rowspan_groups(dataSerials, links[pg] || []);
+			const avail = content_h_px - titleH - 1; // -1 for table top border (parity with server)
+			const pages = [];
+			let cur = [], curH = 0, consumed = new Set();
+			for (let i = 0; i < dataSerials.length; i++) {
+				const s = dataSerials[i];
+				if (consumed.has(s)) continue;
+				const grp = groupOf[s] || [s];
+				grp.forEach(g => consumed.add(g));
+				const grpH = grp.reduce((a, g) => a + (H[g] || 0), 0);
+				if (cur.length && curH + grpH > avail) {
+					pages.push(cur); cur = []; curH = 0;
+				}
+				cur = cur.concat(grp); curH += grpH;
+			}
+			if (cur.length) pages.push(cur);
+			if (!pages.length) pages.push([]);
+			page_break_map[pg] = pages;
+		}
+		return { page_break_map, row_heights };
+	}
+
+	// Union-find over data serials: rows sharing a rowspan cell become one atomic group.
+	_build_rowspan_groups(dataSerials, links) {
+		const parent = {};
+		dataSerials.forEach(s => { parent[s] = s; });
+		const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+		const union = (a, b) => { parent[find(a)] = find(b); };
+		links.forEach(([start, span]) => {
+			if (!parent.hasOwnProperty(start)) return; // rowspan rooted on a title row: ignore
+			for (let k = 1; k < span; k++) {
+				const nxt = start + k;
+				if (parent.hasOwnProperty(nxt)) union(start, nxt);
+			}
+		});
+		const byRoot = {};
+		dataSerials.forEach(s => { const r = find(s); (byRoot[r] = byRoot[r] || []).push(s); });
+		const groupOf = {};
+		dataSerials.forEach(s => { groupOf[s] = byRoot[find(s)]; });
+		return groupOf;
 	}
 
 	_build_single_page_html(pageEl, fullDoc, previewW, previewH) {
@@ -672,6 +818,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			design_name: this.current_design,
 			params: JSON.stringify(this.current_params || {}),
 		});
+		// v15.10.01: forward client-measured pagination so PDF breaks match the preview
+		if (this.current_break_map) {
+			params.set('page_break_map', JSON.stringify(this.current_break_map.page_break_map));
+			params.set('row_heights', JSON.stringify(this.current_break_map.row_heights));
+		}
 		const url = '/api/method/zhiz_print.api.print_designer.generate_print_pdf?' + params;
 		const w = window.open(url, '_blank');
 		if (!w) {

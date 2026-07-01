@@ -162,8 +162,13 @@ class SuperPrintDesign(frappe.model.document.Document):
                         position_map[bottom_key].cell_value = ""
 
     @frappe.whitelist()
-    def get_preview_for_document(self, doc_name=None, params=None):
-        """Preview design"""
+    def get_preview_for_document(self, doc_name=None, params=None,
+                                page_break_map=None, row_heights=None):
+        """Preview design.
+
+        v15.10.01: page_break_map / row_heights forwarded to build_preview_html so a
+        client-measured pagination can drive the render (preview/print/PDF share this).
+        """
         try:
             if isinstance(params, str):
                 params = json.loads(params)
@@ -192,12 +197,48 @@ class SuperPrintDesign(frappe.model.document.Document):
                     query_results[q.query_name] = {'data': []}
 
             html = self.build_preview_html(
-                query_results, doc_name, doc, params=params)
+                query_results, doc_name, doc, params=params,
+                page_break_map=page_break_map, row_heights=row_heights)
             return html
 
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), 'Print preview failed')
             return f'<div class="alert alert-danger">Preview failed: {frappe.utils.escape_html(str(e))}</div>'
+
+    def get_measurement_for_document(self, doc_name=None, params=None):
+        """v15.10.01: produce the off-screen measurement scaffold for this document.
+        Runs the same doc/query setup as get_preview_for_document, then builds the
+        unpaginated measurement HTML + geometry meta. Returns (html, meta)."""
+        try:
+            if isinstance(params, str):
+                params = json.loads(params)
+
+            doc = None
+            if doc_name and self.target_doctype:
+                try:
+                    doc = frappe.get_doc(self.target_doctype, doc_name)
+                except Exception:
+                    pass
+
+            query_results = {}
+            for q in self.design_queries:
+                if not q.query_code:
+                    continue
+                try:
+                    result = self.execute_query(
+                        q.query_code, q.parameters,
+                        doc_name, self.target_doctype, params
+                    )
+                    query_results[q.query_name] = {'data': result}
+                except Exception as e:
+                    frappe.log_error(frappe.get_traceback(), 'Query execution failed: {0}'.format(q.query_name))
+                    query_results[q.query_name] = {'data': []}
+
+            return self.build_measurement_html(query_results, doc=doc, params=params)
+
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), 'Measurement scaffold failed')
+            return '', {}
 
     def execute_query(self, query_code, parameters=None, doc_name=None, doc_type=None, user_params=None, current_row_index=None):
         """Execute query with parameter injection as .where() clauses
@@ -693,8 +734,16 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Main Render Pipeline ====================
 
-    def build_preview_html(self, query_results, doc_name=None, doc=None, params=None):
-        """Build preview HTML"""
+    def build_preview_html(self, query_results, doc_name=None, doc=None, params=None,
+                           page_break_map=None, row_heights=None):
+        """Build preview HTML.
+
+        v15.10.01 pagination rework:
+        - page_break_map supplied (client-measured): bypass _paginate_rows_v2 and group
+          rows by the client's serial indices; row_heights locks each row to its measured
+          pixel height so PDF engines cannot reflow.
+        - both None: legacy _paginate_rows_v2 estimation (fallback, zero behaviour change).
+        """
         try:
             # Parse styles
             row_styles = json.loads(self.row_styles) if self.row_styles else {}
@@ -746,22 +795,44 @@ class SuperPrintDesign(frappe.model.document.Document):
                                     'merge_colspan': cell['colspan'] or 1,
                                 }
 
-                # Pagination for this logical page
-                pages = self._paginate_rows_v2(
-                    all_rows_data, row_type_map, row_styles, paper,
-                    cell_map=cell_map, col_styles=col_styles, doc=doc,
-                    row_display_map=row_display_map, font_size=self.font_size or 13)
+                # Serial index of each expanded row — stable, matches the measurement
+                # scaffold order, so the client's break map (flow serials) maps back here.
+                serial_to_row = {i: r for i, r in enumerate(all_rows_data)}
+                title_serials = [i for i, r in enumerate(all_rows_data)
+                                 if isinstance(r, int) and row_type_map.get(r) == 'Repeat Title Row']
 
-                # Tag each paginated result with this page_no
-                for p in pages:
-                    all_pages.append((page_no, p))
+                client_pages = None
+                if page_break_map is not None:
+                    key = page_no if page_no in page_break_map else str(page_no)
+                    client_pages = page_break_map.get(key)
+
+                if client_pages is not None:
+                    # Client-driven pagination: title rows repeat on every page, data rows
+                    # flow in groups supplied by the client's measured break map.
+                    title_rows_with_serial = [(s, serial_to_row[s]) for s in title_serials]
+                    for group in client_pages:
+                        page_rows = list(title_rows_with_serial)
+                        for s in group:
+                            if s in serial_to_row:
+                                page_rows.append((s, serial_to_row[s]))
+                        all_pages.append((page_no, page_rows))
+                else:
+                    # Legacy estimation fallback
+                    pages = self._paginate_rows_v2(
+                        all_rows_data, row_type_map, row_styles, paper,
+                        cell_map=cell_map, col_styles=col_styles, doc=doc,
+                        row_display_map=row_display_map, font_size=self.font_size or 13)
+                    for p in pages:
+                        all_pages.append((page_no, [(None, r) for r in p]))
+
                 cell_grids_by_page[page_no] = cell_grid
                 cell_maps_by_page[page_no] = cell_map
 
             # Generate HTML for all pages
             body_html = self._build_pages_html(
                 all_pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
-                query_results, doc, row_type_map, row_display_map, paper, params=params
+                query_results, doc, row_type_map, row_display_map, paper, params=params,
+                row_heights_by_page=row_heights
             )
 
             return self._wrap_full_html(body_html, paper_width, paper_height, row_styles, col_styles, paper)
@@ -769,6 +840,105 @@ class SuperPrintDesign(frappe.model.document.Document):
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), 'Build preview HTML failed')
             return f'<div class="alert alert-danger">Preview failed: {frappe.utils.escape_html(str(e))}</div>'
+
+    def build_measurement_html(self, query_results, doc=None, params=None):
+        """v15.10.01: off-screen measurement scaffold. Renders every expanded row of
+        every logical page_no in one table per page_no, with NO height locking, so the
+        browser's offsetHeight reports each row's true wrapped height. Each <tr> is
+        tagged data-pg / data-serial / data-kind for client-side greedy packing.
+
+        Returns (html, meta); meta carries paper geometry + per-page content height.
+        """
+        try:
+            row_styles = json.loads(self.row_styles) if self.row_styles else {}
+            col_styles = json.loads(self.col_styles) if self.col_styles else {}
+            paper = frappe.get_doc("Super Print Paper", self.print_paper)
+            page_count = cint(getattr(self, "page_count", 1)) or 1
+
+            margin_top = cint(paper.margin_top)
+            margin_bottom = cint(paper.margin_bottom)
+            content_h_px = (paper.height - margin_top - margin_bottom) * PX_PER_MM
+            content_w_px = sum(col_styles.get(str(c), {}).get('width', 60)
+                               for c in range(1, (self.columns or 1) + 1))
+
+            blocks_meta = {}
+            blocks_html = []
+
+            for page_no in range(1, page_count + 1):
+                cell_map = self._build_cell_map_for_page(page_no)
+                row_type_map, row_display_map = self._build_row_metadata(page_no=page_no)
+                all_rows_data = self._build_expanded_rows_v2(
+                    cell_map, row_styles, doc, query_results, page_no=page_no)
+
+                # cell_grid (two passes, identical to build_preview_html)
+                cell_grid = [[None] * self.columns for _ in range(self.rows)]
+                for cell in cell_map.values():
+                    r = cell['row'] - 1
+                    c = cell['col'] - 1
+                    if 0 <= r < self.rows and 0 <= c < self.columns:
+                        cell_grid[r][c] = cell
+                for cell in cell_map.values():
+                    r = cell['row'] - 1
+                    c = cell['col'] - 1
+                    for dr in range(cell['rowspan'] or 1):
+                        for dc in range(cell['colspan'] or 1):
+                            if dr == 0 and dc == 0:
+                                continue
+                            nr, nc = r + dr, c + dc
+                            if 0 <= nr < self.rows and 0 <= nc < self.columns:
+                                cell_grid[nr][nc] = {
+                                    'is_merged': True,
+                                    'merge_origin_row': cell['row'],
+                                    'merge_origin_col': cell['col'],
+                                    'merge_rowspan': cell['rowspan'] or 1,
+                                    'merge_colspan': cell['colspan'] or 1,
+                                }
+
+                rows_html = ''
+                for serial, row_data in enumerate(all_rows_data):
+                    is_title = isinstance(row_data, int) and row_type_map.get(row_data) == 'Repeat Title Row'
+                    kind = 'title' if is_title else 'data'
+                    tr_attr = f' data-pg="{page_no}" data-serial="{serial}" data-kind="{kind}"'
+                    row_html = self._build_row_html(
+                        row_data, cell_map, cell_grid, row_styles, col_styles,
+                        query_results, doc, row_type_map, row_display_map, params=params,
+                        measure=True, tr_extra_attr=tr_attr)
+                    rows_html += row_html
+
+                blocks_html.append(
+                    f'<div class="sp-measure-block" data-pg="{page_no}" '
+                    f'style="width:{content_w_px}px;">'
+                    f'<table class="print-form-table" style="width:{content_w_px}px;'
+                    f'border-collapse:collapse;table-layout:fixed;margin:0;">'
+                    f'{self._build_colgroup(col_styles)}{rows_html}</table></div>'
+                )
+                blocks_meta[page_no] = {'content_h_px': content_h_px}
+
+            font_family = self.font_family or 'Microsoft YaHei'
+            font_size = self.font_size or 12
+            html = (
+                '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+                '* { box-sizing: border-box; }'
+                f'body {{ font-family: \'{font_family}\', sans-serif; font-size: {font_size}px; margin:0; padding:0; }}'
+                '.print-form-table td { padding:0; text-align:center; vertical-align:middle; line-height:1; }'
+                '.sp-measure-block { overflow:visible; }'
+                f'</style></head><body>{"".join(blocks_html)}</body></html>'
+            )
+            meta = {
+                'content_h_px': content_h_px,
+                'content_w_px': content_w_px,
+                'paper_width': paper.width,
+                'paper_height': paper.height,
+                'margin_top': margin_top,
+                'margin_bottom': margin_bottom,
+                'page_count': page_count,
+                'blocks': blocks_meta,
+            }
+            return html, meta
+
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), 'Build measurement HTML failed')
+            return '', {}
 
     def _build_cell_map_for_page(self, page_no):
         """Build cell mapping for a specific logical page (filtered by page_no)"""
@@ -801,11 +971,14 @@ class SuperPrintDesign(frappe.model.document.Document):
     # ==================== Per-Page HTML Build (with Header/Footer Positioning) ====================
 
     def _build_pages_html(self, pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
-                          query_results, doc, row_type_map, row_display_map, paper, params=None):
+                          query_results, doc, row_type_map, row_display_map, paper, params=None,
+                          row_heights_by_page=None):
         """Build HTML for all pages, each page as a fixed-size container
 
         v15.04.35: pages is a list of (page_no, rows) tuples.
         cell_maps_by_page / cell_grids_by_page are dicts keyed by page_no.
+        v15.10.01: each row is (serial, row_data); row_heights_by_page[page_no][serial]
+        locks the row to its client-measured height (None serial => legacy path).
         """
         margin_top = cint(paper.margin_top)
         margin_bottom = cint(paper.margin_bottom)
@@ -857,10 +1030,20 @@ class SuperPrintDesign(frappe.model.document.Document):
             page_html += f'<div class="print-page-content" style="position:absolute;top:{content_top:.1f}px;left:0;right:0;bottom:{footer_area_h:.1f}px;padding:0 {margin_right * PX_PER_MM:.1f}px 0 {margin_left * PX_PER_MM:.1f}px;overflow:hidden;">'
             page_html += '<table class="print-form-table">'
             page_html += self._build_colgroup(col_styles)
-            for row_num in page_rows:
+            for serial, row_data in page_rows:
+                locked = None
+                if serial is not None and row_heights_by_page:
+                    rh = row_heights_by_page.get(page_no)
+                    if rh is None:
+                        rh = row_heights_by_page.get(str(page_no))
+                    if rh:
+                        locked = rh.get(serial)
+                        if locked is None:
+                            locked = rh.get(str(serial))
                 page_html += self._build_row_html(
-                    row_num, cell_map, cell_grid, row_styles, col_styles,
-                    query_results, doc, row_type_map, row_display_map, params=params
+                    row_data, cell_map, cell_grid, row_styles, col_styles,
+                    query_results, doc, row_type_map, row_display_map, params=params,
+                    locked_height=locked
                 )
             page_html += '</table></div>'
 
@@ -900,8 +1083,17 @@ class SuperPrintDesign(frappe.model.document.Document):
         return html
 
     def _build_row_html(self, row_data, cell_map, cell_grid, row_styles, col_styles,
-                        query_results, doc=None, row_type_map=None, row_display_map=None, params=None):
-        """Build a single row HTML"""
+                        query_results, doc=None, row_type_map=None, row_display_map=None, params=None,
+                        locked_height=None, measure=False, tr_extra_attr=''):
+        """Build a single row HTML.
+
+        v15.10.01 pagination rework:
+        - measure=True: emit row WITHOUT height lock so the browser reports the true
+          wrapped height (used by the off-screen measurement scaffold).
+        - locked_height=<px>: lock row to the client-measured height so wkhtmltopdf /
+          WeasyPrint cannot reflow it (used when rebuilding from a client page-break map).
+        - default: legacy behaviour (configured height, bumped by _get_row_height estimate).
+        """
         # Process expanded rows
         if isinstance(row_data, dict):
             template_row = row_data['template_row']
@@ -933,19 +1125,33 @@ class SuperPrintDesign(frappe.model.document.Document):
             row_va = va_match.group(1)
             row_css = _re.sub(r'vertical-align\s*:\s*\w+\s*;?', '', row_css).strip()
 
-        row_h_value = row_style.get("height", 20)
-        row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
+        if measure:
+            # Measurement mode: a <td> height acts as a MINIMUM (table cells grow to fit
+            # content), so setting height=configured (no max-height / overflow) lets the
+            # row grow to its true wrapped height while never under-reporting a Fixed
+            # Height / designed-height row. offsetHeight => max(configured, content).
+            row_h_value = row_style.get("height", 20)
+            row_style_attr = ''
+            cell_h_constraint = f'height:{row_h_value}px;'
+        elif locked_height is not None:
+            # Client-measured precise height: lock the row so PDF engines cannot reflow.
+            row_h_value = locked_height
+            row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
+            cell_h_constraint = f'height:{row_h_value}px;max-height:{row_h_value}px;overflow:hidden;'
+        else:
+            row_h_value = row_style.get("height", 20)
+            row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
 
-        # For data-driven rows, use estimated content height to match pagination
-        if data_item:
-            estimated_h = self._get_row_height(row_data, row_styles, cell_map, col_styles,
-                                                doc, row_display_map, self.font_size or 13)
-            if estimated_h > row_h_value:
-                row_h_value = estimated_h
-                row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
+            # For data-driven rows, use estimated content height to match pagination
+            if data_item:
+                estimated_h = self._get_row_height(row_data, row_styles, cell_map, col_styles,
+                                                    doc, row_display_map, self.font_size or 13)
+                if estimated_h > row_h_value:
+                    row_h_value = estimated_h
+                    row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
 
-        # Per-cell height constraint passed to <td> generation
-        cell_h_constraint = f'height:{row_h_value}px;max-height:{row_h_value}px;overflow:hidden;'
+            # Per-cell height constraint passed to <td> generation
+            cell_h_constraint = f'height:{row_h_value}px;max-height:{row_h_value}px;overflow:hidden;'
 
         if row_css:
             row_style_attr += row_css
@@ -961,7 +1167,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         row_style_attr += 'line-height:1;'
 
-        html = f'<tr style="{row_style_attr}">'
+        html = f'<tr{tr_extra_attr} style="{row_style_attr}">'
 
         for col in range(1, self.columns + 1):
             grid_row = row_num - 1

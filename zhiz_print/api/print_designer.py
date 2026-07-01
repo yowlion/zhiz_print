@@ -128,17 +128,35 @@ def get_design_parameters(design_name):
 
 
 @frappe.whitelist()
-def render_print_preview(doctype, docname, design_name, params=None):
+def render_print_preview(doctype, docname, design_name, params=None,
+                         page_break_map=None, row_heights=None):
     """Render print preview HTML.
 
     Preview always uses paper's original W×H (the design's saved paper dimensions).
+    v15.10.01: when page_break_map is supplied (client-measured), render precise
+    pagination; otherwise return the estimation-fallback HTML plus a measurement
+    scaffold (measurement_html + content_h_px) the client uses to compute breaks.
     """
     _check_license()
+
+    def _as_dict(v):
+        if not v:
+            return None
+        if isinstance(v, dict):
+            return v
+        try:
+            return json.loads(v)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return None
+
     if isinstance(params, str):
         try:
             params = json.loads(params)
         except (json.JSONDecodeError, TypeError):
             params = {}
+
+    page_break_map = _as_dict(page_break_map)
+    row_heights = _as_dict(row_heights)
 
     design = frappe.get_doc("Super Print Design", design_name)
 
@@ -149,11 +167,34 @@ def render_print_preview(doctype, docname, design_name, params=None):
     # Get paper info (with margins)
     paper = frappe.get_doc("Super Print Paper", design.print_paper)
 
-    # Render HTML using paper's original W×H
+    # Precise path: client supplied measured breaks -> render exact pagination
+    if page_break_map:
+        html = design.get_preview_for_document(
+            doc_name=docname, params=params,
+            page_break_map=page_break_map, row_heights=row_heights)
+        return {
+            "html": html,
+            "precise": True,
+            "paper_width": paper.width,
+            "paper_height": paper.height,
+            "margin_top": paper.margin_top or 0,
+            "margin_bottom": paper.margin_bottom or 0,
+            "margin_left": paper.margin_left or 0,
+            "margin_right": paper.margin_right or 0,
+        }
+
+    # Fallback path: estimation HTML + measurement scaffold for the client
     html = design.get_preview_for_document(doc_name=docname, params=params)
+    measurement_html, meta = design.get_measurement_for_document(doc_name=docname, params=params)
 
     return {
         "html": html,
+        "precise": False,
+        "measurement_html": measurement_html,
+        "content_h_px": meta.get("content_h_px"),
+        "content_w_px": meta.get("content_w_px"),
+        "page_count": meta.get("page_count"),
+        "blocks": meta.get("blocks"),
         "paper_width": paper.width,
         "paper_height": paper.height,
         "margin_top": paper.margin_top or 0,
@@ -253,9 +294,14 @@ def _resolve_image_urls_for_pdf(html):
     return html
 
 
-def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False):
+def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False,
+                      page_break_map=None, row_heights=None):
     """Common function: render print HTML and apply px scaling, shared by PDF engines.
-    Returns (html, design) tuple."""
+    Returns (html, design) tuple.
+
+    v15.10.01: page_break_map / row_heights forwarded to get_preview_for_document so a
+    client-measured pagination drives PDF output identically to the on-screen preview.
+    """
     import os
 
     if isinstance(params, str):
@@ -269,7 +315,8 @@ def _render_print_html(doctype, docname, design_name, params=None, skip_px_scali
     if not frappe.has_permission(doctype, "print", docname):
         frappe.throw(_("No print permission"), frappe.PermissionError)
 
-    html = design.get_preview_for_document(doc_name=docname, params=params)
+    html = design.get_preview_for_document(doc_name=docname, params=params,
+                                           page_break_map=page_break_map, row_heights=row_heights)
 
     if not skip_px_scaling:
         # WeasyPrint px->mm conversion rate: 25.4/96 ~ 0.264583 mm/px
@@ -313,24 +360,43 @@ def _pdf_response(pdf_bytes, filename):
 
 
 @frappe.whitelist()
-def generate_print_pdf(doctype, docname, design_name, params=None):
-    """Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting."""
+def generate_print_pdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
+    """Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting.
+
+    v15.10.01: page_break_map / row_heights (client-measured) forwarded to the engine
+    so PDF pagination matches the on-screen preview exactly.
+    """
     _check_license()
     _check_draft_no_print(design_name, frappe.get_doc(doctype, docname))
+
+    def _as_dict(v):
+        if not v:
+            return None
+        if isinstance(v, dict):
+            return v
+        try:
+            return json.loads(v)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return None
+
+    page_break_map = _as_dict(page_break_map)
+    row_heights = _as_dict(row_heights)
+
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
     if engine_mode == "WeasyPrint":
-        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params)
+        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params, page_break_map, row_heights)
     elif engine_mode == "Chromium":
-        return _generate_print_pdf_chromium(doctype, docname, design_name, params)
+        return _generate_print_pdf_chromium(doctype, docname, design_name, params, page_break_map, row_heights)
     else:
-        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params)
+        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params, page_break_map, row_heights)
 
 
-def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None):
+def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
     """Generate PDF using WeasyPrint, browser inline preview"""
     from weasyprint import HTML as WeasyHTML
 
-    html, design = _render_print_html(doctype, docname, design_name, params)
+    html, design = _render_print_html(doctype, docname, design_name, params,
+                                      page_break_map=page_break_map, row_heights=row_heights)
 
     # PDF-specific: fix ghost borders of merged cells
     html = _fix_merged_cell_borders_for_pdf(html)
@@ -455,11 +521,12 @@ def _prepare_html_for_wkhtmltopdf(html):
     return html
 
 
-def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
+def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
     """Generate PDF using wkhtmltopdf, browser inline preview"""
     import pdfkit
 
-    html, design = _render_print_html(doctype, docname, design_name, params)
+    html, design = _render_print_html(doctype, docname, design_name, params,
+                                      page_break_map=page_break_map, row_heights=row_heights)
 
     # wkhtmltopdf preprocessing: SVG->PNG, background shorthand fix, flex->table
     html = _prepare_html_for_wkhtmltopdf(html)
@@ -492,13 +559,14 @@ def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None):
         frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
-def _generate_print_pdf_chromium(doctype, docname, design_name, params=None):
+def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
     """Generate PDF using Chromium headless, browser inline preview"""
     import os
     import subprocess
     import tempfile
 
-    html, design = _render_print_html(doctype, docname, design_name, params)
+    html, design = _render_print_html(doctype, docname, design_name, params,
+                                      page_break_map=page_break_map, row_heights=row_heights)
 
     # PDF-specific: convert relative image URLs to file:// paths
     html = _resolve_image_urls_for_pdf(html)
