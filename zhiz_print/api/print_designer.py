@@ -129,13 +129,15 @@ def get_design_parameters(design_name):
 
 @frappe.whitelist()
 def render_print_preview(doctype, docname, design_name, params=None,
-                         page_break_map=None, row_heights=None):
+                         measurement_only=False, page_break_map=None, row_heights=None):
     """Render print preview HTML.
 
     Preview always uses paper's original W×H (the design's saved paper dimensions).
     v15.10.01: when page_break_map is supplied (client-measured), render precise
     pagination; otherwise return the estimation-fallback HTML plus a measurement
     scaffold (measurement_html + content_h_px) the client uses to compute breaks.
+    v15.10.02: measurement_only=True returns ONLY the scaffold (no estimation build),
+    so the client can measure first and render precise once — no double-render flash.
     """
     _check_license()
 
@@ -175,6 +177,27 @@ def render_print_preview(doctype, docname, design_name, params=None,
         return {
             "html": html,
             "precise": True,
+            "paper_width": paper.width,
+            "paper_height": paper.height,
+            "margin_top": paper.margin_top or 0,
+            "margin_bottom": paper.margin_bottom or 0,
+            "margin_left": paper.margin_left or 0,
+            "margin_right": paper.margin_right or 0,
+        }
+
+    # v15.10.02: measurement-only path — client measures first, renders precise once.
+    # Skip the estimation build entirely (one query run, no double-render flash).
+    if measurement_only:
+        measurement_html, meta = design.get_measurement_for_document(doc_name=docname, params=params)
+        return {
+            "html": None,
+            "precise": False,
+            "measurement_only": True,
+            "measurement_html": measurement_html,
+            "content_h_px": meta.get("content_h_px"),
+            "content_w_px": meta.get("content_w_px"),
+            "page_count": meta.get("page_count"),
+            "blocks": meta.get("blocks"),
             "paper_width": paper.width,
             "paper_height": paper.height,
             "margin_top": paper.margin_top or 0,

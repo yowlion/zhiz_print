@@ -378,60 +378,67 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			margin_top: msg.margin_top, margin_bottom: msg.margin_bottom,
 			margin_left: msg.margin_left, margin_right: msg.margin_right,
 		});
+		const callArgs = (extra) => Object.assign({
+			doctype: this.frm.doctype,
+			docname: this.frm.docname,
+			design_name: this.current_design,
+			params: this.current_params || {},
+		}, extra || {});
 
+		// v15.10.02: measure-first, render precise ONCE — no estimation flash.
+		// The spinner stays up until the precise HTML is ready; the estimation is
+		// fetched only as a fallback if measurement / precise is unavailable.
 		try {
-			// Step 1: estimation fallback + measurement scaffold
 			const r1 = await frappe.call({
 				method: 'zhiz_print.api.print_designer.render_print_preview',
-				args: {
-					doctype: this.frm.doctype,
-					docname: this.frm.docname,
-					design_name: this.current_design,
-					params: this.current_params || {},
-				}
+				args: callArgs({ measurement_only: 1 })
 			});
-			if (!r1.message) return;
-			const msg1 = r1.message;
-			const dims = dimsOf(msg1);
-
-			// Render estimation immediately (also the safety net if precise fails)
-			this.current_preview_html = msg1.html;
-			this.current_break_map = null;
-			this._render_pages_html_into_preview(msg1.html, dims);
-
-			// Step 2: client-measured precise pagination
-			if (msg1.measurement_html && msg1.content_h_px) {
-				try {
-					const measured = await this._measure_row_heights(msg1.measurement_html, msg1.content_w_px);
-					if (measured && Object.keys(measured.heights).length) {
-						const breakMap = this._compute_break_map(measured, msg1);
-						if (breakMap) {
-							const r2 = await frappe.call({
-								method: 'zhiz_print.api.print_designer.render_print_preview',
-								args: {
-									doctype: this.frm.doctype,
-									docname: this.frm.docname,
-									design_name: this.current_design,
-									params: this.current_params || {},
-									page_break_map: breakMap.page_break_map,
-									row_heights: breakMap.row_heights,
-								}
-							});
-							if (r2.message && r2.message.precise) {
-								this.current_preview_html = r2.message.html;
-								this.current_break_map = breakMap;
-								this._render_pages_html_into_preview(r2.message.html, dimsOf(r2.message));
-							}
+			if (r1.message && r1.message.measurement_html && r1.message.content_h_px) {
+				const msg1 = r1.message;
+				const measured = await this._measure_row_heights(msg1.measurement_html, msg1.content_w_px);
+				if (measured && Object.keys(measured.heights).length) {
+					const breakMap = this._compute_break_map(measured, msg1);
+					if (breakMap) {
+						const r2 = await frappe.call({
+							method: 'zhiz_print.api.print_designer.render_print_preview',
+							args: callArgs({ page_break_map: breakMap.page_break_map, row_heights: breakMap.row_heights })
+						});
+						if (r2.message && r2.message.precise) {
+							this.current_preview_html = r2.message.html;
+							this.current_break_map = breakMap;
+							this._render_pages_html_into_preview(r2.message.html, dimsOf(r2.message));
+							return;
 						}
 					}
-				} catch (me) {
-					// Precise path failed — keep estimation fallback rendered above
-					console.warn('zhiz_print: precise pagination unavailable, using estimation fallback', me);
 				}
 			}
+			// Precise unavailable → estimation fallback
+			console.warn('zhiz_print: precise pagination unavailable, falling back to estimation');
+			await this._render_estimation_fallback(callArgs);
 		} catch (e) {
 			console.error('Preview render failed:', e);
-			area.innerHTML = '<div class="alert alert-danger" style="margin:20px"><i class="fa fa-exclamation-circle"></i> Preview render failed: ' + this.escapeHtml(e.message || String(e)) + '</div>';
+			try {
+				await this._render_estimation_fallback(callArgs);
+			} catch (e2) {
+				area.innerHTML = '<div class="alert alert-danger" style="margin:20px"><i class="fa fa-exclamation-circle"></i> Preview render failed: ' + this.escapeHtml(e.message || String(e)) + '</div>';
+			}
+		}
+	}
+
+	// Estimation fallback: fetched only when the precise (measured) path is unavailable.
+	async _render_estimation_fallback(callArgs) {
+		const r = await frappe.call({
+			method: 'zhiz_print.api.print_designer.render_print_preview',
+			args: callArgs({})
+		});
+		if (r.message && r.message.html) {
+			this.current_preview_html = r.message.html;
+			this.current_break_map = null;
+			this._render_pages_html_into_preview(r.message.html, {
+				paper_width: r.message.paper_width, paper_height: r.message.paper_height,
+				margin_top: r.message.margin_top, margin_bottom: r.message.margin_bottom,
+				margin_left: r.message.margin_left, margin_right: r.message.margin_right,
+			});
 		}
 	}
 

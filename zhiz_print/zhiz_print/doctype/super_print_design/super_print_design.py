@@ -1134,8 +1134,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             row_style_attr = ''
             cell_h_constraint = f'height:{row_h_value}px;'
         elif locked_height is not None:
-            # Client-measured precise height: lock the row so PDF engines cannot reflow.
-            row_h_value = locked_height
+            # Client-measured precise height, floored at the designer-set height so a
+            # precise row can never render shorter than what was configured in the designer
+            # (measurement is already max(configured, content); this max() is a guarantee).
+            configured = row_style.get("height", 0) or 0
+            row_h_value = max(locked_height, configured)
             row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
             cell_h_constraint = f'height:{row_h_value}px;max-height:{row_h_value}px;overflow:hidden;'
         else:
