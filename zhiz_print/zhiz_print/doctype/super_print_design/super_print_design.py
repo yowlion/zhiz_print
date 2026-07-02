@@ -22,6 +22,10 @@ MERGED_SUFFIX = "||"
 
 PX_PER_MM = 4
 
+# =rowsum(R:C) — sum column C across all expanded items of Data-Driven Row R.
+# Tolerates half-width () and full-width （） parentheses and surrounding spaces.
+_ROWSUM_RE = re.compile(r'\s*=\s*rowsum\s*[（(]\s*(\d+)\s*:\s*(\d+)\s*[）)]')
+
 
 class SuperPrintDesign(frappe.model.document.Document):
 
@@ -501,7 +505,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                         data_driven_rows[row_num]['query_names'].add(qn)
 
         if not data_driven_rows:
-            return all_rows
+            return all_rows, {}
 
         # Get actual data for each data-driven row
         row_data_map = {}  # {row_num: [data_items]}
@@ -564,7 +568,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 result.append(row)
                 i += 1
 
-        return result
+        return result, row_data_map
 
     def _get_row_data_items(self, info, doc, query_results):
         """Get data list for data-driven rows in natural child-table order.
@@ -700,6 +704,22 @@ class SuperPrintDesign(frappe.model.document.Document):
                 frappe.get_traceback(),
                 'Super Print Design: expression eval failed: %s' % (raw[:120]))
             return raw
+
+    def _eval_rowsum(self, target_row, target_col, data_items, cell_map, doc, query_results, params):
+        """Sum the rendered display values of column target_col across all expanded
+        data items of the Data-Driven Row target_row (e.g. =rowsum(5:7) sums col 7
+        of row 5). Reuses _compute_cell_sort_value so expression / logic / placeholder
+        columns resolve correctly before summing; non-numeric cells are skipped.
+        Returns formatted sum (trailing zeros stripped)."""
+        total = 0.0
+        for it in (data_items or []):
+            v = self._compute_cell_sort_value(
+                target_row, target_col, it, cell_map, doc, query_results, params)
+            try:
+                total += float(v or 0)
+            except (ValueError, TypeError):
+                continue
+        return self._fmt_val(total)
 
         def key(item):
             return _safe(getattr(item, sort_field, None))
@@ -887,6 +907,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             all_pages = []
             cell_grids_by_page = {}
             cell_maps_by_page = {}
+            row_items_map_by_page = {}
 
             for page_no in range(1, page_count + 1):
                 cell_map = self._build_cell_map_for_page(page_no)
@@ -895,8 +916,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                 row_type_map, row_display_map = self._build_row_metadata(page_no=page_no)
 
                 # Build expanded rows
-                all_rows_data = self._build_expanded_rows_v2(
+                all_rows_data, row_items_map = self._build_expanded_rows_v2(
                     cell_map, row_styles, doc, query_results, page_no=page_no, params=params)
+                row_items_map_by_page[page_no] = row_items_map
 
                 # Build placeholder grid (two passes)
                 cell_grid = [[None] * self.columns for _ in range(self.rows)]
@@ -959,7 +981,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             body_html = self._build_pages_html(
                 all_pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                 query_results, doc, row_type_map, row_display_map, paper, params=params,
-                row_heights_by_page=row_heights
+                row_heights_by_page=row_heights, row_items_map_by_page=row_items_map_by_page
             )
 
             return self._wrap_full_html(body_html, paper_width, paper_height, row_styles, col_styles, paper)
@@ -994,7 +1016,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             for page_no in range(1, page_count + 1):
                 cell_map = self._build_cell_map_for_page(page_no)
                 row_type_map, row_display_map = self._build_row_metadata(page_no=page_no)
-                all_rows_data = self._build_expanded_rows_v2(
+                all_rows_data, row_items_map = self._build_expanded_rows_v2(
                     cell_map, row_styles, doc, query_results, page_no=page_no, params=params)
 
                 # cell_grid (two passes, identical to build_preview_html)
@@ -1029,7 +1051,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                     row_html = self._build_row_html(
                         row_data, cell_map, cell_grid, row_styles, col_styles,
                         query_results, doc, row_type_map, row_display_map, params=params,
-                        measure=True, tr_extra_attr=tr_attr)
+                        measure=True, tr_extra_attr=tr_attr, row_items_map=row_items_map)
                     rows_html += row_html
 
                 blocks_html.append(
@@ -1099,7 +1121,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def _build_pages_html(self, pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                           query_results, doc, row_type_map, row_display_map, paper, params=None,
-                          row_heights_by_page=None):
+                          row_heights_by_page=None, row_items_map_by_page=None):
         """Build HTML for all pages, each page as a fixed-size container
 
         v15.04.35: pages is a list of (page_no, rows) tuples.
@@ -1167,10 +1189,11 @@ class SuperPrintDesign(frappe.model.document.Document):
                         locked = rh.get(serial)
                         if locked is None:
                             locked = rh.get(str(serial))
+                _row_items = row_items_map_by_page.get(page_no, {}) if row_items_map_by_page else {}
                 page_html += self._build_row_html(
                     row_data, cell_map, cell_grid, row_styles, col_styles,
                     query_results, doc, row_type_map, row_display_map, params=params,
-                    locked_height=locked
+                    locked_height=locked, row_items_map=_row_items
                 )
             page_html += '</table></div>'
 
@@ -1211,7 +1234,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def _build_row_html(self, row_data, cell_map, cell_grid, row_styles, col_styles,
                         query_results, doc=None, row_type_map=None, row_display_map=None, params=None,
-                        locked_height=None, measure=False, tr_extra_attr=''):
+                        locked_height=None, measure=False, tr_extra_attr='', row_items_map=None):
         """Build a single row HTML.
 
         v15.10.01 pagination rework:
@@ -1335,11 +1358,17 @@ class SuperPrintDesign(frappe.model.document.Document):
                 cell_value = cell_data.get('cell_value', '')
                 cell_type = cell_data.get('cell_type', 'static')
 
-                # Expression cell: value starts with '=' → substitute placeholders
-                # then eval the arithmetic expression, e.g. ={doc.items.qty}*{doc.items.rate}
-                if cell_value and cell_value.lstrip().startswith('=') and cell_type != 'logic':
-                    cell_value = self._eval_expression_cell(
-                        cell_value, doc, data_item, query_results, params)
+                # '=' cells: =rowsum(R:C) sum across a Data-Driven Row, or =expr arithmetic
+                if cell_value and cell_type != 'logic' and cell_value.lstrip().startswith('='):
+                    rs = _ROWSUM_RE.match(cell_value)
+                    if rs:
+                        tr_i, tc_i = int(rs.group(1)), int(rs.group(2))
+                        items = (row_items_map or {}).get(tr_i, [])
+                        cell_value = self._eval_rowsum(
+                            tr_i, tc_i, items, cell_map, doc, query_results, params)
+                    else:
+                        cell_value = self._eval_expression_cell(
+                            cell_value, doc, data_item, query_results, params)
 
                 # Logic code: evaluate Python expression
                 if cell_type == 'logic' and cell_value:
