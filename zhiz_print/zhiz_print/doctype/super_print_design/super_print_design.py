@@ -656,14 +656,16 @@ class SuperPrintDesign(frappe.model.document.Document):
     def _compute_cell_sort_value(self, template_row, col_idx, data_item,
                                  cell_map, doc, query_results, params):
         """Compute the rendered display value of a cell, for sorting. Mirrors
-        the value-resolution part of _build_row_html (logic eval + doc/child/
-        param/query placeholder substitution). Covers static, {doc.x},
-        {doc.child.field}, logic-cell, and {param.x} columns. data_key/query-
-        only columns fall back to their raw value (natural order)."""
+        the value-resolution part of _build_row_html (expression / logic eval
+        + doc/child/param/query placeholder substitution). Covers static,
+        {doc.x}, {doc.child.field}, logic-cell, {param.x}, and '=expr'
+        expression columns. data_key/query-only columns fall back to raw."""
         cell = cell_map.get("{0}_{1}".format(template_row, col_idx))
         if not cell:
             return ''
         cv = cell.get('cell_value', '') or ''
+        if cv and cv.lstrip().startswith('=') and cell.get('cell_type') != 'logic':
+            return self._eval_expression_cell(cv, doc, data_item, query_results, params)
         if cell.get('cell_type') == 'logic' and cv:
             cv = self._eval_logic_code(cv, doc, data_item)
         cv = self._replace_doc_placeholders(cv, doc)
@@ -672,6 +674,32 @@ class SuperPrintDesign(frappe.model.document.Document):
         if data_item:
             cv = self._replace_child_table_placeholders(cv, data_item)
         return cv or ''
+
+    def _eval_expression_cell(self, raw, doc, data_item, query_results, params):
+        """Evaluate a cell whose value starts with '=' (arithmetic expression).
+
+        Placeholders are substituted first ({doc.x}, {doc.child.field},
+        {param.x}, {query.column} → their formatted values), then the resulting
+        expression is evaluated via safe_eval. Returns the formatted result;
+        on any failure logs and returns the raw input so the user sees something
+        instead of an empty cell. e.g. '={doc.items.qty}*{doc.items.rate}' with
+        qty=100, rate=0.5 → '100*0.5' → 50.0 → '50'."""
+        if not raw:
+            return ''
+        expr = raw.lstrip()[1:]  # strip leading '='
+        expr = self._replace_doc_placeholders(expr, doc)
+        expr = self._replace_param_placeholders(expr, params)
+        expr = self._replace_query_data_placeholders(expr, query_results)
+        if data_item:
+            expr = self._replace_child_table_placeholders(expr, data_item)
+        try:
+            result = frappe.safe_eval(expr, {}, {'flt': frappe.utils.flt})
+            return self._fmt_val(result)
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                'Super Print Design: expression eval failed: %s' % (raw[:120]))
+            return raw
 
         def key(item):
             return _safe(getattr(item, sort_field, None))
@@ -1306,6 +1334,12 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # Get cell value
                 cell_value = cell_data.get('cell_value', '')
                 cell_type = cell_data.get('cell_type', 'static')
+
+                # Expression cell: value starts with '=' → substitute placeholders
+                # then eval the arithmetic expression, e.g. ={doc.items.qty}*{doc.items.rate}
+                if cell_value and cell_value.lstrip().startswith('=') and cell_type != 'logic':
+                    cell_value = self._eval_expression_cell(
+                        cell_value, doc, data_item, query_results, params)
 
                 # Logic code: evaluate Python expression
                 if cell_type == 'logic' and cell_value:
