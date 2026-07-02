@@ -1549,7 +1549,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             return base_font_size
         w_base = width_per_fs * base_font_size
         # 留 4px 安全余量(border-collapse + 单元格 padding)
-        avail = max(8, cell_w - 4)
+        avail = max(8, cell_w - 8)
         if w_base <= avail:
             return base_font_size
         fs = base_font_size * avail / w_base
