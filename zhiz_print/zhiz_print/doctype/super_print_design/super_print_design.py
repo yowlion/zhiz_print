@@ -202,7 +202,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
             html = self.build_preview_html(
                 query_results, doc_name, doc, params=params,
-                page_break_map=page_break_map, row_heights=row_heights)
+                page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
             return html
 
         except Exception as e:
@@ -882,7 +882,7 @@ class SuperPrintDesign(frappe.model.document.Document):
     # ==================== Main Render Pipeline ====================
 
     def build_preview_html(self, query_results, doc_name=None, doc=None, params=None,
-                           page_break_map=None, row_heights=None):
+                           page_break_map=None, row_heights=None, shrink_map=None):
         """Build preview HTML.
 
         v15.10.01 pagination rework:
