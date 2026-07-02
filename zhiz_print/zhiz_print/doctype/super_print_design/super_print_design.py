@@ -1438,18 +1438,22 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # Auto Shrink Font: shrink_map(前端 measureText 精确)优先,估算兜底;嵌标记供前端测量
                 shrink_attr = ''
                 if row_display == 'Auto Shrink Font' and cell_value:
+                    # base 字号取 cell css_style 的 font-size(实际渲染字号),不是行默认 font_size
+                    # 否则 cell 设了大字号(如 30px)却按行默认(12px)估算→不缩→溢出
+                    _fs_m = _re.search(r'font-size\s*:\s*(\d+(?:\.\d+)?)', cell_data.get('css_style') or '')
+                    _actual_fs = int(float(_fs_m.group(1))) if _fs_m else font_size
                     shrink_key = '{0}_{1}{2}'.format(
                         row_num, col, '_{0}'.format(_data_idx) if _data_idx is not None else '')
                     if shrink_map and shrink_key in shrink_map:
                         shrunk = shrink_map[shrink_key]
                     else:
-                        shrunk = self._estimate_font_size(str(cell_value), cell_w, cell_h, font_size)
-                    if shrunk < font_size:
+                        shrunk = self._estimate_font_size(str(cell_value), cell_w, cell_h, _actual_fs)
+                    if shrunk < _actual_fs:
                         style_attr = style_attr.replace(
-                            f'font-size:{font_size}px;', f'font-size:{shrunk}px;')
-                    # 嵌标记:base 字号 + cell 宽(前端 measureText 量精确字号用)
+                            f'font-size:{_actual_fs}px;', f'font-size:{shrunk}px;')
+                    # 嵌标记:实际字号 + cell 宽(前端 measureText 量精确字号用)
                     shrink_attr = ' data-shrink-cell="{0}" data-base-fs="{1}" data-cell-w="{2}"'.format(
-                        shrink_key, font_size, int(cell_w))
+                        shrink_key, _actual_fs, int(cell_w))
 
                 # Generate content
                 content = self._render_cell_content(
