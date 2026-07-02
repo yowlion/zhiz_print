@@ -27,6 +27,16 @@ frappe.ui.form.on('Super Print Log', {
 		iframeDoc.write(frm.doc.print_preview_html);
 		iframeDoc.close();
 
+		// 注入纸张预览效果(对齐打印预览页 sp-paper-wrapper:灰底衬托 + 居中 + 阴影 + 页间距)。
+		// print_preview_html 是为打印生成的(.print-page 无阴影/不居中),预览回看需补这些视觉。
+		try {
+			let inj = iframeDoc.createElement('style');
+			inj.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;}' +
+				'.print-pages-wrapper{margin:0 auto !important;}' +
+				'.print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
+			(iframeDoc.head || iframeDoc.documentElement).appendChild(inj);
+		} catch (e) {}
+
 		// 动态高度:多页 HTML 完整显示(与打印预览对齐)。字体/图片加载后高度会变,多次重算。
 		let resize = function() {
 			try {
