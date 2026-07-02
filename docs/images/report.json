@@ -1,0 +1,79 @@
+{
+  "server": "gy",
+  "base_url": "http://0.0.0.0:8000",
+  "target_url": "http://0.0.0.0:8000/app/super-print-log/SPL-2026-01356",
+  "login_ok": true,
+  "login_method": "api-fetch",
+  "login_response": {
+    "status": 200,
+    "markers": [
+      {
+        "home_page": "/app/home"
+      },
+      {
+        "full_name": "Administrator"
+      },
+      {
+        "message": "Logged In"
+      }
+    ]
+  },
+  "main_status": 200,
+  "failed_requests": [],
+  "console_errors": [
+    {
+      "type": "log",
+      "text": "Deprecated as of 10.6.0. initHighlighting() is deprecated.  Use highlightAll() instead.",
+      "args": [
+        "Deprecated as of 10.6.0. initHighlighting() is deprecated.  Use highlightAll() instead."
+      ]
+    },
+    {
+      "type": "debug",
+      "text": "zhiz_map_current_doc initialized",
+      "args": [
+        "zhiz_map_current_doc initialized"
+      ]
+    },
+    {
+      "type": "log",
+      "text": "localStorage cleared",
+      "args": [
+        "localStorage cleared"
+      ]
+    },
+    {
+      "type": "log",
+      "text": "Cleared App Cache.",
+      "args": [
+        "Cleared App Cache."
+      ]
+    },
+    {
+      "type": "log",
+      "text": "localStorage cleared",
+      "args": [
+        "localStorage cleared"
+      ]
+    },
+    {
+      "type": "log",
+      "text": "%c使用此控制台可能使攻击者冒充您并窃取您的信息。不要输入或粘贴您不理解的代码。 font-size: large",
+      "args": [
+        "%c使用此控制台可能使攻击者冒充您并窃取您的信息。不要输入或粘贴您不理解的代码。",
+        "font-size: large"
+      ]
+    }
+  ],
+  "page_errors": [],
+  "selector": null,
+  "selector_found": null,
+  "selector_count": 0,
+  "text": null,
+  "text_found": null,
+  "final_url": "http://0.0.0.0:8000/app/super-print-log/SPL-2026-01356",
+  "title": "260702-162 - SPL-2026-01356",
+  "body_text_snippet": "打印日志\nSPL-2026-01356\nBegin typing for results.\nNo new notifications\nA\n260702-162\n详情\n打印预览\n单据类型\n生产工单\nreference_doctype\n单据编号\n260702-162\nreference_name\n操作类型\n打印\nexport_type\n打印设计\n索尔毛坯工单\nprint_design\n打印时间\n2026-07-02 17:03:37\nprint_time\n打印用户\nzhangyf@gy.com\nprint_user\n打印次数\n1\nprint_count",
+  "screenshot": "/Users/hyowlion/CodeApp/apps/zhiz_print/docs/images/screenshot.png",
+  "error": null
+}

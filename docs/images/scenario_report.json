@@ -1,0 +1,81 @@
+{
+  "server": "gy",
+  "base_url": "http://0.0.0.0:8000",
+  "page": "http://0.0.0.0:8000/app/super-print-design/成品销售退货通知",
+  "scenario": "/tmp/sc_rowpanel.json",
+  "steps_total": 5,
+  "steps_run": 5,
+  "passed": true,
+  "failed_step": null,
+  "failed_action": null,
+  "failed_error": null,
+  "failed_url": null,
+  "login_ok": true,
+  "login_method": "api-fetch",
+  "step_results": [
+    {
+      "index": 0,
+      "action": "wait",
+      "ok": true,
+      "detail": "wait '.spd-grid'"
+    },
+    {
+      "index": 1,
+      "action": "wait_ms",
+      "ok": true,
+      "detail": "wait_ms 1500"
+    },
+    {
+      "index": 2,
+      "action": "eval",
+      "ok": true,
+      "detail": "eval → \"clicked row5\""
+    },
+    {
+      "index": 3,
+      "action": "wait_ms",
+      "ok": true,
+      "detail": "wait_ms 1500"
+    },
+    {
+      "index": 4,
+      "action": "screenshot",
+      "ok": true,
+      "detail": "screenshot → 07_row_panel.png"
+    }
+  ],
+  "screenshots": [
+    "/Users/hyowlion/CodeApp/apps/zhiz_print/docs/images/07_row_panel.png"
+  ],
+  "console_errors": [
+    {
+      "type": "log",
+      "text": "Deprecated as of 10.6.0. initHighlighting() is deprecated.  Use highlightAll() instead."
+    },
+    {
+      "type": "debug",
+      "text": "zhiz_map_current_doc initialized"
+    },
+    {
+      "type": "log",
+      "text": "localStorage cleared"
+    },
+    {
+      "type": "log",
+      "text": "Cleared App Cache."
+    },
+    {
+      "type": "log",
+      "text": "localStorage cleared"
+    },
+    {
+      "type": "log",
+      "text": "%c使用此控制台可能使攻击者冒充您并窃取您的信息。不要输入或粘贴您不理解的代码。 font-size: large"
+    }
+  ],
+  "page_errors": [],
+  "failed_requests": [],
+  "screenshot": "/Users/hyowlion/CodeApp/apps/zhiz_print/docs/images/scenario_screenshot.png",
+  "error": null,
+  "main_status": 200
+}
