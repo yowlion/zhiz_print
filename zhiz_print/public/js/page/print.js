@@ -581,8 +581,8 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				if (!key || !text || !cellW) return;
 				_ctx.font = baseFs + 'px ' + fontFamily;
 				const textW = _ctx.measureText(text).width;
-				if (textW > cellW - 8) {
-					const fs = Math.max(6, Math.floor(baseFs * (cellW - 8) / textW));
+				if (textW > cellW) {
+					const fs = Math.max(6, Math.floor(baseFs * cellW / textW));
 					if (fs < baseFs) {
 						td.style.fontSize = fs + 'px';
 						shrinks[key] = fs;

@@ -1438,22 +1438,25 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # Auto Shrink Font: shrink_map(前端 measureText 精确)优先,估算兜底;嵌标记供前端测量
                 shrink_attr = ''
                 if row_display == 'Auto Shrink Font' and cell_value:
-                    # base 字号取 cell css_style 的 font-size(实际渲染字号),不是行默认 font_size
-                    # 否则 cell 设了大字号(如 30px)却按行默认(12px)估算→不缩→溢出
+                    # base 字号取 cell css_style 的 font-size(实际渲染字号),不是行默认
                     _fs_m = _re.search(r'font-size\s*:\s*(\d+(?:\.\d+)?)', cell_data.get('css_style') or '')
                     _actual_fs = int(float(_fs_m.group(1))) if _fs_m else font_size
+                    # 可用宽度 = cell_w - 左右线宽 - 预留 2px(border-collapse 下 border 占内宽)
+                    _bw_m = _re.search(r'border(?:-(?:left|right|top|bottom))?\s*:\s*(\d+)', cell_data.get('css_style') or '')
+                    _border_w = int(_bw_m.group(1)) if _bw_m else 0
+                    _avail_w = cell_w - 2 * _border_w - 2
                     shrink_key = '{0}_{1}{2}'.format(
                         row_num, col, '_{0}'.format(_data_idx) if _data_idx is not None else '')
                     if shrink_map and shrink_key in shrink_map:
                         shrunk = shrink_map[shrink_key]
                     else:
-                        shrunk = self._estimate_font_size(str(cell_value), cell_w, cell_h, _actual_fs)
+                        shrunk = self._estimate_font_size(str(cell_value), _avail_w, cell_h, _actual_fs)
                     if shrunk < _actual_fs:
                         style_attr = style_attr.replace(
                             f'font-size:{_actual_fs}px;', f'font-size:{shrunk}px;')
-                    # 嵌标记:实际字号 + cell 宽(前端 measureText 量精确字号用)
+                    # 嵌标记:实际字号 + 可用宽(已减线宽+预留,前端 measureText 直接用)
                     shrink_attr = ' data-shrink-cell="{0}" data-base-fs="{1}" data-cell-w="{2}"'.format(
-                        shrink_key, _actual_fs, int(cell_w))
+                        shrink_key, _actual_fs, int(_avail_w))
 
                 # Generate content
                 content = self._render_cell_content(
@@ -1549,7 +1552,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             return base_font_size
         w_base = width_per_fs * base_font_size
         # 留 4px 安全余量(border-collapse + 单元格 padding)
-        avail = max(8, cell_w - 8)
+        avail = max(8, cell_w)  # cell_w 已是可用宽(调用方减了左右线宽 + 预留 2px)
         if w_base <= avail:
             return base_font_size
         fs = base_font_size * avail / w_base
