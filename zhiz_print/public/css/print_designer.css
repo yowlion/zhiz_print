@@ -287,8 +287,8 @@
 .spd-grid td.selected { background:#e3f2fd !important; border:2px solid #2196f3 !important; }
 .spd-grid tr.row-selected td { background-color:#fff3e0 !important; }
 .spd-grid td.col-selected { background-color:#e8f5e9 !important; }
-.super-zprint-cell-preview { display:flex; align-items:center; justify-content:center; gap:2px; font-size:8px; color:#999; }
-.super-zprint-cell-preview i { font-size:10px; }
+.super-zprint-cell-preview { display:block; font-size:8px; color:#999; }
+.super-zprint-cell-preview i { font-size:10px; margin-right:2px; }
 .super-zprint-cell-content { font-size:inherit; padding:2px; word-break:break-all; overflow:hidden; }
 .spd-props { width:260px; min-width:260px; max-width:260px; background:#fff; border:1px solid #ddd; border-radius:6px; padding:10px; overflow-y:auto; max-height:600px; display:none; }
 .spd-props.visible { display:block; }
