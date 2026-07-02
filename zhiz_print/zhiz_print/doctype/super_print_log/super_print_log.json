@@ -44,10 +44,9 @@
     },
     {
       "fieldname": "print_design",
-      "fieldtype": "Link",
+      "fieldtype": "Data",
       "in_list_view": 1,
       "label": "Print Design",
-      "options": "Super Print Design",
       "reqd": 1,
       "read_only": 1
     },
