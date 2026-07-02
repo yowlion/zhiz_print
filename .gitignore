@@ -2,3 +2,10 @@
 .wolf/
 CLAUDE.md
 .DS_Store
+
+# screenshot tooling artifacts (verify_page.py / scenario.py 产物,不入仓库)
+images/screenshot.png
+images/report.json
+images/scenario_screenshot.png
+images/scenario_report.json
+images/FAIL_*.png
