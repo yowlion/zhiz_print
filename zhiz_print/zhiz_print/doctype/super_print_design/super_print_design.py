@@ -559,14 +559,24 @@ class SuperPrintDesign(frappe.model.document.Document):
         return result
 
     def _get_row_data_items(self, info, doc, query_results):
-        """Get data list for data-driven rows"""
-        # Prefer document child table first
+        """Get data list for data-driven rows.
+
+        Sorting (document child-table path only), in priority order:
+        1. Design-level explicit sort (items_sort_field + items_sort_order) —
+           generic for any doctype/field.
+        2. Else reuse the target doc's `get_sorted_items()` if it implements one
+           (project-app duck-typed method; zhiz_print must NOT import project
+           apps). Only invoked for the `items` child table, since that method is
+           hardcoded to items — keeps the designer ordering identical to the
+           native Print Format that calls the same method.
+        3. Else natural child-table idx order.
+        """
         if info.get('child_tables') and doc:
             for table_name in info['child_tables']:
                 if hasattr(doc, table_name):
                     child_table = getattr(doc, table_name)
                     if child_table:
-                        return [item for item in child_table]
+                        return self._apply_item_sort(list(child_table), doc, table_name)
 
         # Then fall back to query results
         if info.get('query_names'):
@@ -577,6 +587,77 @@ class SuperPrintDesign(frappe.model.document.Document):
                     return data
 
         return []
+
+    def _apply_item_sort(self, items, doc, table_name):
+        """Sort child-table rows per design config, else reuse project-side
+        get_sorted_items(), else leave natural order. Never raises."""
+        if not items:
+            return items
+
+        # 1. Design-level explicit sort (generic, any doctype/field)
+        sort_field = (getattr(self, 'items_sort_field', '') or '').strip()
+        if sort_field:
+            sort_order = (getattr(self, 'items_sort_order', 'ASC') or 'ASC').upper()
+            try:
+                child_meta = frappe.get_meta(items[0].doctype)
+                key_fn = self._build_sort_key_fn(child_meta, sort_field)
+                return sorted(items, key=key_fn, reverse=(sort_order == 'DESC'))
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    'Super Print Design: sort by %s failed, fallback to natural order' % sort_field)
+                return items
+
+        # 2. Reuse project-side get_sorted_items() if provided (items child table only)
+        if table_name == 'items' and callable(getattr(doc, 'get_sorted_items', None)):
+            try:
+                got = doc.get_sorted_items()
+                if got:
+                    return list(got)
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    'Super Print Design: get_sorted_items() failed, fallback to natural order')
+
+        # 3. Natural order
+        return items
+
+    @staticmethod
+    def _build_sort_key_fn(child_meta, sort_field):
+        """Build a sort-key function for child-table rows.
+
+        Supports two forms:
+        - `fieldname`: the row's own field (e.g. idx, qty, posting_date)
+        - `link_field.relation_field`: follow a Link field on the row to its
+          related doctype and read a field there (e.g. delivery_note.posting_date).
+          Relation values are cached per link name to avoid N+1 queries.
+        None values normalize to '' so mixed/missing fields never break sorted().
+        """
+        def _safe(v):
+            return '' if v is None else v
+
+        if '.' in sort_field:
+            rel_field, rel_key = sort_field.split('.', 1)
+            rel_doctype = None
+            if child_meta:
+                df = child_meta.get_field(rel_field)
+                if df and df.fieldtype == 'Link':
+                    rel_doctype = df.options
+            value_cache = {}
+
+            def key(item):
+                rel_name = getattr(item, rel_field, None)
+                if not rel_name or not rel_doctype:
+                    return ''
+                if rel_name not in value_cache:
+                    value_cache[rel_name] = _safe(
+                        frappe.db.get_value(rel_doctype, rel_name, rel_key))
+                return value_cache[rel_name]
+            return key
+
+        def key(item):
+            return _safe(getattr(item, sort_field, None))
+        return key
 
     # ==================== Pagination ====================
 

@@ -368,3 +368,6 @@ Draft — Preview Only,草稿 — 仅可预览
 "Add Blank Page","新增空白页"
 "Duplicate Current Page","复制当前页"
 "Page  duplicated from page ","第  页已从第  页复制"
+Item Sort Field,明细排序字段
+Item Sort Order,明细排序顺序
+"Sort the data-driven items by this field. Use a row field name (e.g. idx, qty) or a relation like delivery_note.posting_date. Leave empty to reuse the doc's get_sorted_items() if the project app provides one, otherwise natural order.",按此字段对数据驱动的明细行排序。可填行自身字段(如 idx、qty)或关联字段(如 delivery_note.posting_date)。留空则复用项目 app 提供的单据 get_sorted_items()，否则按原顺序。
