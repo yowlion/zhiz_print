@@ -525,22 +525,22 @@ CSS 样式转 Excel 格式(openpyxl),条码 / 二维码以图片形式嵌入单�
 
 打印输出的纸张渲染效果(灰底 + 白纸 + 阴影 + 分页)与下方日志预览一致:
 
-![打印输出纸张效果](images/05_log_preview.png)
-*图 12-1  打印渲染效果 — 纸张白底 + 阴影 + 居中 + 页间距(取自日志预览快照)*
+![打印输出纸张效果](images/08_log_preview_tab.png)
+*图 12-1  打印渲染效果 — 纸张白底 + 阴影 + 居中 + 页间距(公司名/二维码已模糊)*
 
 ---
 
 ## 十三、打印日志(持久化)
 
-每次打印 / 导出 / 批量都记录一条 **Super Print Log**。**日志是持久化的** — 创建时把当时的渲染 HTML 快照存进 `print_preview_html`,后续改设计**不影响历史日志**。
+每次打印 / 导出 / 批量都记录一条 **Super Print Log**。**日志是持久化的** — 创建时把当时的渲染 HTML 快照存进 `print_preview_html`,后续改设计**不影响历史日志**。打开日志后切换到「**打印预览**」tab,即可看到当时打印的实际纸张效果(图 13-2)。
 
 <table>
 <tr><td>
 <img src="images/02_log_list.png" alt="日志列表"/>
 <br/><em>图 13-1  日志列表(按打印时间倒序)</em>
 </td><td>
-<img src="images/05_log_preview.png" alt="日志预览"/>
-<br/><em>图 13-2  单条日志预览 — iframe 动态高度 + 注入纸张 CSS,与打印预览对齐</em>
+<img src="images/08_log_preview_tab.png" alt="日志预览"/>
+<br/><em>图 13-2  单条日志「打印预览」tab — 当时实际打印效果(iframe 动态高度 + 纸张 CSS 对齐;公司名/二维码已模糊)</em>
 </td></tr>
 </table>
 
