@@ -384,7 +384,7 @@ def create_trial_license():
     expires_at = result.get("expires_at")
     server_status = result.get("status", "Active")
     now = frappe.utils.now_datetime()
-    expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 30)
+    expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 365)
 
     if server_status == "Expired" or (expires_at and frappe.utils.get_datetime(expires_at) < now):
         status = "Expired"
@@ -394,7 +394,7 @@ def create_trial_license():
     doc = frappe.get_doc({
         "doctype": "Zprint License",
         "license_key": license_key,
-        "plan": "Trial",
+        "plan": result.get("plan", "Standard"),
         "status": status,
         "activated_at": now,
         "expires_at": expires,
@@ -424,7 +424,7 @@ def _sync_trial_from_server(license_key, machine_id, site_name):
 
     now = frappe.utils.now_datetime()
     expires_at = result.get("expires_at")
-    expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 30)
+    expires = frappe.utils.get_datetime(expires_at) if expires_at else frappe.utils.add_days(now, 365)
     server_status = result.get("status", "Expired")
     if server_status == "Expired" or (expires_at and frappe.utils.get_datetime(expires_at) < now):
         status = "Expired"
@@ -434,7 +434,7 @@ def _sync_trial_from_server(license_key, machine_id, site_name):
     doc = frappe.get_doc({
         "doctype": "Zprint License",
         "license_key": license_key,
-        "plan": result.get("plan", "Trial"),
+        "plan": result.get("plan", "Standard"),
         "status": status,
         "activated_at": result.get("activated_at") or now,
         "expires_at": expires,
