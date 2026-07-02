@@ -37,6 +37,7 @@
     "table_css",
     "row_styles",
     "col_styles",
+    "section_data_sort",
     "items_sort_field",
     "column_break_data_sort",
     "items_sort_order",
@@ -243,6 +244,11 @@
       "hidden": 1,
       "label": "Column Style",
       "options": "JSON"
+    },
+    {
+      "fieldname": "section_data_sort",
+      "fieldtype": "Section Break",
+      "label": "Data Sorting"
     },
     {
       "fieldname": "items_sort_field",
