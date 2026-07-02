@@ -811,6 +811,8 @@ class SuperPrintDesigner {
         if (!container) return;
 
         const rowStyle = this.rowStyles[row] || {};
+        const _firstCellForRow = this.getFirstNonMergedCell(row);
+        const rowType = _firstCellForRow?.row_type || '';
         let cssPreview = '';
         if (rowStyle.height) cssPreview += 'height:' + rowStyle.height + 'px; ';
         if (rowStyle.font_size) cssPreview += 'font-size:' + rowStyle.font_size + 'px; ';
@@ -867,11 +869,11 @@ class SuperPrintDesigner {
                     '</select>' +
                 '</div>' +
             '</div>' +
-            '<div class="super-zprint-property-section">' +
+            '<div class="super-zprint-property-section" id="spd-row-sort-section" style="display:' + (rowType === 'Data-Driven Row' ? '' : 'none') + '">' +
                 '<div class="super-zprint-property-section-header"><i class="fa fa-sort"></i> ' + __('Data Sort') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Data-Driven Row') + ')</small></div>' +
                 '<div class="property-section-body" style="padding:8px">' +
-                    '<input type="text" id="row-sorts" class="form-control input-sm" value="' + (rowStyle.sorts || '') + '" placeholder="delivery_note.posting_date ASC, item_code">' +
-                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('Comma-separated multi-level. field or link.field. Empty = natural order.') + '</div>' +
+                    '<input type="text" id="row-sorts" class="form-control input-sm" value="' + (rowStyle.sorts || '') + '" placeholder="row.3 ASC, row.5 DESC">' +
+                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('row.N = display value of column N. Comma = multi-level. Empty = natural order.') + '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="super-zprint-property-section">' +
@@ -934,7 +936,11 @@ class SuperPrintDesigner {
         if (rowTypeSelect) {
             const firstNonMerged = this.getFirstNonMergedCell(row);
             rowTypeSelect.value = firstNonMerged?.row_type || '';
-            rowTypeSelect.addEventListener('change', (e) => this.setRowTypeForRow(row, e.target.value));
+            rowTypeSelect.addEventListener('change', (e) => {
+                this.setRowTypeForRow(row, e.target.value);
+                const sortSection = container.querySelector('#spd-row-sort-section');
+                if (sortSection) sortSection.style.display = (e.target.value === 'Data-Driven Row') ? '' : 'none';
+            });
         }
         // Row display effect selection
         const rowDisplaySelect = container.querySelector('#row-display-select');

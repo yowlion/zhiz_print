@@ -457,7 +457,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Row Expansion (Data-Driven Rows) ====================
 
-    def _build_expanded_rows_v2(self, cell_map, row_styles, doc, query_results, page_no=None):
+    def _build_expanded_rows_v2(self, cell_map, row_styles, doc, query_results, page_no=None, params=None):
         """Build expanded row list based on row_type and child table/query data"""
         all_rows = list(range(1, self.rows + 1))
 
@@ -506,8 +506,12 @@ class SuperPrintDesign(frappe.model.document.Document):
         # Get actual data for each data-driven row
         row_data_map = {}  # {row_num: [data_items]}
         for row_num, info in data_driven_rows.items():
-            row_data_map[row_num] = self._get_row_data_items(
-                info, doc, query_results)
+            items = self._get_row_data_items(info, doc, query_results)
+            sorts = info.get('sorts', '')
+            if sorts and items:
+                items = self._sort_data_items_by_row_cols(
+                    items, sorts, row_num, cell_map, doc, query_results, params)
+            row_data_map[row_num] = items
 
         # Build expanded row list — group adjacent data-driven rows sharing query_name
         result = []
@@ -563,23 +567,19 @@ class SuperPrintDesign(frappe.model.document.Document):
         return result
 
     def _get_row_data_items(self, info, doc, query_results):
-        """Get data list for data-driven rows.
+        """Get data list for data-driven rows in natural child-table order.
 
-        Sorting: a Data-Driven Row template may carry a row-level `sorts` spec
-        (read from row_styles JSON — e.g. "delivery_note.posting_date ASC, item_code").
-        Applied only on the document child-table path; multi-level + multi-direction
-        via stable sort. Empty/absent = natural child-table idx order.
+        Sorting is NOT applied here — the caller (_build_expanded_rows_v2) sorts
+        by rendered column values after we return the raw item list, because the
+        sort key may be a logic-cell / computed column whose value is only known
+        after placeholder substitution.
         """
         if info.get('child_tables') and doc:
             for table_name in info['child_tables']:
                 if hasattr(doc, table_name):
                     child_table = getattr(doc, table_name)
                     if child_table:
-                        items = list(child_table)
-                        sorts = (info.get('sorts') or '').strip()
-                        if sorts:
-                            items = self._apply_row_sorts(items, sorts)
-                        return items
+                        return list(child_table)
 
         # Then fall back to query results
         if info.get('query_names'):
@@ -591,81 +591,87 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         return []
 
-    def _apply_row_sorts(self, items, sorts_str):
-        """Sort child-table rows by a per-row multi-level spec.
+    def _sort_data_items_by_row_cols(self, items, sorts_str, template_row,
+                                     cell_map, doc, query_results, params):
+        """Sort data items by the rendered display value of row columns.
 
-        Format: "field DIR, link.relation DIR, ..."
-          - field         : row's own field (idx, qty, posting_date, ...)
-          - link.relation : follow a Link field on the row to its related doctype
-                            and read a field there (e.g. delivery_note.posting_date);
-                            cached per link name to avoid N+1.
-          - DIR           : ASC (default) / DESC
-        Multi-level is implemented by stable-sorting from the lowest priority
-        upward, so each level may have its own direction. Never raises — on any
-        error it logs and returns the natural-order list.
+        sorts_str format: "row.N DIR, row.M DIR, ..."
+          - row.N : the rendered display value of column N (1-based) of this
+                    Data-Driven Row template, evaluated per data item (logic-cell
+                    eval + doc/child/param placeholder substitution). Works even
+                    when the column is a computed/conditional value, since it
+                    sorts by what actually gets displayed.
+          - DIR   : ASC (default) / DESC
+        Multi-level via stable sort from lowest to highest priority. Never
+        raises — logs and returns natural order on any error.
         """
-        if not items:
-            return items
         parsed = []
         for part in (sorts_str or '').split(','):
             part = part.strip()
             if not part:
                 continue
             tokens = part.split()
-            field = tokens[0].strip()
-            if not field:
-                continue
+            key = tokens[0].strip().lower()
             order = tokens[1].upper() if len(tokens) > 1 else 'ASC'
             if order not in ('ASC', 'DESC'):
                 order = 'ASC'
-            parsed.append((field, order))
+            if key.startswith('row.'):
+                try:
+                    col_idx = int(key[4:])
+                except (ValueError, TypeError):
+                    continue
+                if col_idx >= 1:
+                    parsed.append((col_idx, order))
         if not parsed:
             return items
         try:
-            child_meta = frappe.get_meta(items[0].doctype)
-            # stable sort from lowest priority to highest
-            for field, order in reversed(parsed):
-                key_fn = self._build_sort_key_fn(child_meta, field)
-                items = sorted(items, key=key_fn, reverse=(order == 'DESC'))
+            for col_idx, order in reversed(parsed):
+                items = sorted(
+                    items,
+                    key=lambda it, ci=col_idx: self._sort_key_normalized(
+                        self._compute_cell_sort_value(
+                            template_row, ci, it, cell_map, doc, query_results, params)),
+                    reverse=(order == 'DESC'))
             return items
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),
-                'Super Print Design: row sort "%s" failed, fallback to natural order' % sorts_str)
+                'Super Print Design: row-col sort "%s" failed, fallback to natural order' % sorts_str)
             return items
 
     @staticmethod
-    def _build_sort_key_fn(child_meta, sort_field):
-        """Build a sort-key function for child-table rows.
+    def _sort_key_normalized(v):
+        """Sort key that compares numbers numerically and strings lexically
+        without raising on mixed types: numeric -> (0, float), non-numeric ->
+        (1, str), empty -> (2, ''). Numbers sort before strings; empty sorts
+        last under ASC (DESC reverse flips it to first)."""
+        s = (str(v) if v is not None else '').strip()
+        if s == '':
+            return (2, '')
+        try:
+            return (0, float(s))
+        except (ValueError, TypeError):
+            return (1, s)
 
-        Supports two forms:
-        - `fieldname`: the row's own field (e.g. idx, qty, posting_date)
-        - `link_field.relation_field`: follow a Link field on the row to its
-          related doctype and read a field there (e.g. delivery_note.posting_date).
-          Relation values are cached per link name to avoid N+1 queries.
-        None values normalize to '' so mixed/missing fields never break sorted().
-        """
-        def _safe(v):
-            return '' if v is None else v
-
-        if '.' in sort_field:
-            rel_field, rel_key = sort_field.split('.', 1)
-            rel_doctype = None
-            if child_meta:
-                df = child_meta.get_field(rel_field)
-                if df and df.fieldtype == 'Link':
-                    rel_doctype = df.options
-            value_cache = {}
-
-            def key(item):
-                rel_name = getattr(item, rel_field, None)
-                if not rel_name or not rel_doctype:
-                    return ''
-                if rel_name not in value_cache:
-                    value_cache[rel_name] = _safe(
-                        frappe.db.get_value(rel_doctype, rel_name, rel_key))
-                return value_cache[rel_name]
-            return key
+    def _compute_cell_sort_value(self, template_row, col_idx, data_item,
+                                 cell_map, doc, query_results, params):
+        """Compute the rendered display value of a cell, for sorting. Mirrors
+        the value-resolution part of _build_row_html (logic eval + doc/child/
+        param/query placeholder substitution). Covers static, {doc.x},
+        {doc.child.field}, logic-cell, and {param.x} columns. data_key/query-
+        only columns fall back to their raw value (natural order)."""
+        cell = cell_map.get("{0}_{1}".format(template_row, col_idx))
+        if not cell:
+            return ''
+        cv = cell.get('cell_value', '') or ''
+        if cell.get('cell_type') == 'logic' and cv:
+            cv = self._eval_logic_code(cv, doc, data_item)
+        cv = self._replace_doc_placeholders(cv, doc)
+        cv = self._replace_param_placeholders(cv, params)
+        cv = self._replace_query_data_placeholders(cv, query_results)
+        if data_item:
+            cv = self._replace_child_table_placeholders(cv, data_item)
+        return cv or ''
 
         def key(item):
             return _safe(getattr(item, sort_field, None))
@@ -862,7 +868,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
                 # Build expanded rows
                 all_rows_data = self._build_expanded_rows_v2(
-                    cell_map, row_styles, doc, query_results, page_no=page_no)
+                    cell_map, row_styles, doc, query_results, page_no=page_no, params=params)
 
                 # Build placeholder grid (two passes)
                 cell_grid = [[None] * self.columns for _ in range(self.rows)]
@@ -961,7 +967,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 cell_map = self._build_cell_map_for_page(page_no)
                 row_type_map, row_display_map = self._build_row_metadata(page_no=page_no)
                 all_rows_data = self._build_expanded_rows_v2(
-                    cell_map, row_styles, doc, query_results, page_no=page_no)
+                    cell_map, row_styles, doc, query_results, page_no=page_no, params=params)
 
                 # cell_grid (two passes, identical to build_preview_html)
                 cell_grid = [[None] * self.columns for _ in range(self.rows)]
