@@ -4,6 +4,8 @@
 frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({ parent: wrapper, title: __('模板平台'), single_column: false });
     $(wrapper).find('.page-form.row.hide').remove();
+    // 面包屑导航(对齐 doctype form 风格)
+    $('#navbar-breadcrumbs').html('<li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>');
 
     // 顶部刷新按钮
     const $iconGroup = $(wrapper).find('.page-icon-group');

@@ -3253,17 +3253,22 @@ frappe.ui.form.on('Super Print Design', {
                     frappe.call({
                         method: 'zhiz_print.api.template_store.share_template',
                         args: { design_name: frm.doc.design_name },
-                    }).then(r => {
-                        const m = r.message || {};
-                        if (m.success) {
-                            frappe.show_alert({ message: m.is_new ? __('已分享到模板平台') : __('模板已更新(v{0})').replace('{0}', m.version), indicator: 'green' });
-                        } else {
-                            frappe.show_alert({ message: __('分享失败: ') + (m.error || ''), indicator: 'red' });
-                        }
-                    }).catch(() => frappe.show_alert({ message: __('分享失败'), indicator: 'red' }))
-                      .finally(() => frappe.dom.unfreeze());
+                        callback: (r) => {
+                            frappe.dom.unfreeze();
+                            const m = r.message || {};
+                            if (m.success) {
+                                frappe.show_alert({ message: m.is_new ? __('已分享到模板平台') : __('模板已更新(v{0})').replace('{0}', m.version), indicator: 'green' });
+                            } else {
+                                frappe.show_alert({ message: __('分享失败: ') + (m.error || ''), indicator: 'red' });
+                            }
+                        },
+                        error: () => {
+                            frappe.dom.unfreeze();
+                            frappe.show_alert({ message: __('分享失败'), indicator: 'red' });
+                        },
+                    });
                 });
-            });
+            }, 'btn-primary');
         }
         if (spd_designer) spd_designer = null;
         spd_designer = new SuperPrintDesigner(frm);
