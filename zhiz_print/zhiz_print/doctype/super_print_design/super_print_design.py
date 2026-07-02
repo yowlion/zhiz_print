@@ -488,8 +488,12 @@ class SuperPrintDesign(frappe.model.document.Document):
 
                 if is_data_driven:
                     if row_num not in data_driven_rows:
+                        row_sorts = ''
+                        if row_styles and isinstance(row_styles, dict):
+                            row_sorts = (row_styles.get(str(row_num), {}) or {}).get('sorts', '') or ''
                         data_driven_rows[row_num] = {
-                            'child_tables': set(), 'query_names': set()}
+                            'child_tables': set(), 'query_names': set(),
+                            'sorts': row_sorts}
                     for (table_name, _) in child_patterns:
                         data_driven_rows[row_num]['child_tables'].add(
                             table_name)
@@ -561,22 +565,21 @@ class SuperPrintDesign(frappe.model.document.Document):
     def _get_row_data_items(self, info, doc, query_results):
         """Get data list for data-driven rows.
 
-        Sorting (document child-table path only), in priority order:
-        1. Design-level explicit sort (items_sort_field + items_sort_order) —
-           generic for any doctype/field.
-        2. Else reuse the target doc's `get_sorted_items()` if it implements one
-           (project-app duck-typed method; zhiz_print must NOT import project
-           apps). Only invoked for the `items` child table, since that method is
-           hardcoded to items — keeps the designer ordering identical to the
-           native Print Format that calls the same method.
-        3. Else natural child-table idx order.
+        Sorting: a Data-Driven Row template may carry a row-level `sorts` spec
+        (read from row_styles JSON — e.g. "delivery_note.posting_date ASC, item_code").
+        Applied only on the document child-table path; multi-level + multi-direction
+        via stable sort. Empty/absent = natural child-table idx order.
         """
         if info.get('child_tables') and doc:
             for table_name in info['child_tables']:
                 if hasattr(doc, table_name):
                     child_table = getattr(doc, table_name)
                     if child_table:
-                        return self._apply_item_sort(list(child_table), doc, table_name)
+                        items = list(child_table)
+                        sorts = (info.get('sorts') or '').strip()
+                        if sorts:
+                            items = self._apply_row_sorts(items, sorts)
+                        return items
 
         # Then fall back to query results
         if info.get('query_names'):
@@ -588,39 +591,48 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         return []
 
-    def _apply_item_sort(self, items, doc, table_name):
-        """Sort child-table rows per design config, else reuse project-side
-        get_sorted_items(), else leave natural order. Never raises."""
+    def _apply_row_sorts(self, items, sorts_str):
+        """Sort child-table rows by a per-row multi-level spec.
+
+        Format: "field DIR, link.relation DIR, ..."
+          - field         : row's own field (idx, qty, posting_date, ...)
+          - link.relation : follow a Link field on the row to its related doctype
+                            and read a field there (e.g. delivery_note.posting_date);
+                            cached per link name to avoid N+1.
+          - DIR           : ASC (default) / DESC
+        Multi-level is implemented by stable-sorting from the lowest priority
+        upward, so each level may have its own direction. Never raises — on any
+        error it logs and returns the natural-order list.
+        """
         if not items:
             return items
-
-        # 1. Design-level explicit sort (generic, any doctype/field)
-        sort_field = (getattr(self, 'items_sort_field', '') or '').strip()
-        if sort_field:
-            sort_order = (getattr(self, 'items_sort_order', 'ASC') or 'ASC').upper()
-            try:
-                child_meta = frappe.get_meta(items[0].doctype)
-                key_fn = self._build_sort_key_fn(child_meta, sort_field)
-                return sorted(items, key=key_fn, reverse=(sort_order == 'DESC'))
-            except Exception:
-                frappe.log_error(
-                    frappe.get_traceback(),
-                    'Super Print Design: sort by %s failed, fallback to natural order' % sort_field)
-                return items
-
-        # 2. Reuse project-side get_sorted_items() if provided (items child table only)
-        if table_name == 'items' and callable(getattr(doc, 'get_sorted_items', None)):
-            try:
-                got = doc.get_sorted_items()
-                if got:
-                    return list(got)
-            except Exception:
-                frappe.log_error(
-                    frappe.get_traceback(),
-                    'Super Print Design: get_sorted_items() failed, fallback to natural order')
-
-        # 3. Natural order
-        return items
+        parsed = []
+        for part in (sorts_str or '').split(','):
+            part = part.strip()
+            if not part:
+                continue
+            tokens = part.split()
+            field = tokens[0].strip()
+            if not field:
+                continue
+            order = tokens[1].upper() if len(tokens) > 1 else 'ASC'
+            if order not in ('ASC', 'DESC'):
+                order = 'ASC'
+            parsed.append((field, order))
+        if not parsed:
+            return items
+        try:
+            child_meta = frappe.get_meta(items[0].doctype)
+            # stable sort from lowest priority to highest
+            for field, order in reversed(parsed):
+                key_fn = self._build_sort_key_fn(child_meta, field)
+                items = sorted(items, key=key_fn, reverse=(order == 'DESC'))
+            return items
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                'Super Print Design: row sort "%s" failed, fallback to natural order' % sorts_str)
+            return items
 
     @staticmethod
     def _build_sort_key_fn(child_meta, sort_field):

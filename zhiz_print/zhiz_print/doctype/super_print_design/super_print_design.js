@@ -868,6 +868,13 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-sort"></i> ' + __('Data Sort') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Data-Driven Row') + ')</small></div>' +
+                '<div class="property-section-body" style="padding:8px">' +
+                    '<input type="text" id="row-sorts" class="form-control input-sm" value="' + (rowStyle.sorts || '') + '" placeholder="delivery_note.posting_date ASC, item_code">' +
+                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('Comma-separated multi-level. field or link.field. Empty = natural order.') + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="super-zprint-property-section">' +
                 '<div class="super-zprint-property-section-header"><i class="fa fa-text-height"></i> ' + __('Row Display Effect') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<select id="row-display-select" class="form-control">' +
@@ -911,6 +918,14 @@ class SuperPrintDesigner {
             });
             cssInput.addEventListener('change', (e) => {
                 this.updateRowStyle(row, 'css_style', e.target.value);
+            });
+        }
+
+        // Row data sort (per Data-Driven Row template)
+        const sortsInput = container.querySelector('#row-sorts');
+        if (sortsInput) {
+            sortsInput.addEventListener('change', (e) => {
+                this.updateRowStyle(row, 'sorts', e.target.value || undefined);
             });
         }
 

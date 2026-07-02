@@ -255,12 +255,12 @@ Active,已激活
 Expired,已过期
 Unused,未使用
 Locked,已锁定
-"License expires at {0}, status is locked, please contact vendor to unlock.","许可证到期时间 {0}，状态已锁定，请联系供应商解锁。"
-"License expired on {0}. Please renew your subscription.","许可证已于 {0} 过期，请续订许可证。"
+"License expires at {0}, status is locked, please contact vendor to unlock.",许可证到期时间 {0}，状态已锁定，请联系供应商解锁。
+License expired on {0}. Please renew your subscription.,许可证已于 {0} 过期，请续订许可证。
 No License,无许可证
 License expired or not activated,许可证已过期或未激活
 Expires,过期时间
-"Not activated. Please refresh boot cache to get a trial license or purchase a full license.","未激活，请刷新启动缓存获取试用许可或购买正式许可。"
+Not activated. Please refresh boot cache to get a trial license or purchase a full license.,未激活，请刷新启动缓存获取试用许可或购买正式许可。
 Cannot create new print design,无法创建新的打印设计
 Batch Print,批量打印
 Batch Logs,批量日志
@@ -280,7 +280,7 @@ Back to List,返回列表
 Unmerge Left,左侧打散
 Unmerge Inherit,继承打散
 "Content stays in first cell, others become empty",左侧打散：取消合并后内容保留在第一个单元格，其余单元格为空
-"Content is copied to every freed cell",继承打散：取消合并后内容复制到每个释放的单元格
+Content is copied to every freed cell,继承打散：取消合并后内容复制到每个释放的单元格
 Unmerged with content inherited,已继承打散
 Unmerged, content kept in first cell,已左侧打散
 Format Painter,格式刷
@@ -322,17 +322,17 @@ Update,更新
 Add,添加
 Select Document for Preview,选择预览文档
 Select Document,选择单据
-"Select a {0} document to provide context for query parameters (e.g. doc.field)","选择一个 {0} 单据为查询参数（如 doc.field）提供上下文"
+Select a {0} document to provide context for query parameters (e.g. doc.field),选择一个 {0} 单据为查询参数（如 doc.field）提供上下文
 Confirm,确认
 Sample Document,模板演示单据
-"Used for query preview to resolve doc.field parameters. Leave empty to preview without document context.",用于查询预览时解析doc.field参数。留空则预览时不带文档上下文。
-"Row {0} format painted",第 {0} 行格式刷已应用
-"Col {0} format painted",第 {0} 列格式刷已应用
+Used for query preview to resolve doc.field parameters. Leave empty to preview without document context.,用于查询预览时解析doc.field参数。留空则预览时不带文档上下文。
+Row {0} format painted,第 {0} 行格式刷已应用
+Col {0} format painted,第 {0} 列格式刷已应用
 format painted,格式刷已应用
 Auto Match,自动匹配
 No matching template found,未找到匹配的模板
 Priority,优先级
-"Lower number means higher priority. Used for template ordering and auto-match selection.",数字越小优先级越高。用于模板排序和自动匹配选择。
+Lower number means higher priority. Used for template ordering and auto-match selection.,数字越小优先级越高。用于模板排序和自动匹配选择。
 Logic Code,条件表达式
 Image Rendering,图片渲染
 Use Explicit Image Rendering,使用显式方式渲染图片
@@ -340,35 +340,33 @@ Use Explicit Image Rendering,使用显式方式渲染图片
 Draft No Print,草稿不能打印
 "When checked, design can be previewed but cannot be printed or exported (PDF / Excel / batch). Uncheck to make the design live.",勾选后该设计仅可预览，不能打印或导出（PDF / Excel / 批量），取消勾选可正式启用该设计。
 Draft — Preview Only,草稿 — 仅可预览
-"This design is marked as draft. Preview only — printing and export are disabled. Uncheck \"Draft No Print\" in the design to enable.",该设计标记为草稿。仅可预览 — 打印和导出已禁用。请在设计中取消勾选"草稿不能打印"以启用。
-"This design is marked as draft. Preview only — printing is disabled.",该设计标记为草稿。仅可预览 — 打印已禁用。
-"This design is marked as draft. Preview only — PDF export is disabled.",该设计标记为草稿。仅可预览 — PDF 导出已禁用。
-"This design is marked as draft. Preview only — Excel export is disabled.",该设计标记为草稿。仅可预览 — Excel 导出已禁用。
-"Design '{0}' is marked as draft and cannot be printed or exported. Please uncheck 'Draft No Print' in the design first.",设计"{0}"标记为草稿，不能打印或导出。请先在设计中取消勾选"草稿不能打印"。
-"All matched designs are drafts and cannot be printed. Please uncheck 'Draft No Print' in the design(s) first.",所有匹配的设计均为草稿，不能打印。请先在设计中取消勾选"草稿不能打印"。
-"Draft Document — Preview Only","草稿单据，仅预览"
+"This design is marked as draft. Preview only — printing and export are disabled. Uncheck \Draft No Print\"" in the design to enable.""","该设计标记为草稿。仅可预览 — 打印和导出已禁用。请在设计中取消勾选""草稿不能打印""以启用。"
+This design is marked as draft. Preview only — printing is disabled.,该设计标记为草稿。仅可预览 — 打印已禁用。
+This design is marked as draft. Preview only — PDF export is disabled.,该设计标记为草稿。仅可预览 — PDF 导出已禁用。
+This design is marked as draft. Preview only — Excel export is disabled.,该设计标记为草稿。仅可预览 — Excel 导出已禁用。
+Design '{0}' is marked as draft and cannot be printed or exported. Please uncheck 'Draft No Print' in the design first.,"设计""{0}""标记为草稿，不能打印或导出。请先在设计中取消勾选""草稿不能打印""。"
+All matched designs are drafts and cannot be printed. Please uncheck 'Draft No Print' in the design(s) first.,"所有匹配的设计均为草稿，不能打印。请先在设计中取消勾选""草稿不能打印""。"
+Draft Document — Preview Only,草稿单据，仅预览
 "This document is in draft state (not submitted). Printing and export are disabled by the design's ""Draft No Print"" setting. Submit the document first.","该单据处于草稿状态(未提交)。设计的""草稿不能打印""设置已禁用打印和导出。请先提交该单据。"
-"No documents can be exported. All selected documents are in draft state or have no matching template.","没有可导出的单据。所选单据全部处于草稿状态或没有匹配的模板。"
-"document(s) skipped as draft (design disables draft printing)",已跳过的草稿单据(设计禁用了草稿打印)
-"draft skipped",草稿已跳过
-"to preview",待预览
-"failed",失败
-"Auto","自动选择"
-"Page Count","页数"
-"Number of logical pages per print job. Each page renders as a separate .print-page div. Use 1 for single-page designs.","每次打印任务的逻辑页数。每页渲染为独立的 .print-page 区块。单页设计请填 1。"
-"Page","页码"
-"Pages","页面"
-"Add Page","新增页"
-"Remove Current Page","删除当前页"
-"Cannot remove the last page","无法删除最后一页"
-"Remove page ? Its cells will be lost.","删除第  页?该页单元格将丢失。"
-"Page  added","已新增第  页"
-"Page removed","页已删除"
-"pages","页"
-"Add Blank Page","新增空白页"
-"Duplicate Current Page","复制当前页"
-"Page  duplicated from page ","第  页已从第  页复制"
-Item Sort Field,明细排序字段
-Item Sort Order,明细排序顺序
-"Sort the data-driven items by this field. Use a row field name (e.g. idx, qty) or a relation like delivery_note.posting_date. Leave empty to reuse the doc's get_sorted_items() if the project app provides one, otherwise natural order.",按此字段对数据驱动的明细行排序。可填行自身字段(如 idx、qty)或关联字段(如 delivery_note.posting_date)。留空则复用项目 app 提供的单据 get_sorted_items()，否则按原顺序。
-Data Sorting,数据排序
+No documents can be exported. All selected documents are in draft state or have no matching template.,没有可导出的单据。所选单据全部处于草稿状态或没有匹配的模板。
+document(s) skipped as draft (design disables draft printing),已跳过的草稿单据(设计禁用了草稿打印)
+draft skipped,草稿已跳过
+to preview,待预览
+failed,失败
+Auto,自动选择
+Page Count,页数
+Number of logical pages per print job. Each page renders as a separate .print-page div. Use 1 for single-page designs.,每次打印任务的逻辑页数。每页渲染为独立的 .print-page 区块。单页设计请填 1。
+Page,页码
+Pages,页面
+Add Page,新增页
+Remove Current Page,删除当前页
+Cannot remove the last page,无法删除最后一页
+Remove page ? Its cells will be lost.,删除第  页?该页单元格将丢失。
+Page  added,已新增第  页
+Page removed,页已删除
+pages,页
+Add Blank Page,新增空白页
+Duplicate Current Page,复制当前页
+Page  duplicated from page ,第  页已从第  页复制
+Data Sort,数据排序
+Comma-separated multi-level. field or link.field. Empty = natural order.,逗号分隔多级排序。可填行字段或 关联.字段。留空=原顺序

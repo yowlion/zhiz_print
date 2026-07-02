@@ -37,10 +37,6 @@
     "table_css",
     "row_styles",
     "col_styles",
-    "section_data_sort",
-    "items_sort_field",
-    "column_break_data_sort",
-    "items_sort_order",
     "section_header_footer",
     "section_page_header",
     "page_header_left",
@@ -244,28 +240,6 @@
       "hidden": 1,
       "label": "Column Style",
       "options": "JSON"
-    },
-    {
-      "fieldname": "section_data_sort",
-      "fieldtype": "Section Break",
-      "label": "Data Sorting"
-    },
-    {
-      "fieldname": "items_sort_field",
-      "fieldtype": "Data",
-      "label": "Item Sort Field",
-      "description": "Sort the data-driven items by this field. Use a row field name (e.g. idx, qty) or a relation like delivery_note.posting_date. Leave empty to reuse the doc's get_sorted_items() if the project app provides one, otherwise natural order."
-    },
-    {
-      "fieldname": "column_break_data_sort",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "ASC",
-      "fieldname": "items_sort_order",
-      "fieldtype": "Select",
-      "label": "Item Sort Order",
-      "options": "ASC\nDESC"
     },
     {
       "fieldname": "section_header_footer",
