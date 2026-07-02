@@ -587,6 +587,18 @@ def batch_record_print_log(doctype, docnames, design_name=None, params=None, exp
     for docname in docnames:
         try:
             dname = doc_design_map.get(docname, design_name)
+            # Render preview snapshot (server-side estimation pagination) so the
+            # log can be previewed later. Client-measured pagination can't run
+            # server-side; estimation is good enough for a historical snapshot.
+            preview_html = ''
+            try:
+                if dname:
+                    _design = frappe.get_doc("Super Print Design", dname)
+                    preview_html = _design.get_preview_for_document(
+                        doc_name=docname, params=params) or ''
+            except Exception:
+                frappe.log_error(frappe.get_traceback(),
+                                 'Batch log preview render failed: %s/%s' % (doctype, docname))
             existing_count = frappe.db.count("Super Print Log", filters={
                 "reference_doctype": doctype,
                 "reference_name": docname,
@@ -596,6 +608,8 @@ def batch_record_print_log(doctype, docnames, design_name=None, params=None, exp
                 "reference_doctype": doctype,
                 "reference_name": docname,
                 "print_design": dname,
+                "print_preview_html": preview_html,
+                "parameters_used": json.dumps(params, ensure_ascii=False) if params else "{}",
                 "export_type": export_type,
                 "print_count": existing_count + 1,
                 "print_user": frappe.session.user,
