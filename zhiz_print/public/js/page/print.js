@@ -582,7 +582,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				_ctx.font = baseFs + 'px ' + fontFamily;
 				const textW = _ctx.measureText(text).width;
 				if (textW > cellW) {
-					const fs = Math.max(6, Math.floor(baseFs * cellW / textW));
+					// -1px 安全余量: measureText(canvas) vs 浏览器 td 渲染有 sub-pixel/字体度量差异,
+					// 临界字号(算出刚好=avail)实际渲染会略超被 overflow 截,减 1 避免末尾字符遮挡
+					const fs = Math.max(6, Math.floor(baseFs * cellW / textW) - 1);
 					if (fs < baseFs) {
 						td.style.fontSize = fs + 'px';
 						shrinks[key] = fs;
