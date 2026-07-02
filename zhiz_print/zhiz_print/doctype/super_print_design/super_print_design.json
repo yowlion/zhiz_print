@@ -197,6 +197,7 @@
       "fieldname": "page_count",
       "fieldtype": "Int",
       "label": "Page Count",
+      "read_only": 1,
       "description": "Number of logical pages per print job. Each page renders as a separate .print-page div. Use 1 for single-page designs."
     },
     {
