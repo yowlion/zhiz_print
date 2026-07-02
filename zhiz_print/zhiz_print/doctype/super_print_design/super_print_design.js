@@ -564,7 +564,11 @@ class SuperPrintDesigner {
                     let fontSize = rowStyle.font_size || this.fontSize;
                     cellStyle += 'font-size:' + fontSize + 'px;';
                     if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
-                    if (css_style) cellStyle += css_style;
+                    if (css_style) {
+                        let _cs = css_style.trim();
+                        if (_cs && !_cs.endsWith(';')) _cs += ';';
+                        cellStyle += _cs;
+                    }
 
                     // Auto Shrink Font preview
                     if (rowDisplay === 'Auto Shrink Font' && cell_value) {
