@@ -2824,8 +2824,12 @@ class SuperPrintDesigner {
             let newRowspan = cell.rowspan;
 
             // Check: does this merged cell span across the insertion row?
-            // A cell spans across 'row' if cell.row <= row AND endRow >= row
-            if (cell.rowspan > 1 && cell.row <= row && endRow >= row) {
+            // A cell spans across 'row' if cell.row < row AND endRow >= row.
+            // Strict < (not <=): inserting at the master's own start row means
+            // "insert above this cell" — the whole master shifts down, rowspan
+            // must NOT grow. Only rows inserted strictly inside the merge area
+            // get absorbed (rowspan+1).
+            if (cell.rowspan > 1 && cell.row < row && endRow >= row) {
                 newRowspan += 1;
                 mergedCellsExpanded.add(cellId);
             }
@@ -2916,7 +2920,11 @@ class SuperPrintDesigner {
             let newColspan = cell.colspan;
 
             // Check: does this merged cell span across the insertion col?
-            if (cell.colspan > 1 && cell.col <= col && endCol >= col) {
+            // Strict < (not <=): inserting at the master's own start col means
+            // "insert left of this cell" — the whole master shifts right,
+            // colspan must NOT grow. Only cols inserted strictly inside the
+            // merge area get absorbed (colspan+1).
+            if (cell.colspan > 1 && cell.col < col && endCol >= col) {
                 newColspan += 1;
             }
 
