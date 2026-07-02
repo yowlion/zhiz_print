@@ -1313,7 +1313,8 @@ class SuperPrintDesign(frappe.model.document.Document):
         if row_display == 'Fixed Height':
             row_style_attr += 'overflow:hidden;white-space:nowrap;'
         elif row_display == 'Auto Shrink Font':
-            row_style_attr += 'overflow:hidden;'
+            # nowrap: 文字不换行,放不下时由 _estimate_font_size 缩字号 fit 单元格宽度
+            row_style_attr += 'overflow:hidden;white-space:nowrap;'
         else:
             # Auto wrap (default)
             row_style_attr += 'word-wrap:break-word;word-break:break-all;'
@@ -1511,22 +1512,33 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     @staticmethod
     def _estimate_font_size(text, cell_w, cell_h, base_font_size=12):
-        """Estimate font size for Auto Shrink Font"""
+        """Auto Shrink Font: 找一个能在单元格内单行(nowrap)放下的最大字号。
+
+        基于 cell_w 宽度 fit(不再看高度),用分类字符宽度系数估算文字总宽
+        (CJK 1.0 / 数字 0.60 / 大写 0.65 / 小写 0.50 / 符号 0.45 × 字号),
+        与 _get_row_height 同系数。base 字号能放下就返回 base;否则线性缩到
+        text_width(fs) <= cell_w。下限 6px。nowrap 单行高≈字号,行高通常 >= 字号,
+        故 cell_h 不再作为缩字号依据。"""
         if not text:
             return base_font_size
-        char_count = len(text)
-        if char_count == 0:
+        import re as _re
+        s = str(text)
+        cn = len(_re.findall(r'[一-鿿　-〿＀-￯]', s))
+        digit = len(_re.findall(r'[0-9]', s))
+        upper = len(_re.findall(r'[A-Z]', s))
+        lower = len(_re.findall(r'[a-z]', s))
+        symbol = len(s) - cn - digit - upper - lower
+        # 每字号单位的文字总宽(所有字符宽度系数之和)
+        width_per_fs = cn * 1.0 + digit * 0.60 + upper * 0.65 + lower * 0.50 + symbol * 0.45
+        if width_per_fs <= 0:
             return base_font_size
-        # Chinese chars ~ font_size wide, English ~ font_size*0.6
-        # Rough estimate: mixed char average width = font_size * 0.7
-        avg_char_w = base_font_size * 0.7
-        chars_per_line = max(1, cell_w / avg_char_w)
-        lines_needed = max(1, char_count / chars_per_line)
-        total_height = lines_needed * base_font_size * 1.2
-        if total_height <= cell_h:
+        w_base = width_per_fs * base_font_size
+        # 留 4px 安全余量(border-collapse + 单元格 padding)
+        avail = max(8, cell_w - 4)
+        if w_base <= avail:
             return base_font_size
-        ratio = cell_h / total_height
-        return max(6, int(base_font_size * ratio))
+        fs = base_font_size * avail / w_base
+        return max(6, int(fs))
 
     # ==================== Cell Content Rendering ====================
 
