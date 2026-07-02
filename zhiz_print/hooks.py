@@ -34,6 +34,9 @@ page_js = {
     "batch-print": "public/js/page/batch_print.js",
 }
 
+# Super Print Design list view — 模板商店入口按钮
+doctype_list_js = {"Super Print Design": "public/js/super_print_design_list.js"}
+
 # Boot Session Hook
 # Inject zhiz_print settings into frappe.boot on page load, avoiding runtime API calls
 boot_session = "zhiz_print.api.print_setting.get_boot_settings"

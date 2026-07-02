@@ -648,6 +648,7 @@ class SuperPrintDesigner {
         });
         container.querySelector('#spd-clear-btn')?.addEventListener('click', () => this.clearDesign());
         container.querySelector('#spd-save-btn')?.addEventListener('click', () => this.saveDesign());
+        container.querySelector('#spd-share-platform-btn')?.addEventListener('click', () => this.shareToPlatform());
         container.querySelector('#spd-query-btn')?.addEventListener('click', () => this.showQueryDefinitionDialog());
         container.querySelector('#spd-params-btn')?.addEventListener('click', () => this.showParamsDialog());
         container.querySelector('#spd-repeat-title-btn')?.addEventListener('click', () => this.setRowType('Repeat Title Row'));
@@ -1991,6 +1992,35 @@ class SuperPrintDesigner {
         return queries.map(q =>
             '<option value="' + q.query_name + '">' + __(q.query_name) + '</option>'
         ).join('');
+    }
+
+    async shareToPlatform() {
+        if (!this.frm.doc.design_name) {
+            frappe.show_alert({ message: __('Please save the design first'), indicator: 'yellow' });
+            return;
+        }
+        const btn = document.getElementById('spd-share-platform-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }
+        try {
+            const r = await frappe.call({
+                method: 'zhiz_print.api.template_store.share_template',
+                args: { design_name: this.frm.doc.design_name },
+            });
+            const msg = (r.message) || {};
+            if (msg.success) {
+                frappe.show_alert({
+                    message: msg.is_new ? __('Template shared to platform') : __('Template updated (v{0})').replace('{0}', msg.version),
+                    indicator: 'green',
+                });
+            } else {
+                frappe.show_alert({ message: __('Share failed: ') + (msg.error || ''), indicator: 'red' });
+            }
+        } catch (e) {
+            frappe.show_alert({ message: __('Share failed'), indicator: 'red' });
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        }
     }
 
     saveDesign() {

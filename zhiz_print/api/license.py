@@ -154,10 +154,10 @@ def _decrypt_response(encrypted_data):
     return json.loads(plaintext.decode("utf-8"))
 
 
-def _call_license_api(endpoint, body_dict):
+def _call_license_api(endpoint, body_dict, module="license_api"):
     import requests
     request_payload = _build_request(body_dict)
-    url = "{0}/api/method/zhiz_licser.api.license_api.{1}".format(LICENSE_SERVER, endpoint)
+    url = "{0}/api/method/zhiz_licser.api.{1}.{2}".format(LICENSE_SERVER, module, endpoint)
     response = requests.post(url, json=request_payload, timeout=10)
     if response.status_code == 200:
         data = response.json()
