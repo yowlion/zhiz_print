@@ -167,7 +167,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     @frappe.whitelist()
     def get_preview_for_document(self, doc_name=None, params=None,
-                                page_break_map=None, row_heights=None):
+                                page_break_map=None, row_heights=None, shrink_map=None):
         """Preview design.
 
         v15.10.01: page_break_map / row_heights forwarded to build_preview_html so a
@@ -981,7 +981,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             body_html = self._build_pages_html(
                 all_pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                 query_results, doc, row_type_map, row_display_map, paper, params=params,
-                row_heights_by_page=row_heights, row_items_map_by_page=row_items_map_by_page
+                row_heights_by_page=row_heights, row_items_map_by_page=row_items_map_by_page,
+                shrink_map=shrink_map
             )
 
             return self._wrap_full_html(body_html, paper_width, paper_height, row_styles, col_styles, paper)
@@ -1121,7 +1122,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def _build_pages_html(self, pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                           query_results, doc, row_type_map, row_display_map, paper, params=None,
-                          row_heights_by_page=None, row_items_map_by_page=None):
+                          row_heights_by_page=None, row_items_map_by_page=None, shrink_map=None):
         """Build HTML for all pages, each page as a fixed-size container
 
         v15.04.35: pages is a list of (page_no, rows) tuples.
@@ -1193,7 +1194,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 page_html += self._build_row_html(
                     row_data, cell_map, cell_grid, row_styles, col_styles,
                     query_results, doc, row_type_map, row_display_map, params=params,
-                    locked_height=locked, row_items_map=_row_items
+                    locked_height=locked, row_items_map=_row_items, shrink_map=shrink_map
                 )
             page_html += '</table></div>'
 
@@ -1234,7 +1235,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def _build_row_html(self, row_data, cell_map, cell_grid, row_styles, col_styles,
                         query_results, doc=None, row_type_map=None, row_display_map=None, params=None,
-                        locked_height=None, measure=False, tr_extra_attr='', row_items_map=None):
+                        locked_height=None, measure=False, tr_extra_attr='', row_items_map=None, shrink_map=None):
         """Build a single row HTML.
 
         v15.10.01 pagination rework:
@@ -1249,9 +1250,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             template_row = row_data['template_row']
             data_item = row_data['data_item']
             row_num = template_row
+            _data_idx = row_data.get('data_index')
         else:
             row_num = row_data
             data_item = None
+            _data_idx = None
 
         def _is_merged_covering(merged_info, check_row, check_col):
             """Check if merge area covers specified row/column"""
@@ -1432,13 +1435,21 @@ class SuperPrintDesign(frappe.model.document.Document):
                 cell_w = sum(col_styles.get(str(c), {}).get('width', 60)
                              for c in range(col, col + cell_colspan))
 
-                # Auto Shrink Font: estimate suitable font size
+                # Auto Shrink Font: shrink_map(前端 measureText 精确)优先,估算兜底;嵌标记供前端测量
+                shrink_attr = ''
                 if row_display == 'Auto Shrink Font' and cell_value:
-                    shrunk = self._estimate_font_size(
-                        str(cell_value), cell_w, cell_h, font_size)
+                    shrink_key = '{0}_{1}{2}'.format(
+                        row_num, col, '_{0}'.format(_data_idx) if _data_idx is not None else '')
+                    if shrink_map and shrink_key in shrink_map:
+                        shrunk = shrink_map[shrink_key]
+                    else:
+                        shrunk = self._estimate_font_size(str(cell_value), cell_w, cell_h, font_size)
                     if shrunk < font_size:
                         style_attr = style_attr.replace(
                             f'font-size:{font_size}px;', f'font-size:{shrunk}px;')
+                    # 嵌标记:base 字号 + cell 宽(前端 measureText 量精确字号用)
+                    shrink_attr = ' data-shrink-cell="{0}" data-base-fs="{1}" data-cell-w="{2}"'.format(
+                        shrink_key, font_size, int(cell_w))
 
                 # Generate content
                 content = self._render_cell_content(
@@ -1482,7 +1493,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                             border_suppress += 'border-top:none;'
                     style_attr += border_suppress
 
-                html += f'<td {rowspan_attr} {colspan_attr} style="{style_attr}">{content}</td>'
+                html += f'<td {rowspan_attr} {colspan_attr}{shrink_attr} style="{style_attr}">{content}</td>'
             else:
                 # Empty cell - also needs merge border suppression
                 empty_style = cell_h_constraint + 'line-height:1;'

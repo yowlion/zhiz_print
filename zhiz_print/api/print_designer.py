@@ -129,7 +129,7 @@ def get_design_parameters(design_name):
 
 @frappe.whitelist()
 def render_print_preview(doctype, docname, design_name, params=None,
-                         measurement_only=False, page_break_map=None, row_heights=None):
+                         measurement_only=False, page_break_map=None, row_heights=None, shrink_map=None):
     """Render print preview HTML.
 
     Preview always uses paper's original W×H (the design's saved paper dimensions).
@@ -159,6 +159,7 @@ def render_print_preview(doctype, docname, design_name, params=None,
 
     page_break_map = _as_dict(page_break_map)
     row_heights = _as_dict(row_heights)
+    shrink_map = _as_dict(shrink_map)
 
     design = frappe.get_doc("Super Print Design", design_name)
 
@@ -173,7 +174,7 @@ def render_print_preview(doctype, docname, design_name, params=None,
     if page_break_map:
         html = design.get_preview_for_document(
             doc_name=docname, params=params,
-            page_break_map=page_break_map, row_heights=row_heights)
+            page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
         return {
             "html": html,
             "precise": True,
@@ -318,7 +319,7 @@ def _resolve_image_urls_for_pdf(html):
 
 
 def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False,
-                      page_break_map=None, row_heights=None):
+                      page_break_map=None, row_heights=None, shrink_map=None):
     """Common function: render print HTML and apply px scaling, shared by PDF engines.
     Returns (html, design) tuple.
 
@@ -339,7 +340,7 @@ def _render_print_html(doctype, docname, design_name, params=None, skip_px_scali
         frappe.throw(_("No print permission"), frappe.PermissionError)
 
     html = design.get_preview_for_document(doc_name=docname, params=params,
-                                           page_break_map=page_break_map, row_heights=row_heights)
+                                           page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
 
     if not skip_px_scaling:
         # WeasyPrint px->mm conversion rate: 25.4/96 ~ 0.264583 mm/px
@@ -383,7 +384,7 @@ def _pdf_response(pdf_bytes, filename):
 
 
 @frappe.whitelist()
-def generate_print_pdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
+def generate_print_pdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
     """Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting.
 
     v15.10.01: page_break_map / row_heights (client-measured) forwarded to the engine
@@ -404,22 +405,23 @@ def generate_print_pdf(doctype, docname, design_name, params=None, page_break_ma
 
     page_break_map = _as_dict(page_break_map)
     row_heights = _as_dict(row_heights)
+    shrink_map = _as_dict(shrink_map)
 
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
     if engine_mode == "WeasyPrint":
-        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params, page_break_map, row_heights)
+        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map)
     elif engine_mode == "Chromium":
-        return _generate_print_pdf_chromium(doctype, docname, design_name, params, page_break_map, row_heights)
+        return _generate_print_pdf_chromium(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map)
     else:
-        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params, page_break_map, row_heights)
+        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map)
 
 
-def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
+def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
     """Generate PDF using WeasyPrint, browser inline preview"""
     from weasyprint import HTML as WeasyHTML
 
     html, design = _render_print_html(doctype, docname, design_name, params,
-                                      page_break_map=page_break_map, row_heights=row_heights)
+                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
 
     # PDF-specific: fix ghost borders of merged cells
     html = _fix_merged_cell_borders_for_pdf(html)
@@ -544,12 +546,12 @@ def _prepare_html_for_wkhtmltopdf(html):
     return html
 
 
-def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
+def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
     """Generate PDF using wkhtmltopdf, browser inline preview"""
     import pdfkit
 
     html, design = _render_print_html(doctype, docname, design_name, params,
-                                      page_break_map=page_break_map, row_heights=row_heights)
+                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
 
     # wkhtmltopdf preprocessing: SVG->PNG, background shorthand fix, flex->table
     html = _prepare_html_for_wkhtmltopdf(html)
@@ -582,14 +584,14 @@ def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, 
         frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
-def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None):
+def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
     """Generate PDF using Chromium headless, browser inline preview"""
     import os
     import subprocess
     import tempfile
 
     html, design = _render_print_html(doctype, docname, design_name, params,
-                                      page_break_map=page_break_map, row_heights=row_heights)
+                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
 
     # PDF-specific: convert relative image URLs to file:// paths
     html = _resolve_image_urls_for_pdf(html)

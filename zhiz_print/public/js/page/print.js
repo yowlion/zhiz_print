@@ -401,7 +401,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					if (breakMap) {
 						const r2 = await frappe.call({
 							method: 'zhiz_print.api.print_designer.render_print_preview',
-							args: callArgs({ page_break_map: breakMap.page_break_map, row_heights: breakMap.row_heights })
+							args: callArgs({ page_break_map: breakMap.page_break_map, row_heights: breakMap.row_heights, shrink_map: breakMap.shrink_map })
 						});
 						if (r2.message && r2.message.precise) {
 							this.current_preview_html = r2.message.html;
@@ -568,6 +568,28 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			}
 			await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+			// 量 Auto Shrink 精确字号(measureText)并应用到 iframe cell,让后续行高基于精确字号
+			const shrinks = {};
+			const fontFamily = (this.frm && this.frm.doc && this.frm.doc.font_family) || 'Microsoft YaHei';
+			const _canvas = document.createElement('canvas');
+			const _ctx = _canvas.getContext('2d');
+			mdoc.querySelectorAll('td[data-shrink-cell]').forEach(td => {
+				const key = td.dataset.shrinkCell;
+				const baseFs = parseInt(td.dataset.baseFs, 10) || 12;
+				const cellW = parseInt(td.dataset.cellW, 10) || 0;
+				const text = (td.textContent || '').trim();
+				if (!key || !text || !cellW) return;
+				_ctx.font = baseFs + 'px ' + fontFamily;
+				const textW = _ctx.measureText(text).width;
+				if (textW > cellW - 2) {
+					const fs = Math.max(6, Math.floor(baseFs * (cellW - 2) / textW));
+					if (fs < baseFs) {
+						td.style.fontSize = fs + 'px';
+						shrinks[key] = fs;
+					}
+				}
+			});
+
 			const heights = {}, kinds = {}, order = {}, links = {};
 			const trs = mdoc.querySelectorAll('tr[data-serial]');
 			trs.forEach(tr => {
@@ -583,7 +605,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					if (rs > 1) links[pg].push([serial, rs]);
 				});
 			});
-			return { heights, kinds, order, links };
+			return { heights, kinds, order, links, shrinks };
 		} finally {
 			if (mframe.parentNode) mframe.parentNode.removeChild(mframe);
 		}
@@ -630,7 +652,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			if (!pages.length) pages.push([]);
 			page_break_map[pg] = pages;
 		}
-		return { page_break_map, row_heights };
+		return { page_break_map, row_heights, shrink_map: measured.shrinks || {} };
 	}
 
 	// Union-find over data serials: rows sharing a rowspan cell become one atomic group.
@@ -829,6 +851,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		if (this.current_break_map) {
 			params.set('page_break_map', JSON.stringify(this.current_break_map.page_break_map));
 			params.set('row_heights', JSON.stringify(this.current_break_map.row_heights));
+			if (this.current_break_map.shrink_map) params.set('shrink_map', JSON.stringify(this.current_break_map.shrink_map));
 		}
 		const url = '/api/method/zhiz_print.api.print_designer.generate_print_pdf?' + params;
 		const w = window.open(url, '_blank');
