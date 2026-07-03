@@ -147,15 +147,12 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                     // 动态适配:读 .print-page 实际 px 尺寸设 iframe 宽高 + scale 满卡片宽
                     // (原固定 794x1123 scale 0.21 只适配 A4 纵向;横向/标签纸张 952x552 宽>794 会溢出遮挡)
                     const firstPage = d.querySelector('.print-page');
-                    const wrapper = d.querySelector('.print-pages-wrapper');
                     if (firstPage && firstPage.offsetWidth) {
                         const pw = firstPage.offsetWidth;
-                        // 高度按多页总高(.print-pages-wrapper offsetHeight = 所有页叠加+页间距;单页模板即单页高)
-                        const ph = (wrapper && wrapper.offsetHeight) ? wrapper.offsetHeight : (firstPage.offsetHeight || Math.round(pw * 1.414));
+                        const ph = firstPage.offsetHeight || Math.round(pw * 1.414);
                         ifr.style.width = pw + 'px';
                         ifr.style.height = ph + 'px';
                         const thumbW = ifr.parentElement.offsetWidth || 160;
-                        // 缩放到卡片宽(满卡宽,即上上个版本 v15.20.17 逻辑;1/1.2 余量用户反馈过小已删)
                         ifr.style.transform = 'translateX(-50%) scale(' + (thumbW / pw).toFixed(4) + ')';
                     }
                 } catch (e) {}
