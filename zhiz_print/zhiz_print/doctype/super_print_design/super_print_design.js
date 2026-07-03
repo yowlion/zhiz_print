@@ -1175,8 +1175,15 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
         const [row, col] = this.parseCellId(cellId);
-        const cell = this.grid[row - 1]?.[col - 1];
-        if (!cell || cell._merged) return;
+        let cell = this.grid[row - 1]?.[col - 1];
+        if (!cell) return;
+        // 如果选的是 merged child,找 master cell(渲染属性面板 + show 打散按钮;否则 child _merged 直接 return 用户看不到打散按钮)
+        if (cell._merged && cell.master_cell_id) {
+            cell = this.cellDataMap[cell.master_cell_id];
+            if (!cell) return;
+        } else if (cell._merged) {
+            return;
+        }
 
         const isMerged = cell.rowspan > 1 || cell.colspan > 1;
         const btnLeft = container.querySelector('#btn-unmerge-left');
