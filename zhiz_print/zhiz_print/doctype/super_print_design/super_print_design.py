@@ -1387,7 +1387,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                             cell_value, doc, data_item, query_results, params)
 
                 # Logic code: evaluate Python expression
-                if cell_type == 'logic' and cell_value:
+                # doc=None(纯模板结构预览)时 logic 原样显示表达式文本,不计算(无 doc/row 无法求值)
+                if cell_type == 'logic' and cell_value and doc is not None:
                     cell_value = self._eval_logic_code(cell_value, doc, data_item)
 
                 # Replace {doc.field_name} placeholder (single level)
