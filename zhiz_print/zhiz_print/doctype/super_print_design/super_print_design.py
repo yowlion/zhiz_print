@@ -1893,3 +1893,12 @@ def _execute_query_with_doc_context(query_code, parameters, doc_type, doc_name, 
             json.dumps(doc_type), json.dumps(doc_name)) + modified_code
 
     return execute_query_code(modified_code, filters=params, format_result=True)
+
+
+@frappe.whitelist()
+def preview_with_sample(design_name, doc_name):
+    """设计器演示预览:用 sample_doc 渲染当前设计的实际数据预览 HTML。"""
+    if not design_name or not doc_name:
+        frappe.throw("design_name and doc_name required")
+    doc = frappe.get_doc("Super Print Design", design_name)
+    return doc.get_preview_for_document(doc_name=doc_name) or ""

@@ -243,7 +243,7 @@
 }
 
 /* ==================== Super Print Designer - Design Editor ==================== */
-.spd-container { display:flex; flex-direction:column; gap:10px; margin-top:15px; }
+.spd-container { display:flex; flex-direction:column; gap:6px; margin-top:0; }
 .spd-toolbar { display:flex; align-items:center; gap:8px; padding:6px 10px; background:#f8f9fa; border-radius:6px; border:1px solid #dee2e6; flex-wrap:nowrap; overflow-x:auto; }
 .spd-controls { display:flex; align-items:center; gap:4px; flex-shrink:0; }
 .spd-controls label { margin:0; font-weight:600; font-size:12px; }
@@ -255,7 +255,9 @@
 .spd-page-tab { font-size:11px !important; padding:3px 8px !important; }
 .spd-page-tab-active { background:#28a745 !important; color:#fff !important; border-color:#28a745 !important; }
 .spd-page-tab-active i { color:#fff !important; }
-.spd-main { display:flex; gap:12px; min-height:400px; }
+.spd-main { display:flex; gap:12px; min-height:400px; position:relative; }
+.spd-preview-overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:#f0f0f0; overflow:auto; z-index:100; display:none; padding:20px; }
+.spd-preview-overlay iframe { width:100%; min-height:calc(100vh - 220px); border:0; }
 .spd-grid-wrap { flex:1; overflow:auto; max-height:600px; border:1px solid #dee2e6; border-radius:6px; background:#e0e0e0; padding:20px; display:flex; justify-content:center; align-items:flex-start; }
 .spd-paper-preview { }
 .super-zprint-grid-wrapper { display:flex; flex-direction:column; align-items:flex-start; }

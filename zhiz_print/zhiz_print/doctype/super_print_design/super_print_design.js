@@ -3275,6 +3275,50 @@ frappe.ui.form.on('Super Print Design', {
         if (spd_designer) spd_designer = null;
         spd_designer = new SuperPrintDesigner(frm);
 
+        // 演示预览按钮(sample_doc 有时显示;toggle overlay 覆盖主区渲染实际数据预览,点其他设计按钮回设计)
+        const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
+        if (ptsPreviewBtn) {
+            ptsPreviewBtn.style.display = (frm.doc.sample_doc ? '' : 'none');
+            ptsPreviewBtn.onclick = () => {
+                const overlay = document.getElementById('spd-preview-overlay');
+                if (!overlay) return;
+                if (overlay.style.display !== 'none') { overlay.style.display = 'none'; return; }  // 已显示→回设计
+                if (!frm.doc.sample_doc) return;
+                frappe.dom.freeze(__('渲染预览中...'));
+                frappe.call({
+                    method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_with_sample',
+                    args: { design_name: frm.doc.design_name, doc_name: frm.doc.sample_doc },
+                    callback: (r) => {
+                        frappe.dom.unfreeze();
+                        const ifr = document.getElementById('spd-preview-iframe');
+                        if (ifr) {
+                            try {
+                                const d = ifr.contentWindow.document;
+                                d.open(); d.write(r.message || ''); d.close();
+                                const st = d.createElement('style');
+                                st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
+                                d.head.appendChild(st);
+                            } catch (e) {}
+                        }
+                        overlay.style.display = 'block';
+                    },
+                    error: () => { frappe.dom.unfreeze(); }
+                });
+            };
+        }
+        // 预览模式点任意 toolbar 按钮(除演示预览)→ 回设计(capture 阶段 + stop 阻止 action)
+        const ptsToolbar = document.querySelector('.spd-toolbar');
+        if (ptsToolbar && !ptsToolbar._pts_hide_bound) {
+            ptsToolbar._pts_hide_bound = true;
+            ptsToolbar.addEventListener('click', (e) => {
+                const ov = document.getElementById('spd-preview-overlay');
+                if (ov && ov.style.display !== 'none' && !e.target.closest('#spd-preview-sample-btn')) {
+                    ov.style.display = 'none';
+                    e.stopPropagation(); e.preventDefault();
+                }
+            }, true);
+        }
+
         // Load design data from server for existing documents
         let serverData = null;
         if (!frm.is_new() && frm.doc.name) {
