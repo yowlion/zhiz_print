@@ -193,6 +193,8 @@ class SuperPrintDesigner {
                             _merged: true,
                             master_cell_id: cell.master_cell_id || ''
                         };
+                        // 保留 cellDataMap entry(打散时需通过 child cell_id 找 master)
+                        page.cellDataMap[cell.cell_id] = { _merged: true, master_cell_id: cell.master_cell_id || '', cell_id: cell.cell_id };
                     } else {
                         const cellData = {
                             cell_id: cell.cell_id || `R${cell.row}C${cell.col}`,
@@ -359,8 +361,10 @@ class SuperPrintDesigner {
                 if (r === startRow && c === startCol) continue;
                 if (r >= page.grid.length || c >= page.grid[0].length) continue;
                 const existing = page.grid[r][c];
-                if (existing && !existing._merged) {
-                    delete page.cellDataMap[existing.cell_id];
+                if (existing && !existing._merged && existing.cell_id) {
+                    // 不删 cellDataMap(打散时需通过 child cell_id 找 master),标 _merged
+                    page.cellDataMap[existing.cell_id]._merged = true;
+                    page.cellDataMap[existing.cell_id].master_cell_id = cell.cell_id;
                 }
                 page.grid[r][c] = { _merged: true, master_cell_id: cell.cell_id };
             }
