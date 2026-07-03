@@ -146,9 +146,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                     (d.head || d.documentElement).appendChild(st);
                     // 88e5b86 基础上修横向纸张遮挡:iframe width=纸张实际宽(容横向 952 不截) height 固定 1123(容多页)
                     // scale=min(0.21, thumbW/pw):窄/纵向纸张(pw<=794) 用 0.21(即 88e5b86 视觉,多页完整);宽纸张(952) 用 thumbW/pw(<0.21 满卡宽不遮挡右)
-                    const wrapper = d.querySelector('.print-pages-wrapper');
                     const firstPage = d.querySelector('.print-page');
-                    const pw = (wrapper && wrapper.offsetWidth) ? wrapper.offsetWidth : ((firstPage && firstPage.offsetWidth) || 794);
+                    const pw = (firstPage && firstPage.offsetWidth) ? firstPage.offsetWidth : 794;
                     ifr.style.width = pw + 'px';
                     ifr.style.height = '1123px';
                     const thumbW = ifr.parentElement.offsetWidth || 167;
