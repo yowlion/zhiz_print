@@ -254,7 +254,9 @@ def install_template(template_id, new_design_name=None, new_paper_name=None):
     doc = frappe.get_doc(design_data)
     frappe.flags.skip_zhiz_print_license = True
     try:
-        doc.insert(ignore_permissions=True)
+        # ignore_mandatory: sample_doc 已剔空(本地无原单据),跳过必填校验强制安装;
+        # 安装后用户在设计器补充本地演示单据
+        doc.insert(ignore_permissions=True, ignore_mandatory=True)
         frappe.db.commit()
     finally:
         frappe.flags.skip_zhiz_print_license = False
