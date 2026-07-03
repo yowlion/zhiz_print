@@ -423,10 +423,10 @@ class SuperPrintDesign(frappe.model.document.Document):
         return re.findall(r'\{doc\.(\w+)\.(\w+)\}', cell_value)
 
     @staticmethod
-    def _replace_header_footer_placeholders(html, page_num, total_pages):
-        """Replace fixed placeholders in header/footer"""
-        if not html:
-            return ''
+    def _replace_header_footer_placeholders(html, page_num, total_pages, raw=False):
+        """Replace fixed placeholders in header/footer. raw=True 时原样返回(doc=None 模板结构预览不替换)"""
+        if raw or not html:
+            return html or ''
         now = datetime.datetime.now()
         replacements = {
             '{page}': str(page_num),
@@ -1173,13 +1173,13 @@ class SuperPrintDesign(frappe.model.document.Document):
                 self, 'page_header_center', '') or getattr(self, 'page_header_right', '')
             if has_header:
                 header_left = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_header_left', '') or '', page_num, total_pages
+                    getattr(self, 'page_header_left', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 header_center = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_header_center', '') or '', page_num, total_pages
+                    getattr(self, 'page_header_center', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 header_right = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_header_right', '') or '', page_num, total_pages
+                    getattr(self, 'page_header_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:center;">'
                 page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{header_left}</div>'
@@ -1214,13 +1214,13 @@ class SuperPrintDesign(frappe.model.document.Document):
                 self, 'page_footer_center', '') or getattr(self, 'page_footer_right', '')
             if has_footer:
                 footer_left = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_footer_left', '') or '', page_num, total_pages
+                    getattr(self, 'page_footer_left', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 footer_center = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_footer_center', '') or '', page_num, total_pages
+                    getattr(self, 'page_footer_center', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 footer_right = self._replace_header_footer_placeholders(
-                    getattr(self, 'page_footer_right', '') or '', page_num, total_pages
+                    getattr(self, 'page_footer_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:center;">'
                 page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{footer_left}</div>'
