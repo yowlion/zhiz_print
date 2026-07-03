@@ -155,8 +155,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                         ifr.style.width = pw + 'px';
                         ifr.style.height = ph + 'px';
                         const thumbW = ifr.parentElement.offsetWidth || 160;
-                        // 缩放到卡片宽的 1/1.2(留 ~17% 余量)
-                        ifr.style.transform = 'translateX(-50%) scale(' + (thumbW / 1.2 / pw).toFixed(4) + ')';
+                        // 缩放到卡片宽(满卡宽,即上上个版本 v15.20.17 逻辑;1/1.2 余量用户反馈过小已删)
+                        ifr.style.transform = 'translateX(-50%) scale(' + (thumbW / pw).toFixed(4) + ')';
                     }
                 } catch (e) {}
             }
