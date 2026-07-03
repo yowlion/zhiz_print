@@ -1507,6 +1507,7 @@ class SuperPrintDesigner {
         }
         cell.colspan = newColspan;
         this.cellDataMap[this.currentCell] = cell;
+        this.frm.dirty();
     }
 
     _adjustRowspan(cell, row, col, oldRowspan, newRowspan) {
@@ -1563,6 +1564,7 @@ class SuperPrintDesigner {
         }
         cell.rowspan = newRowspan;
         this.cellDataMap[this.currentCell] = cell;
+        this.frm.dirty();
     }
 
     _createFreedCell(row, col, sourceCell, copyContent) {
@@ -1585,8 +1587,14 @@ class SuperPrintDesigner {
 
     _doUnmerge(inherit) {
         if (!this.currentCell) return;
-        const cell = this.cellDataMap[this.currentCell];
-        if (!cell || (cell.rowspan <= 1 && cell.colspan <= 1)) return;
+        let cell = this.cellDataMap[this.currentCell];
+        if (!cell) return;
+        // 如果选的是 merged child,找 master cell(否则 child rowspan/colspan=1 直接 return 无法打散)
+        if (cell._merged && cell.master_cell_id) {
+            cell = this.cellDataMap[cell.master_cell_id];
+            if (!cell) return;
+        }
+        if (cell.rowspan <= 1 && cell.colspan <= 1) return;
 
         const startRow = cell.row - 1;
         const startCol = cell.col - 1;
@@ -1606,9 +1614,10 @@ class SuperPrintDesigner {
 
         cell.rowspan = 1;
         cell.colspan = 1;
-        this.cellDataMap[this.currentCell] = cell;
+        this.cellDataMap[cell.cell_id] = cell;
         this.refreshGrid();
         this.renderCellProperties(this.currentCell);
+        this.frm.dirty();
         frappe.show_alert({ message: inherit ? __('Unmerged with content inherited') : __('Unmerged, content kept in first cell'), indicator: 'green' });
     }
 
