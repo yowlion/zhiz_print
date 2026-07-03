@@ -148,10 +148,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                     // scale=min(0.21, thumbW/pw):窄/纵向纸张(pw<=794) 用 0.21(即 88e5b86 视觉,多页完整);宽纸张(952) 用 thumbW/pw(<0.21 满卡宽不遮挡右)
                     const firstPage = d.querySelector('.print-page');
                     const pw = (firstPage && firstPage.offsetWidth) ? firstPage.offsetWidth : 794;
-                    ifr.style.width = pw + 'px';
+                    const iframeW = pw + 40;  // +40 容 body padding(注入的 20*2),否则 page 右侧超出 iframe 被截
+                    ifr.style.width = iframeW + 'px';
                     ifr.style.height = '1123px';
                     const thumbW = ifr.parentElement.offsetWidth || 167;
-                    ifr.style.transform = 'translateX(-50%) scale(' + Math.min(0.21, thumbW / pw).toFixed(4) + ')';
+                    ifr.style.transform = 'translateX(-50%) scale(' + Math.min(0.21, thumbW / iframeW).toFixed(4) + ')';
                 } catch (e) {}
             }
         });
