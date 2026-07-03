@@ -1374,7 +1374,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                 cell_type = cell_data.get('cell_type', 'static')
 
                 # '=' cells: =rowsum(R:C) sum across a Data-Driven Row, or =expr arithmetic
-                if cell_value and cell_type != 'logic' and cell_value.lstrip().startswith('='):
+                # doc=None(纯模板结构预览)时原样显示 =rowsum()/=expr 文本,不计算(无 doc/items 无法求值)
+                if cell_value and cell_type != 'logic' and cell_value.lstrip().startswith('=') and doc is not None:
                     rs = _ROWSUM_RE.match(cell_value)
                     if rs:
                         tr_i, tc_i = int(rs.group(1)), int(rs.group(2))
