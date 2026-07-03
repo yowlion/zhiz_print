@@ -4,8 +4,14 @@
 frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({ parent: wrapper, title: __('模板平台'), single_column: false });
     $(wrapper).find('.page-form.row.hide').remove();
-    // 面包屑导航:高级打印设计 > 模板平台(延后设避开 Frappe route 清空 navbar-breadcrumbs)
-    setTimeout(() => { $('#navbar-breadcrumbs').html('<li><a href="/app/super-print-design">' + __('高级打印设计') + '</a></li><li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>'); }, 0);
+    // 面包屑导航:高级打印设计 > 模板平台。监听 route-change(Frappe 每次路由变化会清空 navbar-breadcrumbs,回退到本页需重设;on_page_load 只首次跑不够)
+    const setPtsBreadcrumbs = () => {
+        if (frappe.get_route_str() === 'print-template-store') {
+            $('#navbar-breadcrumbs').html('<li><a href="/app/super-print-design">' + __('高级打印设计') + '</a></li><li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>');
+        }
+    };
+    $(document).off('route-change.pts-bc').on('route-change.pts-bc', setPtsBreadcrumbs);
+    setTimeout(setPtsBreadcrumbs, 0);
 
     // 顶部刷新按钮
     const $iconGroup = $(wrapper).find('.page-icon-group');
@@ -117,7 +123,14 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         list.forEach((t, i) => {
             const ifr = iframes[i];
             if (ifr && t.preview_html) {
-                try { const d = ifr.contentWindow.document; d.open(); d.write(t.preview_html); d.close(); } catch (e) {}
+                try {
+                    const d = ifr.contentWindow.document;
+                    d.open(); d.write(t.preview_html); d.close();
+                    // 注入纸张效果 CSS(灰底/白纸 box-shadow/居中),scale 后阴影虽细但纸张感在
+                    const st = d.createElement('style');
+                    st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
+                    (d.head || d.documentElement).appendChild(st);
+                } catch (e) {}
             }
         });
 
