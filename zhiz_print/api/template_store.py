@@ -135,12 +135,12 @@ def list_templates(target_doctype=None):
     if not result:
         return {"templates": [], "error": "Cannot reach template platform"}
     templates = result.get("templates", []) or []
-    # 返回客户端前脱敏(中心存原版,只在返回客户端模板平台时脱敏)
+    # 列表精简:剥离 preview_html(MB级,体积大)。卡片缩略改懒加载——可见时 get_template
+    # 单独拉 preview + 本地缓存。脱敏在 get_template 返回时做(点详情/卡片懒加载拉 preview 时脱敏)。
     for tpl in templates:
         if isinstance(tpl, dict):
-            for _k in ("preview_html", "preview_html_design"):
-                if tpl.get(_k):
-                    tpl[_k] = _desensitize_preview(tpl[_k])
+            tpl.pop("preview_html", None)
+            tpl.pop("preview_html_design", None)
     return {"templates": templates, "count": result.get("count", 0)}
 
 

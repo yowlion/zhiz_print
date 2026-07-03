@@ -83,7 +83,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     let activeCategory = 'all';
     let keyword = '';
 
-    $('#pts-reload-btn').on('click', () => loadTemplates());
+    $('#pts-reload-btn').on('click', () => { try { localStorage.removeItem(PTS_LIST_CACHE); } catch (e) {} loadTemplates(true); });
     $('#pts-search').on('input', function () { keyword = $(this).val().toLowerCase().trim(); renderCards(); });
     $sidebar.on('click', '.pts-cat', function () {
         $sidebar.find('.pts-cat').removeClass('active');
@@ -92,16 +92,36 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         renderCards();
     });
 
+    const PTS_LIST_CACHE = 'pts_list_cache';
+    const PTS_LIST_TTL = 10 * 60 * 1000;  // 10分钟
     loadTemplates();
 
-    function loadTemplates() {
+    function loadTemplates(force) {
+        // 方案2:先用本地缓存渲染(秒开),后台静默刷新
+        if (!force) {
+            try {
+                const cached = JSON.parse(localStorage.getItem(PTS_LIST_CACHE) || 'null');
+                if (cached && cached.ts && (Date.now() - cached.ts < PTS_LIST_TTL) && cached.templates) {
+                    allTemplates = cached.templates;
+                    renderCategories();
+                    renderCards();
+                    _fetchTemplates();  // 后台静默刷新
+                    return;
+                }
+            } catch (e) {}
+        }
         $('#pts-grid').html(`<div class="pts-empty">${__('加载中...')}</div>`);
+        _fetchTemplates();
+    }
+
+    function _fetchTemplates() {
         frappe.call({
             method: 'zhiz_print.api.template_store.list_templates',
             args: {},
             callback: (r) => {
                 const res = r.message || {};
                 allTemplates = res.templates || [];
+                try { localStorage.setItem(PTS_LIST_CACHE, JSON.stringify({ ts: Date.now(), templates: allTemplates })); } catch (e) {}
                 renderCategories();
                 renderCards();
             }
@@ -135,30 +155,54 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 </div>
             </div>`).join(''));
 
-        // 顺序一致:iframes[i] ↔ list[i]
-        const iframes = document.querySelectorAll('#pts-grid .pts-card-thumb iframe');
-        list.forEach((t, i) => {
-            const ifr = iframes[i];
-            if (ifr && t.preview_html) {
-                try {
-                    const d = ifr.contentWindow.document;
-                    d.open(); d.write(t.preview_html); d.close();
-                    // 注入纸张效果 CSS(灰底/白纸 box-shadow/居中)
-                    const st = d.createElement('style');
-                    st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
-                    (d.head || d.documentElement).appendChild(st);
-                    // 88e5b86 基础上修横向纸张遮挡:iframe width=纸张实际宽(容横向 952 不截) height 固定 1123(容多页)
-                    // scale=min(0.21, thumbW/pw):窄/纵向纸张(pw<=794) 用 0.21(即 88e5b86 视觉,多页完整);宽纸张(952) 用 thumbW/pw(<0.21 满卡宽不遮挡右)
-                    const firstPage = d.querySelector('.print-page');
-                    const pw = (firstPage && firstPage.offsetWidth) ? firstPage.offsetWidth : 794;
-                    const iframeW = pw + 40;  // +40 容 body padding(注入的 20*2),否则 page 右侧超出 iframe 被截
-                    ifr.style.width = iframeW + 'px';
-                    ifr.style.height = '1123px';
-                    const thumbW = ifr.parentElement.offsetWidth || 167;
-                    ifr.style.transform = 'translateX(-50%) scale(' + Math.min(0.21, thumbW / iframeW).toFixed(4) + ')';
-                } catch (e) {}
+        // 方案3:卡片缩略懒加载——IntersectionObserver 可见时才拉 preview + 本地缓存
+        const _writeThumb = (ifr, html) => {
+            try {
+                const d = ifr.contentWindow.document;
+                d.open(); d.write(html); d.close();
+                const st = d.createElement('style');
+                st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
+                (d.head || d.documentElement).appendChild(st);
+                const firstPage = d.querySelector('.print-page');
+                const pw = (firstPage && firstPage.offsetWidth) ? firstPage.offsetWidth : 794;
+                const iframeW = pw + 40;
+                ifr.style.width = iframeW + 'px';
+                ifr.style.height = '1123px';
+                const thumbW = ifr.parentElement.offsetWidth || 167;
+                ifr.style.transform = 'translateX(-50%) scale(' + Math.min(0.21, thumbW / iframeW).toFixed(4) + ')';
+            } catch (e) {}
+        };
+        const _loadCardThumb = (card) => {
+            const name = card.dataset.name;
+            const ck = 'pts_thumb_' + name;
+            let html = null;
+            try { html = localStorage.getItem(ck); } catch (e) {}
+            if (html) {
+                const ifr = card.querySelector('.pts-card-thumb iframe');
+                if (ifr) { _writeThumb(ifr, html); return; }
             }
-        });
+            // 本地无缓存:显示 spinner,异步 get_template 拉(返回已脱敏 preview_html)
+            card.querySelector('.pts-card-thumb').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:11px;"><i class="fa fa-spinner fa-spin"></i></div>';
+            frappe.call({
+                method: 'zhiz_print.api.template_store.get_template',
+                args: { template_id: name },
+                callback: (r) => {
+                    const tpl = r.message;
+                    card.querySelector('.pts-card-thumb').innerHTML = '<iframe></iframe>';
+                    const ifr2 = card.querySelector('.pts-card-thumb iframe');
+                    if (tpl && tpl.preview_html && ifr2) {
+                        try { localStorage.setItem(ck, tpl.preview_html); } catch (e) {}
+                        _writeThumb(ifr2, tpl.preview_html);
+                    }
+                }
+            });
+        };
+        const _obs = new IntersectionObserver((entries) => {
+            entries.forEach(en => {
+                if (en.isIntersecting) { _loadCardThumb(en.target); _obs.unobserve(en.target); }
+            });
+        }, { rootMargin: '150px' });
+        document.querySelectorAll('#pts-grid .pts-card').forEach(c => _obs.observe(c));
 
         $('#pts-grid').off('click', '.pts-card').on('click', '.pts-card', function () {
             const name = $(this).data('name');
