@@ -308,6 +308,10 @@ class SuperPrintDesign(frappe.model.document.Document):
         - flt(value): alias for frappe.utils.flt (safe_eval blocks frappe.utils.* attribute access)
         - max/min/round: builtins (safe_eval hides them by default)
         """
+        # 设计预览(doc=None):不求值,显示表达式原文(截断长表达式,让用户看到 logic cell 内容)
+        if doc is None:
+            _s = ' '.join(expr.split())
+            return _s[:60] + ('...' if len(_s) > 60 else '')
         try:
             local_vars = SuperPrintDesign._build_safe_eval_locals(doc, row)
             result = frappe.safe_eval(expr, {}, local_vars)
