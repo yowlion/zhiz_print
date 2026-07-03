@@ -134,7 +134,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             size: 'extra-large',
             fields: [
                 { fieldtype: 'HTML', fieldname: 'preview',
-                  options: `<div style="height:75vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
+                  options: `<div style="height:50vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
                 { fieldtype: 'HTML', fieldname: 'paper',
                   options: `<div class="pts-paper-info" id="pts-paper-info">${__('加载中...')}</div>` },
                 { fieldtype: 'HTML', fieldname: 'actions_comments',
