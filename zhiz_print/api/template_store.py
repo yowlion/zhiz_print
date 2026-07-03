@@ -161,8 +161,12 @@ def install_template(template_id, new_design_name=None, new_paper_name=None):
     except Exception:
         paper_config = {}
 
-    final_paper = paper_name
-    if paper_name and frappe.db.exists("Super Print Paper", paper_name):
+    if new_paper_name:
+        # 用户指定新纸张名 → 用新名(已存在则复用,不存在则建新)
+        final_paper = new_paper_name
+        if not frappe.db.exists("Super Print Paper", new_paper_name):
+            _create_paper(new_paper_name, paper_config)
+    elif paper_name and frappe.db.exists("Super Print Paper", paper_name):
         # 检查配置是否一致
         local_paper = frappe.db.get_value("Super Print Paper", paper_name, [
             "width", "height", "margin_top", "margin_bottom",
@@ -171,15 +175,14 @@ def install_template(template_id, new_design_name=None, new_paper_name=None):
             (local_paper.get(k) == paper_config.get(k))
             for k in ["width", "height", "margin_top", "margin_bottom", "margin_left", "margin_right"])
         if not config_match:
-            # 同名异配置 → 用 new_paper_name
-            if not new_paper_name:
-                frappe.throw("纸张「{0}」已存在但配置不同,请指定新纸张名(new_paper_name)".format(paper_name))
-            final_paper = new_paper_name
-            _create_paper(final_paper, paper_config)
+            frappe.throw("纸张「{0}」已存在但配置不同,请指定新纸张名(new_paper_name)".format(paper_name))
+        final_paper = paper_name  # 复用同名同配置
     elif paper_name:
-        # 无同名 → 建
+        # 无同名 → 建原纸张
         final_paper = paper_name
         _create_paper(final_paper, paper_config)
+    else:
+        final_paper = ""
 
     # 3. 设计重名
     design_name = new_design_name or tpl.get("template_name")
