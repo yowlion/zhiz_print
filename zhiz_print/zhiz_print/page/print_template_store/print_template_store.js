@@ -158,10 +158,10 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 const d = ifr.contentWindow.document;
                 d.open(); d.write(tpl.preview_html || ''); d.close();
                 const st = d.createElement('style');
-                st.textContent = 'body{background:#f0f0f0;margin:0;padding:20px;} .print-pages-wrapper{margin:0 auto;} .print-page{box-shadow:0 2px 16px rgba(0,0,0,.12);margin:0 0 20px;background:#fff;}';
-                d.head.appendChild(st);
+                st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
+                (d.head || d.documentElement).appendChild(st);
             } catch (e) {}
-            const resize = () => { try { ifr.style.height = Math.max(420, ifr.contentWindow.document.body.scrollHeight) + 'px'; } catch (e2) {} };
+            const resize = () => { try { const cd = ifr.contentWindow.document; const h = Math.max(cd.body.scrollHeight, cd.documentElement.scrollHeight, cd.body.offsetHeight); if (h > 0) ifr.style.height = (h + 16) + 'px'; } catch (e2) {} };
             [100, 500, 1500].forEach(ms => setTimeout(resize, ms));
         };
         setTimeout(writePreview, 50);
