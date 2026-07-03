@@ -6,8 +6,21 @@ install_template: 从 zhiz_licser 拉模板 + 本地重建(纸张/设计重名�
 """
 from __future__ import unicode_literals
 import json
+import re
 import frappe
 from zhiz_print.api.license import _call_license_api, get_machine_id
+
+# 脱敏:模板平台公开(装 app 都能看),返回客户端前把公司名替换为固定占位,保密真实客户。
+# 注意:脱敏只在 get_template/list_templates 返回客户端模板平台时做;share_template 推送原版,
+# 中心服务器存储与服务端预览保留真实数据(原版)。
+SENSITIVE_COMPANY = "广德智兆科技有限公司"
+_COMPANY_RE = re.compile(r'[一-龥A-Za-z]{2,15}(?:有限公司|科技有限公司|有限责任公司|股份有限公司|集团有限公司|公司)(?![一-龥A-Za-z])')
+
+
+def _desensitize_preview(html):
+    if not html:
+        return html
+    return _COMPANY_RE.sub(SENSITIVE_COMPANY, html)
 
 
 # Frappe 内部字段(清洗时剔除)
@@ -83,18 +96,8 @@ def share_template(design_name):
     preview_html = _embed_img(preview_html)
     preview_html_design = _embed_img(preview_html_design)
 
-    # 脱敏:模板平台公开(装 app 都能看),preview 里公司名(授权公司+单据公司)替换为固定"广德智兆科技有限公司"(保密真实客户)
-    SENSITIVE_COMPANY = "广德智兆科技有限公司"
-    _doc_company = frappe.db.get_value(design.target_doctype, design.sample_doc, "company") if (design.target_doctype and design.sample_doc) else None
-    for _c in {company, _doc_company}:
-        if _c and _c != SENSITIVE_COMPANY:
-            preview_html = preview_html.replace(_c, SENSITIVE_COMPANY)
-            preview_html_design = preview_html_design.replace(_c, SENSITIVE_COMPANY)
-    # 兜底:正则匹配硬编码公司名(中文2+字+有限公司/科技有限公司/公司等后缀,后非中文避免"公司名称/代号"标签误匹配)
-    import re
-    _company_re = re.compile(r'[一-龥A-Za-z]{2,15}(?:有限公司|科技有限公司|有限责任公司|股份有限公司|集团有限公司|公司)(?![一-龥A-Za-z])')
-    preview_html = _company_re.sub(SENSITIVE_COMPANY, preview_html)
-    preview_html_design = _company_re.sub(SENSITIVE_COMPANY, preview_html_design)
+    # 推送原版 preview(不脱敏):中心服务器存储与服务端预览需看真实数据;
+    # 脱敏改由 get_template/list_templates 返回客户端模板平台时做(_desensitize_preview)。
 
     import zhiz_print
     body = {
@@ -131,7 +134,14 @@ def list_templates(target_doctype=None):
     result = _call_license_api("list_templates", body, module="template_api")
     if not result:
         return {"templates": [], "error": "Cannot reach template platform"}
-    return {"templates": result.get("templates", []), "count": result.get("count", 0)}
+    templates = result.get("templates", []) or []
+    # 返回客户端前脱敏(中心存原版,只在返回客户端模板平台时脱敏)
+    for tpl in templates:
+        if isinstance(tpl, dict):
+            for _k in ("preview_html", "preview_html_design"):
+                if tpl.get(_k):
+                    tpl[_k] = _desensitize_preview(tpl[_k])
+    return {"templates": templates, "count": result.get("count", 0)}
 
 
 @frappe.whitelist()
@@ -140,7 +150,13 @@ def get_template(template_id):
     result = _call_license_api("get_template", {"template_id": template_id}, module="template_api")
     if not result or "template" not in result:
         return {"error": (result or {}).get("error", "Template not found")}
-    return result.get("template")
+    tpl = result.get("template")
+    # 返回客户端前脱敏(中心存原版,只在返回客户端模板平台时脱敏)
+    if isinstance(tpl, dict):
+        for _k in ("preview_html", "preview_html_design"):
+            if tpl.get(_k):
+                tpl[_k] = _desensitize_preview(tpl[_k])
+    return tpl
 
 
 @frappe.whitelist()
