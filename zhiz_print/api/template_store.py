@@ -67,6 +67,14 @@ def share_template(design_name):
     license_key = lic[0]["license_key"] if lic else ""
     company = lic[0]["company_name"] if lic else ""
 
+    # 脱敏:模板平台公开(装 app 都能看),preview 里公司名(授权公司+单据公司)替换为固定"广德智兆科技有限公司"(保密真实客户)
+    SENSITIVE_COMPANY = "广德智兆科技有限公司"
+    _doc_company = frappe.db.get_value(design.target_doctype, design.sample_doc, "company") if (design.target_doctype and design.sample_doc) else None
+    for _c in {company, _doc_company}:
+        if _c and _c != SENSITIVE_COMPANY:
+            preview_html = preview_html.replace(_c, SENSITIVE_COMPANY)
+            preview_html_design = preview_html_design.replace(_c, SENSITIVE_COMPANY)
+
     import zhiz_print
     body = {
         "template_name": design.design_name,

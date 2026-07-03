@@ -131,7 +131,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 <div class="pts-card-body">
                     <div class="pts-card-name">${frappe.utils.escape_html(t.template_name || '')}</div>
                     <div class="pts-card-meta">${frappe.utils.escape_html(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0}</div>
-                    <div class="pts-card-co">${frappe.utils.escape_html(t.author_company || __('匿名'))}</div>
+                    <div class="pts-card-co">广德智兆科技有限公司</div>
                 </div>
             </div>`).join(''));
 
