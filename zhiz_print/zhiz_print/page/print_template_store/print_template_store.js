@@ -114,7 +114,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         $('#pts-cat-all-count').text(allTemplates.length);
         const cats = Object.keys(counts).sort();
         $('#pts-cat-list').html(cats.map(c =>
-            `<div class="pts-cat" data-cat="${frappe.utils.escape_html(c)}">${frappe.utils.escape_html(c)} <span class="pts-cat-count">${counts[c]}</span></div>`
+            `<div class="pts-cat" data-cat="${frappe.utils.escape_html(c)}">${__(c)} <span class="pts-cat-count">${counts[c]}</span></div>`
         ).join(''));
     }
 
@@ -130,7 +130,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 <div class="pts-card-thumb"><iframe></iframe></div>
                 <div class="pts-card-body">
                     <div class="pts-card-name">${frappe.utils.escape_html(t.template_name || '')}</div>
-                    <div class="pts-card-meta">${frappe.utils.escape_html(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0}</div>
+                    <div class="pts-card-meta">${__(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0}</div>
                     <div class="pts-card-co">广德智兆科技有限公司</div>
                 </div>
             </div>`).join(''));
@@ -255,7 +255,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 let pc = {};
                 try { pc = JSON.parse(t.print_paper_config || '{}'); } catch (e) {}
                 $ctx.find('#pts-paper-info').html(
-                    `<b>${__('单据')}</b>: ${frappe.utils.escape_html(t.target_doctype || '-')} &nbsp;·&nbsp; ` +
+                    `<b>${__('单据')}</b>: ${__(t.target_doctype || '-')} &nbsp;·&nbsp; ` +
                     `<b>${__('纸张')}</b>: ${frappe.utils.escape_html(t.print_paper_name || '-')} ` +
                     `(${__('宽')} ${pc.width || '-'} × ${__('高')} ${pc.height || '-'}, ` +
                     `${__('边距')} T${pc.margin_top || '-'} B${pc.margin_bottom || '-'} L${pc.margin_left || '-'} R${pc.margin_right || '-'})`
