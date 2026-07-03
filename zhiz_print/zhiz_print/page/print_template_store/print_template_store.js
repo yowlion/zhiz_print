@@ -4,8 +4,8 @@
 frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({ parent: wrapper, title: __('模板平台'), single_column: false });
     $(wrapper).find('.page-form.row.hide').remove();
-    // 面包屑导航(对齐 doctype form 风格)
-    $('#navbar-breadcrumbs').html('<li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>');
+    // 面包屑导航(延后设,避开 Frappe route 完成时清空 navbar-breadcrumbs)
+    setTimeout(() => { $('#navbar-breadcrumbs').html('<li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>'); }, 0);
 
     // 顶部刷新按钮
     const $iconGroup = $(wrapper).find('.page-icon-group');
@@ -30,7 +30,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         @media(max-width:1150px){ .pts-grid{ grid-template-columns:repeat(3,1fr);} }
         .pts-card { background:#fff; border:1px solid #e8eaed; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04); cursor:pointer; transition:transform .12s, box-shadow .12s; overflow:hidden; }
         .pts-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); border-color:#d1d1d6; }
-        .pts-card-thumb { height:210px; background:#f0f0f2; overflow:hidden; position:relative; }
+        .pts-card-thumb { height:105px; background:#f0f0f2; overflow:hidden; position:relative; }
         .pts-card-thumb iframe { position:absolute; top:0; left:50%; width:794px; height:1123px; border:0; transform:translateX(-50%) scale(0.21); transform-origin:top center; pointer-events:none; }
         .pts-card-body { padding:7px 9px; font-size:11px; }
         .pts-card-name { font-weight:600; color:#1d1d1f; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -134,7 +134,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             size: 'extra-large',
             fields: [
                 { fieldtype: 'HTML', fieldname: 'preview',
-                  options: `<div style="height:62vh;overflow:auto;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
+                  options: `<div style="height:75vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
                 { fieldtype: 'HTML', fieldname: 'paper',
                   options: `<div class="pts-paper-info" id="pts-paper-info">${__('加载中...')}</div>` },
                 { fieldtype: 'HTML', fieldname: 'actions_comments',
@@ -150,11 +150,17 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         });
         dlg.show();
 
-        // 写完整预览 + 动态高度(字体/图片加载后多次重算,复用 super_print_log iframe 动态高模式)
-        const ifr = document.getElementById('pts-dlg-iframe');
+        // 写完整预览(本 dialog 内精确找 iframe) + 注入纸张效果 CSS(灰底/阴影/居中,对齐打印预览纸张视觉)
         const writePreview = () => {
+            const ifr = dlg.$wrapper.find('#pts-dlg-iframe')[0];
             if (!ifr) return;
-            try { const d = ifr.contentWindow.document; d.open(); d.write(tpl.preview_html || ''); d.close(); } catch (e) {}
+            try {
+                const d = ifr.contentWindow.document;
+                d.open(); d.write(tpl.preview_html || ''); d.close();
+                const st = d.createElement('style');
+                st.textContent = 'body{background:#f0f0f0;margin:0;padding:20px;} .print-pages-wrapper{margin:0 auto;} .print-page{box-shadow:0 2px 16px rgba(0,0,0,.12);margin:0 0 20px;background:#fff;}';
+                d.head.appendChild(st);
+            } catch (e) {}
             const resize = () => { try { ifr.style.height = Math.max(420, ifr.contentWindow.document.body.scrollHeight) + 'px'; } catch (e2) {} };
             [100, 500, 1500].forEach(ms => setTimeout(resize, ms));
         };
@@ -163,16 +169,17 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         loadPaperInfo(tpl);
         loadComments(tpl.name);
 
-        $('#pts-install-btn').off('click').on('click', () => openInstallDialog(tpl));
-        $('#pts-submit-comment').off('click').on('click', () => {
-            const content = $('#pts-new-comment').val().trim();
+        // 事件绑定限定本 dialog(事件委托,避免全局 id 冲突)
+        dlg.$wrapper.on('click', '#pts-install-btn', () => openInstallDialog(tpl));
+        dlg.$wrapper.on('click', '#pts-submit-comment', () => {
+            const content = dlg.$wrapper.find('#pts-new-comment').val().trim();
             if (!content) return;
             frappe.call({
                 method: 'zhiz_print.api.template_store.add_template_comment',
                 args: { template_id: tpl.name, content },
                 callback: (r) => {
                     if ((r.message || {}).success) {
-                        $('#pts-new-comment').val('');
+                        dlg.$wrapper.find('#pts-new-comment').val('');
                         loadComments(tpl.name);
                         frappe.show_alert({ message: __('评论已提交'), indicator: 'green' });
                     } else {
