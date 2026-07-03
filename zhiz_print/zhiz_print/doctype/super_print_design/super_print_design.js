@@ -3285,10 +3285,9 @@ frappe.ui.form.on('Super Print Design', {
                 if (!btn) return;
                 const frm2 = (typeof cur_frm !== 'undefined' && cur_frm) ? cur_frm : null;
                 const overlay = document.getElementById('spd-preview-overlay');
-                console.log('[PTS demo preview]', { frm2: frm2 ? frm2.doc.name : null, sample_doc: frm2 ? frm2.doc.sample_doc : null, overlay: !!overlay, display: overlay ? overlay.style.display : '?' });
                 if (!frm2) return;
                 if (!overlay) return;
-                if (overlay.style.display !== 'none') {  // 已预览→回设计
+                if (window.getComputedStyle(overlay).display !== 'none') {  // 已预览→回设计(用 computed:初始 display:none 是 CSS 类设的,inline style 为空,''.!==.'none' 会误判)
                     overlay.style.display = 'none';
                     btn.classList.remove('active');
                     btn.innerHTML = '<i class="fa fa-eye"></i> ' + __('演示预览');
@@ -3328,7 +3327,7 @@ frappe.ui.form.on('Super Print Design', {
             ptsToolbar._pts_hide_bound = true;
             ptsToolbar.addEventListener('click', (e) => {
                 const ov = document.getElementById('spd-preview-overlay');
-                if (ov && ov.style.display !== 'none' && !e.target.closest('#spd-preview-sample-btn')) {
+                if (ov && window.getComputedStyle(ov).display !== 'none' && !e.target.closest('#spd-preview-sample-btn')) {
                     ov.style.display = 'none';
                     ptsPreviewBtn.classList.remove('active');
                     ptsPreviewBtn.innerHTML = '<i class="fa fa-eye"></i> ' + __('演示预览');
