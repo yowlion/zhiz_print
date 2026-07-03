@@ -46,7 +46,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-dlg-preview { width:100%; min-height:420px; border:1px solid #e8eaed; border-radius:8px; background:#f0f0f2; }
         .pts-paper-info { background:#f5f5f7; border-radius:8px; padding:8px 12px; font-size:12px; color:#6e6e73; margin:8px 0; }
         .pts-paper-info b { color:#1d1d1f; }
-        .pts-comments { max-height:220px; overflow-y:auto; margin:6px 0; }
+        .pts-comments { height:200px; overflow-y:auto; margin:6px 0; }
         .pts-comment { padding:6px 0; border-bottom:1px solid #f0f0f2; font-size:12px; }
         .pts-comment-author { font-weight:600; color:var(--zhiz-super-accent,#007AFF); }
         .pts-comment-date { color:#aeaeb2; font-size:10px; float:right; }
@@ -147,7 +147,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             size: 'extra-large',
             fields: [
                 { fieldtype: 'HTML', fieldname: 'preview',
-                  options: `<div style="height:50vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
+                  options: `<div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
                 { fieldtype: 'HTML', fieldname: 'paper',
                   options: `<div class="pts-paper-info" id="pts-paper-info">${__('加载中...')}</div>` },
                 { fieldtype: 'HTML', fieldname: 'actions_comments',
