@@ -153,7 +153,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                         ifr.style.width = pw + 'px';
                         ifr.style.height = ph + 'px';
                         const thumbW = ifr.parentElement.offsetWidth || 160;
-                        ifr.style.transform = 'translateX(-50%) scale(' + (thumbW / pw).toFixed(4) + ')';
+                        // 缩放到卡片宽的 1/1.2(留 ~17% 余量,避免纸张满铺显过大/遮挡)
+                        ifr.style.transform = 'translateX(-50%) scale(' + (thumbW / 1.2 / pw).toFixed(4) + ')';
                     }
                 } catch (e) {}
             }
