@@ -4,8 +4,8 @@
 frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({ parent: wrapper, title: __('模板平台'), single_column: false });
     $(wrapper).find('.page-form.row.hide').remove();
-    // 面包屑导航(延后设,避开 Frappe route 完成时清空 navbar-breadcrumbs)
-    setTimeout(() => { $('#navbar-breadcrumbs').html('<li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>'); }, 0);
+    // 面包屑导航:高级打印设计 > 模板平台(延后设避开 Frappe route 清空 navbar-breadcrumbs)
+    setTimeout(() => { $('#navbar-breadcrumbs').html('<li><a href="/app/super-print-design">' + __('高级打印设计') + '</a></li><li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>'); }, 0);
 
     // 顶部刷新按钮
     const $iconGroup = $(wrapper).find('.page-icon-group');
@@ -148,12 +148,10 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                             </div>` },
             ],
         });
-        dlg.show();
-
-        // 写完整预览(本 dialog 内精确找 iframe) + 注入纸张效果 CSS(灰底/阴影/居中,对齐打印预览纸张视觉)
+        // 写完整预览 + 注入纸张 CSS。时机:shown.bs.modal(modal 显示动画 ~300ms 完成后 iframe contentDocument 才稳定可写) + setTimeout 兜底 + iframe 未渲染重试
         const writePreview = () => {
             const ifr = dlg.$wrapper.find('#pts-dlg-iframe')[0];
-            if (!ifr) return;
+            if (!ifr) { setTimeout(writePreview, 50); return; }
             try {
                 const d = ifr.contentWindow.document;
                 d.open(); d.write(tpl.preview_html || ''); d.close();
@@ -164,7 +162,10 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             const resize = () => { try { const cd = ifr.contentWindow.document; const h = Math.max(cd.body.scrollHeight, cd.documentElement.scrollHeight, cd.body.offsetHeight); if (h > 0) ifr.style.height = (h + 16) + 'px'; } catch (e2) {} };
             [100, 500, 1500].forEach(ms => setTimeout(resize, ms));
         };
-        setTimeout(writePreview, 50);
+        dlg.show();
+        dlg.$wrapper.on('shown.bs.modal', writePreview);
+        setTimeout(writePreview, 100);
+        setTimeout(writePreview, 600);
 
         loadPaperInfo(tpl);
         loadComments(tpl.name);
