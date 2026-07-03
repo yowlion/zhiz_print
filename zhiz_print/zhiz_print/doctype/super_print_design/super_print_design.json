@@ -141,7 +141,8 @@
       "fieldtype": "Dynamic Link",
       "label": "Sample Document",
       "options": "target_doctype",
-      "description": "Used for query preview to resolve doc.field parameters. Leave empty to preview without document context."
+      "reqd": 1,
+      "description": "Used for query preview to resolve doc.field parameters and demo preview."
     },
     {
       "fieldname": "column_break_basic",
