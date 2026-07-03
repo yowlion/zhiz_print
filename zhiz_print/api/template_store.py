@@ -147,7 +147,10 @@ def list_templates(target_doctype=None):
 @frappe.whitelist()
 def get_template(template_id):
     """从模板平台拉单个模板完整数据。"""
-    result = _call_license_api("get_template", {"template_id": template_id}, module="template_api")
+    try:
+        result = _call_license_api("get_template", {"template_id": template_id}, module="template_api", timeout=30)
+    except Exception:
+        return {"error": "拉取模板预览超时,请稍后重试"}
     if not result or "template" not in result:
         return {"error": (result or {}).get("error", "Template not found")}
     tpl = result.get("template")

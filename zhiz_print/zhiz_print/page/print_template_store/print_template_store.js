@@ -188,9 +188,14 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 args: { template_id: name },
                 callback: (r) => {
                     const tpl = r.message;
+                    if (!tpl || tpl.error) {
+                        // 超时/失败:静默(不弹窗),占位改文件图标;详情仍可点开重试
+                        card.querySelector('.pts-card-thumb').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#bbb;font-size:18px;"><i class="fa fa-file-text-o"></i></div>';
+                        return;
+                    }
                     card.querySelector('.pts-card-thumb').innerHTML = '<iframe></iframe>';
                     const ifr2 = card.querySelector('.pts-card-thumb iframe');
-                    if (tpl && tpl.preview_html && ifr2) {
+                    if (tpl.preview_html && ifr2) {
                         try { localStorage.setItem(ck, tpl.preview_html); } catch (e) {}
                         _writeThumb(ifr2, tpl.preview_html);
                     }
@@ -206,8 +211,19 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
 
         $('#pts-grid').off('click', '.pts-card').on('click', '.pts-card', function () {
             const name = $(this).data('name');
-            const tpl = allTemplates.find(t => t.name === name);
-            if (tpl) openPreview(tpl);
+            const meta = allTemplates.find(t => t.name === name) || { name: name };
+            // 列表精简后 allTemplates 无 preview_html,click 时 get_template 拉完整(含 preview_html/preview_html_design)
+            frappe.dom.freeze(__('加载中...'));
+            frappe.call({
+                method: 'zhiz_print.api.template_store.get_template',
+                args: { template_id: name },
+                callback: (r) => {
+                    frappe.dom.unfreeze();
+                    const full = r.message;
+                    openPreview(full && !full.error ? Object.assign({}, meta, full) : meta);
+                },
+                error: () => { frappe.dom.unfreeze(); openPreview(meta); }
+            });
         });
     }
 
