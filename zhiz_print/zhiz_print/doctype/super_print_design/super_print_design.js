@@ -651,7 +651,6 @@ class SuperPrintDesigner {
             this.frm.dirty();
         });
         container.querySelector('#spd-clear-btn')?.addEventListener('click', () => this.clearDesign());
-        container.querySelector('#spd-save-btn')?.addEventListener('click', () => this.saveDesign());
         container.querySelector('#spd-query-btn')?.addEventListener('click', () => this.showQueryDefinitionDialog());
         container.querySelector('#spd-params-btn')?.addEventListener('click', () => this.showParamsDialog());
         container.querySelector('#spd-repeat-title-btn')?.addEventListener('click', () => this.setRowType('Repeat Title Row'));
