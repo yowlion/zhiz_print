@@ -38,12 +38,18 @@ def share_template(design_name):
     design = frappe.get_doc("Super Print Design", design_name)
     design_data = _clean_doc(design.as_dict(no_nulls=True))
 
-    # 渲染预览 HTML(sample_doc 有则用它渲染真实数据;空则 None → 占位符原样呈现纯模板结构,不绑任何单据数据)
+    # 实际打印预览(sample_doc 数据渲染)
     preview_html = ""
     try:
-        preview_html = design.get_preview_for_document(doc_name=design.sample_doc or None) or ""
+        preview_html = design.get_preview_for_document(doc_name=design.sample_doc) or ""
     except Exception:
         preview_html = ""
+    # 设计渲染(None 占位符原样,纯模板结构)
+    preview_html_design = ""
+    try:
+        preview_html_design = design.get_preview_for_document(doc_name=None) or ""
+    except Exception:
+        preview_html_design = ""
 
     # 纸张配置
     paper_config = {}
@@ -69,6 +75,7 @@ def share_template(design_name):
         "print_paper_config": json.dumps(paper_config, ensure_ascii=False),
         "design_data": json.dumps(design_data, ensure_ascii=False, default=str),
         "preview_html": preview_html,
+        "preview_html_design": preview_html_design,
         "zhiz_print_version": getattr(zhiz_print, "__version__", ""),
         "author_license_key": license_key,
         "author_machine_id": get_machine_id(),

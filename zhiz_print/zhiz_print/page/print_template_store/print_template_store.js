@@ -57,6 +57,9 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-card-meta { color:#86868b; margin-top:2px; }
         .pts-card-co { color:var(--zhiz-super-accent,#007AFF); margin-top:2px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .pts-empty { padding:40px; text-align:center; color:#aeaeb2; font-size:13px; }
+        .pts-preview-tabs { display:flex; gap:4px; margin-bottom:6px; }
+        .pts-preview-tabs .pts-tab { padding:5px 16px; border-radius:6px 6px 0 0; font-size:12px; cursor:pointer; background:#e0e0e0; color:#666; }
+        .pts-preview-tabs .pts-tab.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
         .pts-dlg-preview { width:100%; min-height:420px; border:1px solid #e8eaed; border-radius:8px; background:#f0f0f2; }
         .pts-paper-info { background:#f5f5f7; border-radius:8px; padding:8px 12px; font-size:12px; color:#6e6e73; margin:8px 0; }
         .pts-paper-info b { color:#1d1d1f; }
@@ -170,7 +173,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             size: 'extra-large',
             fields: [
                 { fieldtype: 'HTML', fieldname: 'preview',
-                  options: `<div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
+                  options: `<div class="pts-preview-tabs">
+                      <span class="pts-tab active" data-tab="actual">${__('实际打印')}</span>
+                      <span class="pts-tab" data-tab="design">${__('设计渲染')}</span>
+                  </div>
+                  <div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
                 { fieldtype: 'HTML', fieldname: 'paper',
                   options: `<div class="pts-paper-info" id="pts-paper-info">${__('加载中...')}</div>` },
                 { fieldtype: 'HTML', fieldname: 'actions_comments',
@@ -188,12 +195,12 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             ],
         });
         // 写完整预览 + 注入纸张 CSS。时机:shown.bs.modal(modal 显示动画 ~300ms 完成后 iframe contentDocument 才稳定可写) + setTimeout 兜底 + iframe 未渲染重试
-        const writePreview = () => {
+        const writePreview = (html) => {
             const ifr = dlg.$wrapper.find('#pts-dlg-iframe')[0];
-            if (!ifr) { setTimeout(writePreview, 50); return; }
+            if (!ifr) { setTimeout(() => writePreview(html), 50); return; }
             try {
                 const d = ifr.contentWindow.document;
-                d.open(); d.write(tpl.preview_html || ''); d.close();
+                d.open(); d.write(html || ''); d.close();
                 const st = d.createElement('style');
                 st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
                 (d.head || d.documentElement).appendChild(st);
@@ -202,9 +209,16 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             [100, 500, 1500].forEach(ms => setTimeout(resize, ms));
         };
         dlg.show();
-        dlg.$wrapper.on('shown.bs.modal', writePreview);
-        setTimeout(writePreview, 100);
-        setTimeout(writePreview, 600);
+        dlg.$wrapper.on('shown.bs.modal', () => writePreview(tpl.preview_html || ''));
+        setTimeout(() => writePreview(tpl.preview_html || ''), 100);
+        setTimeout(() => writePreview(tpl.preview_html || ''), 600);
+        // 页签切换:实际打印(preview_html)/设计渲染(preview_html_design 占位符)
+        dlg.$wrapper.on('click', '.pts-tab', (e) => {
+            const tab = $(e.currentTarget).data('tab');
+            dlg.$wrapper.find('.pts-tab').removeClass('active');
+            $(e.currentTarget).addClass('active');
+            writePreview(tab === 'design' ? (tpl.preview_html_design || '') : (tpl.preview_html || ''));
+        });
 
         loadPaperInfo(tpl, dlg.$wrapper);
         loadComments(tpl.name, dlg.$wrapper);
