@@ -3278,26 +3278,31 @@ frappe.ui.form.on('Super Print Design', {
         // 演示预览按钮(setTimeout 等 SuperPrintDesigner 模板渲染完再绑定,避免 getElementById null)
         setTimeout(() => {
         const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
-        if (ptsPreviewBtn) {
-            // display 由 Jinja 渲染时按 sample_doc 决定(html {% if not sample_doc %}display:none),JS 不再设
-            ptsPreviewBtn.onclick = () => {
+        // 演示预览用事件委托(document 级,不依赖 onclick 绑定时序/按钮重建,解决点击没反应)
+        if (!document._pts_preview_delegated) {
+            document._pts_preview_delegated = true;
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('#spd-preview-sample-btn');
+                if (!btn) return;
+                const frm2 = (typeof spd_designer !== 'undefined' && spd_designer && spd_designer.frm) ? spd_designer.frm : null;
+                if (!frm2) return;
                 const overlay = document.getElementById('spd-preview-overlay');
                 if (!overlay) return;
                 if (overlay.style.display !== 'none') {  // 已预览→回设计
                     overlay.style.display = 'none';
-                    ptsPreviewBtn.classList.remove('active');
-                    ptsPreviewBtn.innerHTML = '<i class="fa fa-eye"></i> ' + __('演示预览');
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="fa fa-eye"></i> ' + __('演示预览');
                     return;
                 }
-                if (!frm.doc.sample_doc) return;
-                // 即时反馈:按钮立即变 + overlay 显示 spinner(不等 server)
-                ptsPreviewBtn.classList.add('active');
-                ptsPreviewBtn.innerHTML = '<i class="fa fa-pencil"></i> ' + __('回到设计');
+                if (!frm2.doc.sample_doc) return;
+                // 即时反馈:按钮立即变 + overlay 显示 spinner
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fa fa-pencil"></i> ' + __('回到设计');
                 overlay.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;color:#666;font-size:14px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;font-size:20px;"></i>' + __('渲染预览中...') + '</div>';
                 overlay.style.display = 'block';
                 frappe.call({
                     method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_with_sample',
-                    args: { design_name: frm.doc.design_name, doc_name: frm.doc.sample_doc },
+                    args: { design_name: frm2.doc.design_name, doc_name: frm2.doc.sample_doc },
                     callback: (r) => {
                         overlay.innerHTML = '<iframe id="spd-preview-iframe" style="width:100%;min-height:calc(100vh - 220px);border:0;"></iframe>';
                         const ifr = overlay.querySelector('#spd-preview-iframe');
@@ -3315,7 +3320,7 @@ frappe.ui.form.on('Super Print Design', {
                         overlay.innerHTML = '<div style="color:#dc3545;text-align:center;padding:40px;font-size:14px;"><i class="fa fa-exclamation-triangle"></i> ' + __('渲染失败,请检查 sample_doc 是否有效') + '</div>';
                     }
                 });
-            };
+            });
         }
         // 预览模式点任意 toolbar 按钮(除演示预览)→ 回设计(capture 阶段 + stop 阻止 action)
         const ptsToolbar = document.querySelector('.spd-toolbar');
