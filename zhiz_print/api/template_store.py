@@ -67,6 +67,22 @@ def share_template(design_name):
     license_key = lic[0]["license_key"] if lic else ""
     company = lic[0]["company_name"] if lic else ""
 
+    # 图片转 base64 嵌入(跨服务器自包含,解决推送后图片 URL 指向客户服务器不可达)
+    import re
+    from zhiz_print.utils.query_executor import image_to_base64_src
+    def _embed_img(_html):
+        if not _html:
+            return _html
+        def _r(m):
+            s = m.group(1).strip()
+            if not s or s.startswith('data:'):
+                return m.group(0)  # 已 base64/空,保留
+            b = image_to_base64_src(s)
+            return 'src="' + b + '"' if (b and b != s) else m.group(0)  # 转失败保留原 src
+        return re.sub(r'src="(https?://[^"]+|/[^"]+)"', _r, _html)
+    preview_html = _embed_img(preview_html)
+    preview_html_design = _embed_img(preview_html_design)
+
     # 脱敏:模板平台公开(装 app 都能看),preview 里公司名(授权公司+单据公司)替换为固定"广德智兆科技有限公司"(保密真实客户)
     SENSITIVE_COMPANY = "广德智兆科技有限公司"
     _doc_company = frappe.db.get_value(design.target_doctype, design.sample_doc, "company") if (design.target_doctype and design.sample_doc) else None
