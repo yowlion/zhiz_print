@@ -1431,12 +1431,16 @@ class SuperPrintDesign(frappe.model.document.Document):
 
                 # Query data replacement (for non-expanded rows, take first query result row)
                 if not data_item and cell_data.get('query_name') and cell_data.get('data_key'):
-                    qr = query_results.get(cell_data['query_name'], {})
-                    qr_data = qr.get('data', [])
-                    if qr_data and isinstance(qr_data, list) and len(qr_data) > 0:
-                        first = qr_data[0]
-                        if isinstance(first, dict) and cell_data['data_key'] in first:
-                            cell_value = str(first[cell_data['data_key']] if first[cell_data['data_key']] is not None else '')
+                    qr = query_results.get(cell_data['query_name'])
+                    if qr is None:
+                        # query 未执行(如纯模板结构预览 doc_name=None):显示 {query.data_key} 占位符,与本地设计器网格一致
+                        cell_value = '{' + cell_data['query_name'] + '.' + cell_data['data_key'] + '}'
+                    else:
+                        qr_data = qr.get('data', [])
+                        if qr_data and isinstance(qr_data, list) and len(qr_data) > 0:
+                            first = qr_data[0]
+                            if isinstance(first, dict) and cell_data['data_key'] in first:
+                                cell_value = str(first[cell_data['data_key']] if first[cell_data['data_key']] is not None else '')
 
                 # Calculate cell dimensions
                 cell_rowspan = cell_data['rowspan']
