@@ -3275,8 +3275,7 @@ frappe.ui.form.on('Super Print Design', {
         if (spd_designer) spd_designer = null;
         spd_designer = new SuperPrintDesigner(frm);
 
-        // 演示预览按钮(setTimeout 等 SuperPrintDesigner 模板渲染完再绑定,避免 getElementById null)
-        setTimeout(() => {
+        // 演示预览按钮 + toolbar 回设计(同步绑委托/事件,document 级不依赖按钮 DOM 时序,解决首次点击赶不上 setTimeout 100ms)
         const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
         // 演示预览用事件委托(document 级,不依赖 onclick 绑定时序/按钮重建,解决点击没反应)
         if (!document._pts_preview_delegated) {
@@ -3336,7 +3335,6 @@ frappe.ui.form.on('Super Print Design', {
                 }
             }, true);
         };
-        }, 100);
 
         // Load design data from server for existing documents
         let serverData = null;
