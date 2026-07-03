@@ -1053,6 +1053,7 @@ class SuperPrintDesigner {
         if (!this.rowStyles[row]) this.rowStyles[row] = {};
         this.rowStyles[row][property] = value;
         this.refreshGrid();
+        this.frm.dirty();
     }
 
     // ==================== Column Property Panel ====================
@@ -1455,6 +1456,7 @@ class SuperPrintDesigner {
         cell[property] = value;
         this.cellDataMap[this.currentCell] = cell;
         this.refreshGrid();
+        this.frm.dirty();
     }
 
     _adjustColspan(cell, row, col, oldColspan, newColspan) {
@@ -1993,17 +1995,9 @@ class SuperPrintDesigner {
         ).join('');
     }
 
-    saveDesign() {
-        // Sync current row/col count from toolbar inputs
-        const container = document.getElementById(this.designContainerId);
-        if (container) {
-            const inputRows = parseInt(container.querySelector('#spd-rows')?.value);
-            const inputCols = parseInt(container.querySelector('#spd-cols')?.value);
-            if (inputRows && inputRows > 0) this.rows = inputRows;
-            if (inputCols && inputCols > 0) this.cols = inputCols;
-        }
-
-        // Collect cells across ALL pages
+    syncToForm() {
+        // 收集 designItems(遍历所有页 grid cells) + 同步状态到 frm.doc
+        // 供 saveDesign + before_save(原生保存) 调用,确保 frm.doc 有最新设计器状态
         const designItems = [];
         const pageNumbers = Object.keys(this.pages).map(p => parseInt(p)).sort((a, b) => a - b);
         for (const pageNo of pageNumbers) {
@@ -2031,7 +2025,6 @@ class SuperPrintDesigner {
             }
         }
 
-        // Use frm.set_value + frm.save() like zhiz_qm
         this.frm.set_value('rows', this.rows);
         this.frm.set_value('columns', this.cols);
         this.frm.set_value('page_count', pageNumbers.length);
@@ -2046,10 +2039,23 @@ class SuperPrintDesigner {
         this.frm.set_value('page_footer_center', this.pageFooterCenter);
         this.frm.set_value('page_footer_right', this.pageFooterRight);
         this.frm.set_value('design_items', designItems);
+        return { cells: designItems.length, pages: pageNumbers.length };
+    }
 
+    saveDesign() {
+        // Sync current row/col count from toolbar inputs
+        const container = document.getElementById(this.designContainerId);
+        if (container) {
+            const inputRows = parseInt(container.querySelector('#spd-rows')?.value);
+            const inputCols = parseInt(container.querySelector('#spd-cols')?.value);
+            if (inputRows && inputRows > 0) this.rows = inputRows;
+            if (inputCols && inputCols > 0) this.cols = inputCols;
+        }
+
+        const info = this.syncToForm();
         this.frm.save().then(() => {
             frappe.show_alert({
-                message: __('Design saved') + ', ' + designItems.length + ' ' + __('cells') + ', ' + pageNumbers.length + ' ' + __('pages'),
+                message: __('Design saved') + ', ' + info.cells + ' ' + __('cells') + ', ' + info.pages + ' ' + __('pages'),
                 indicator: 'green'
             });
         });
@@ -3242,6 +3248,11 @@ frappe.ui.form.on('Super Print Design', {
         if (frm.is_new()) {
             frm.set_df_property('design_view_tab', 'hidden', 1);
         }
+    },
+
+    before_save(frm) {
+        // 原生保存(右上角)前同步设计器状态到 frm.doc(去掉自定义保存按钮后由原生接管)
+        if (spd_designer) spd_designer.syncToForm();
     },
 
     async refresh(frm) {
