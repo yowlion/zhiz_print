@@ -176,7 +176,10 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 { fieldtype: 'HTML', fieldname: 'paper',
                   options: `<div class="pts-paper-info" id="pts-paper-info">${__('加载中...')}</div>` },
                 { fieldtype: 'HTML', fieldname: 'actions_comments',
-                  options: `<button class="btn btn-success btn-sm" id="pts-install-btn" style="margin:4px 0;"><i class="fa fa-download"></i> ${__('下载安装')}</button>
+                  options: `<div style="display:flex;align-items:center;gap:12px;margin:4px 0;">
+                              <button class="btn btn-success btn-sm" id="pts-install-btn"><i class="fa fa-download"></i> ${__('下载安装')}</button>
+                              <span style="color:#86868b;font-size:12px;">${__('下载次数')}: <b style="color:#1d1d1f;">${tpl.download_count || 0}</b></span>
+                            </div>
                             <hr style="margin:8px 0;">
                             <div style="font-weight:600;">${__('评论')}</div>
                             <div class="pts-comments" id="pts-comments">${__('加载中...')}</div>
