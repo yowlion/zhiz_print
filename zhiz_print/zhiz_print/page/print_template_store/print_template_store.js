@@ -4,14 +4,28 @@
 frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({ parent: wrapper, title: __('模板平台'), single_column: false });
     $(wrapper).find('.page-form.row.hide').remove();
-    // 面包屑导航:高级打印设计 > 模板平台。监听 route-change(Frappe 每次路由变化会清空 navbar-breadcrumbs,回退到本页需重设;on_page_load 只首次跑不够)
-    const setPtsBreadcrumbs = () => {
-        if (frappe.get_route_str() === 'print-template-store') {
-            $('#navbar-breadcrumbs').html('<li><a href="/app/super-print-design">' + __('高级打印设计') + '</a></li><li><a href="/app/print-template-store">' + __('模板平台') + '</a></li>');
-        }
+    // 面包屑:高级打印设计 > 模板平台。用 Frappe breadcrumbs API 注册到 all[current_page],route 变化/回退由 container.update() 自动渲染(原手动设 DOM 会被 update().clear() 覆盖)。
+    // patch set_custom_breadcrumbs 支持 items 多级(原生只认单 route+label);仅对有 items 的生效,其他走原逻辑。
+    if (!frappe.breadcrumbs._pts_patched) {
+        const _orig_scb = frappe.breadcrumbs.set_custom_breadcrumbs;
+        frappe.breadcrumbs.set_custom_breadcrumbs = function (bc) {
+            if (bc && bc.items) {
+                this.$breadcrumbs.empty();
+                bc.items.forEach(it => this.append_breadcrumb_element(it.route, it.label));
+            } else {
+                _orig_scb.call(this, bc);
+            }
+        };
+        frappe.breadcrumbs._pts_patched = true;
+    }
+    frappe.breadcrumbs.all['print-template-store'] = {
+        type: 'Custom',
+        items: [
+            { route: '/app/super-print-design', label: __('高级打印设计') },
+            { route: '/app/print-template-store', label: __('模板平台') },
+        ],
     };
-    $(document).off('route-change.pts-bc').on('route-change.pts-bc', setPtsBreadcrumbs);
-    setTimeout(setPtsBreadcrumbs, 0);
+    frappe.breadcrumbs.update();
 
     // 顶部刷新按钮
     const $iconGroup = $(wrapper).find('.page-icon-group');
