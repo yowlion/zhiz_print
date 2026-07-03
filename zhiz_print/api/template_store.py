@@ -38,13 +38,10 @@ def share_template(design_name):
     design = frappe.get_doc("Super Print Design", design_name)
     design_data = _clean_doc(design.as_dict(no_nulls=True))
 
-    # 渲染预览 HTML(sample_doc 优先;无则用 target_doctype 最新已提交单据 mock)
+    # 渲染预览 HTML(sample_doc 有则用它渲染真实数据;空则 None → 占位符原样呈现纯模板结构,不绑任何单据数据)
     preview_html = ""
     try:
-        doc_name = design.sample_doc
-        if not doc_name and design.target_doctype:
-            doc_name = frappe.db.get_value(design.target_doctype, {"docstatus": ["!=", 2]}, "name", order_by="creation desc")
-        preview_html = design.get_preview_for_document(doc_name=doc_name) or ""
+        preview_html = design.get_preview_for_document(doc_name=design.sample_doc or None) or ""
     except Exception:
         preview_html = ""
 
