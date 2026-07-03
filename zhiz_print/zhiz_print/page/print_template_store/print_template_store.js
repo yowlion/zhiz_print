@@ -51,7 +51,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-card { background:#fff; border:1px solid #e8eaed; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04); cursor:pointer; transition:transform .12s, box-shadow .12s; overflow:hidden; }
         .pts-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); border-color:#d1d1d6; }
         .pts-card-thumb { height:105px; background:#f0f0f2; overflow:hidden; position:relative; }
-        .pts-card-thumb iframe { position:absolute; top:0; left:50%; width:794px; height:1123px; border:0; transform:translateX(-50%) scale(0.21); transform-origin:top center; pointer-events:none; }
+        .pts-card-thumb iframe { position:absolute; top:0; left:50%; border:0; transform-origin:top center; pointer-events:none; }
         .pts-card-body { padding:7px 9px; font-size:11px; }
         .pts-card-name { font-weight:600; color:#1d1d1f; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .pts-card-meta { color:#86868b; margin-top:2px; }
@@ -144,6 +144,15 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                     const st = d.createElement('style');
                     st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
                     (d.head || d.documentElement).appendChild(st);
+                    // 88e5b86 基础上修横向纸张遮挡:iframe width=纸张实际宽(容横向 952 不截) height 固定 1123(容多页)
+                    // scale=min(0.21, thumbW/pw):窄/纵向纸张(pw<=794) 用 0.21(即 88e5b86 视觉,多页完整);宽纸张(952) 用 thumbW/pw(<0.21 满卡宽不遮挡右)
+                    const wrapper = d.querySelector('.print-pages-wrapper');
+                    const firstPage = d.querySelector('.print-page');
+                    const pw = (wrapper && wrapper.offsetWidth) ? wrapper.offsetWidth : ((firstPage && firstPage.offsetWidth) || 794);
+                    ifr.style.width = pw + 'px';
+                    ifr.style.height = '1123px';
+                    const thumbW = ifr.parentElement.offsetWidth || 167;
+                    ifr.style.transform = 'translateX(-50%) scale(' + Math.min(0.21, thumbW / pw).toFixed(4) + ')';
                 } catch (e) {}
             }
         });
