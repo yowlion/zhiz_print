@@ -132,6 +132,19 @@ class SuperPrintDesigner {
         return str.slice(10, -2);
     }
 
+    // 统一 cell_id 为 P{页}_R{行}C{列}:兼容历史单页格式 R{r}C{c}、
+    // 多页主格 P{p}_R{r}C{c}、占位格 P{p}R{r}C{c}(无下划线)。
+    // 单页即 page 1,R1C1 与 P1_R1C1 等价 → 统一成 P1_R1C1。
+    // 这样 currentCell(渲染坐标)、cell_id、cellDataMap key 三者天然对齐,单页/多页同一套逻辑。
+    _normalizeCellId(rawId, pageNo) {
+        const s = (rawId || '').toString().trim();
+        const m = s.match(/R(\d+)C(\d+)/);
+        if (!m) return `P${pageNo || 1}_R1C1`;
+        const pm = s.match(/^P(\d+)_?R/);
+        const p = pm ? parseInt(pm[1]) : (pageNo || 1);
+        return `P${p}_R${m[1]}C${m[2]}`;
+    }
+
     loadExistingDesign(serverData) {
         this.initGrid();
         this.cellDataMap = {};
@@ -175,6 +188,7 @@ class SuperPrintDesigner {
 
             // Parse cells from server, grouped by page_no
             if (serverData.cells && serverData.cells.length > 0) {
+                // 第一遍:放真实 cell + 占位格,cell_id/master_cell_id 统一归一化为 P{页}_R{行}C{列}
                 serverData.cells.forEach(cell => {
                     const pageNo = parseInt(cell.page_no) || 1;
                     if (!this.pages[pageNo]) {
@@ -189,15 +203,17 @@ class SuperPrintDesigner {
                     if (rowIndex < 0 || rowIndex >= this.rows || colIndex < 0 || colIndex >= this.cols) return;
 
                     if (cell.is_merged) {
+                        const masterId = this._normalizeCellId(cell.master_cell_id, pageNo);
+                        const childId = this._normalizeCellId(cell.cell_id, pageNo);
                         page.grid[rowIndex][colIndex] = {
                             _merged: true,
-                            master_cell_id: cell.master_cell_id || ''
+                            master_cell_id: masterId
                         };
                         // 保留 cellDataMap entry(打散时需通过 child cell_id 找 master)
-                        page.cellDataMap[cell.cell_id] = { _merged: true, master_cell_id: cell.master_cell_id || '', cell_id: cell.cell_id };
+                        page.cellDataMap[childId] = { _merged: true, master_cell_id: masterId, cell_id: childId };
                     } else {
                         const cellData = {
-                            cell_id: cell.cell_id || `R${cell.row}C${cell.col}`,
+                            cell_id: this._normalizeCellId(cell.cell_id, pageNo),
                             page_no: pageNo,
                             row: cell.row, col: cell.col,
                             rowspan: parseInt(cell.rowspan) || 1,
@@ -215,12 +231,19 @@ class SuperPrintDesigner {
                         };
                         page.grid[rowIndex][colIndex] = cellData;
                         page.cellDataMap[cellData.cell_id] = cellData;
-
-                        if (cellData.rowspan > 1 || cellData.colspan > 1) {
-                            this._markMergedInPage(page, cellData);
-                        }
                     }
                 });
+                // 第二遍:所有 cell 就位后统一标记合并区(避免占位格 cell_value=''
+                // 被当普通 cell 加载后覆盖主格 _markMergedInPage 写下的 _merged 标记)
+                for (const pn of Object.keys(this.pages)) {
+                    const pg = this.pages[pn];
+                    for (const id in pg.cellDataMap) {
+                        const c = pg.cellDataMap[id];
+                        if (c && !c._merged && (c.rowspan > 1 || c.colspan > 1)) {
+                            this._markMergedInPage(pg, c);
+                        }
+                    }
+                }
             }
             // Active page = 1; load its grid/cellDataMap references
             this._activatePage(1);
@@ -260,6 +283,7 @@ class SuperPrintDesigner {
                     return a.col - b.col;
                 });
 
+                // 第一遍:放真实 cell + 占位格,cell_id/master_cell_id 统一归一化为 P{页}_R{行}C{列}
                 sortedItems.forEach(item => {
                     const pageNo = parseInt(item.page_no) || 1;
                     if (!this.pages[pageNo]) {
@@ -274,13 +298,16 @@ class SuperPrintDesigner {
 
                     if (rowIndex >= 0 && rowIndex < this.rows && colIndex >= 0 && colIndex < this.cols) {
                         if (this.isMergedMark(item.cell_value)) {
+                            const masterId = this._normalizeCellId(this.extractMasterId(item.cell_value), pageNo);
+                            const childId = this._normalizeCellId(item.cell_id, pageNo);
                             page.grid[rowIndex][colIndex] = {
                                 _merged: true,
-                                master_cell_id: this.extractMasterId(item.cell_value)
+                                master_cell_id: masterId
                             };
+                            page.cellDataMap[childId] = { _merged: true, master_cell_id: masterId, cell_id: childId };
                         } else {
                             const cellData = {
-                                cell_id: item.cell_id || `R${item.row}C${item.col}`,
+                                cell_id: this._normalizeCellId(item.cell_id, pageNo),
                                 page_no: pageNo,
                                 row: item.row, col: item.col,
                                 rowspan: parseInt(item.rowspan) || 1,
@@ -298,13 +325,20 @@ class SuperPrintDesigner {
                             };
                             page.grid[rowIndex][colIndex] = cellData;
                             page.cellDataMap[cellData.cell_id] = cellData;
-
-                            if (cellData.rowspan > 1 || cellData.colspan > 1) {
-                                this._markMergedInPage(page, cellData);
-                            }
                         }
                     }
                 });
+                // 第二遍:所有 cell 就位后统一标记合并区(避免占位格 cell_value=''
+                // 被当普通 cell 加载后覆盖主格 _markMergedInPage 写下的 _merged 标记)
+                for (const pn of Object.keys(this.pages)) {
+                    const pg = this.pages[pn];
+                    for (const id in pg.cellDataMap) {
+                        const c = pg.cellDataMap[id];
+                        if (c && !c._merged && (c.rowspan > 1 || c.colspan > 1)) {
+                            this._markMergedInPage(pg, c);
+                        }
+                    }
+                }
             }
             this._activatePage(1);
         }
@@ -556,7 +590,7 @@ class SuperPrintDesigner {
             for (let col = 1; col <= this.cols; col++) {
                 if (occupied[row][col]) continue;
                 const cell = this.grid[row - 1]?.[col - 1];
-                const cellId = 'R' + row + 'C' + col;
+                const cellId = `P${this.currentPageNo}_R${row}C${col}`;
                 const colSelectedClass = this.selectedCol === col ? ' col-selected' : '';
 
                 if (cell && !cell._merged) {
@@ -2901,7 +2935,7 @@ class SuperPrintDesigner {
             m.rowspan = m.newRowspan;
             delete m.newRow;
             delete m.newRowspan;
-            const newId = 'R' + m.row + 'C' + m.col;
+            const newId = `P${m.page_no || this.currentPageNo}_R${m.row}C${m.col}`;
             m.cell_id = newId;
             this.cellDataMap[newId] = m;
             this.grid[m.row - 1][m.col - 1] = m;
@@ -2911,7 +2945,7 @@ class SuperPrintDesigner {
         for (let r = 1; r <= this.rows; r++) {
             for (let c = 1; c <= oldCols; c++) {
                 if (!this.grid[r - 1][c - 1]) {
-                    const id = 'R' + r + 'C' + c;
+                    const id = `P${this.currentPageNo}_R${r}C${c}`;
                     const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
                     this.grid[r - 1][c - 1] = data;
                     this.cellDataMap[id] = data;
@@ -2994,7 +3028,7 @@ class SuperPrintDesigner {
             m.colspan = m.newColspan;
             delete m.newCol;
             delete m.newColspan;
-            const newId = 'R' + m.row + 'C' + m.col;
+            const newId = `P${m.page_no || this.currentPageNo}_R${m.row}C${m.col}`;
             m.cell_id = newId;
             this.cellDataMap[newId] = m;
             this.grid[m.row - 1][m.col - 1] = m;
@@ -3004,7 +3038,7 @@ class SuperPrintDesigner {
         for (let r = 1; r <= oldRows; r++) {
             for (let c = 1; c <= this.cols; c++) {
                 if (!this.grid[r - 1][c - 1]) {
-                    const id = 'R' + r + 'C' + c;
+                    const id = `P${this.currentPageNo}_R${r}C${c}`;
                     const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
                     this.grid[r - 1][c - 1] = data;
                     this.cellDataMap[id] = data;
@@ -3109,7 +3143,7 @@ class SuperPrintDesigner {
             delete m.newRow;
             delete m.newRowspan;
             if (m.rowspan < 1) m.rowspan = 1;
-            const newId = 'R' + m.row + 'C' + m.col;
+            const newId = `P${m.page_no || this.currentPageNo}_R${m.row}C${m.col}`;
             m.cell_id = newId;
             this.cellDataMap[newId] = m;
             this.grid[m.row - 1][m.col - 1] = m;
@@ -3119,7 +3153,7 @@ class SuperPrintDesigner {
         for (let r = 1; r <= this.rows; r++) {
             for (let c = 1; c <= oldCols; c++) {
                 if (!this.grid[r - 1][c - 1]) {
-                    const id = 'R' + r + 'C' + c;
+                    const id = `P${this.currentPageNo}_R${r}C${c}`;
                     const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
                     this.grid[r - 1][c - 1] = data;
                     this.cellDataMap[id] = data;
@@ -3201,7 +3235,7 @@ class SuperPrintDesigner {
             delete m.newCol;
             delete m.newColspan;
             if (m.colspan < 1) m.colspan = 1;
-            const newId = 'R' + m.row + 'C' + m.col;
+            const newId = `P${m.page_no || this.currentPageNo}_R${m.row}C${m.col}`;
             m.cell_id = newId;
             this.cellDataMap[newId] = m;
             this.grid[m.row - 1][m.col - 1] = m;
@@ -3211,7 +3245,7 @@ class SuperPrintDesigner {
         for (let r = 1; r <= oldRows; r++) {
             for (let c = 1; c <= this.cols; c++) {
                 if (!this.grid[r - 1][c - 1]) {
-                    const id = 'R' + r + 'C' + c;
+                    const id = `P${this.currentPageNo}_R${r}C${c}`;
                     const data = { cell_id: id, row: r, col: c, rowspan: 1, colspan: 1, cell_type: 'static', cell_value: '', css_style: defaultCss };
                     this.grid[r - 1][c - 1] = data;
                     this.cellDataMap[id] = data;
