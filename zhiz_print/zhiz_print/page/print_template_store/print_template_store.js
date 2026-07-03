@@ -174,8 +174,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             fields: [
                 { fieldtype: 'HTML', fieldname: 'preview',
                   options: `<div class="pts-preview-tabs">
-                      <span class="pts-tab active" data-tab="actual">${__('实际打印')}</span>
-                      <span class="pts-tab" data-tab="design">${__('设计渲染')}</span>
+                      <span class="pts-tab active" data-tab="actual">${__('打印效果')}</span>
+                      <span class="pts-tab" data-tab="design">${__('设计效果')}</span>
                   </div>
                   <div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
                 { fieldtype: 'HTML', fieldname: 'paper',
