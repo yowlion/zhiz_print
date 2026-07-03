@@ -868,6 +868,7 @@ def get_designer_html(design_name=None, rows=20, columns=15, font_family="Micros
         "m_right": m_right_px,
         "col_header_offset": int(col_header_offset),
         "total_width": total_width,
+        "sample_doc": doc.sample_doc or "",
     }
 
     template_path = "zhiz_print/zhiz_print/doctype/super_print_design/designer_template.html"
