@@ -3279,7 +3279,7 @@ frappe.ui.form.on('Super Print Design', {
         setTimeout(() => {
         const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
         if (ptsPreviewBtn) {
-            ptsPreviewBtn.style.display = (frm.doc.sample_doc ? '' : 'none');
+            // display 由 Jinja 渲染时按 sample_doc 决定(html {% if not sample_doc %}display:none),JS 不再设
             ptsPreviewBtn.onclick = () => {
                 const overlay = document.getElementById('spd-preview-overlay');
                 if (!overlay) return;
