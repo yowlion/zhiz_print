@@ -180,11 +180,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                             </div>
                             <hr style="margin:8px 0;">
                             <div style="font-weight:600;">${__('评论')}</div>
-                            <div class="pts-comments" id="pts-comments">${__('加载中...')}</div>
-                            <div class="input-group" style="margin-top:6px;">
+                            <div class="input-group" style="margin-top:6px;margin-bottom:6px;">
                                 <input type="text" id="pts-new-comment" class="form-control input-sm" placeholder="${__('留言...')}">
                                 <span class="input-group-btn"><button class="btn btn-sm btn-default" id="pts-submit-comment">${__('提交')}</button></span>
-                            </div>` },
+                            </div>
+                            <div class="pts-comments" id="pts-comments">${__('加载中...')}</div>` },
             ],
         });
         // 写完整预览 + 注入纸张 CSS。时机:shown.bs.modal(modal 显示动画 ~300ms 完成后 iframe contentDocument 才稳定可写) + setTimeout 兜底 + iframe 未渲染重试
