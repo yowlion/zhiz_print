@@ -3283,7 +3283,12 @@ frappe.ui.form.on('Super Print Design', {
             ptsPreviewBtn.onclick = () => {
                 const overlay = document.getElementById('spd-preview-overlay');
                 if (!overlay) return;
-                if (overlay.style.display !== 'none') { overlay.style.display = 'none'; return; }  // 已显示→回设计
+                if (overlay.style.display !== 'none') {  // 已预览→回设计
+                    overlay.style.display = 'none';
+                    ptsPreviewBtn.classList.remove('active');
+                    ptsPreviewBtn.innerHTML = '<i class="fa fa-eye"></i> ' + __('演示预览');
+                    return;
+                }
                 if (!frm.doc.sample_doc) return;
                 frappe.dom.freeze(__('渲染预览中...'));
                 frappe.call({
@@ -3302,6 +3307,8 @@ frappe.ui.form.on('Super Print Design', {
                             } catch (e) {}
                         }
                         overlay.style.display = 'block';
+                        ptsPreviewBtn.classList.add('active');
+                        ptsPreviewBtn.innerHTML = '<i class="fa fa-pencil"></i> ' + __('回到设计');
                     },
                     error: () => { frappe.dom.unfreeze(); }
                 });
@@ -3315,6 +3322,8 @@ frappe.ui.form.on('Super Print Design', {
                 const ov = document.getElementById('spd-preview-overlay');
                 if (ov && ov.style.display !== 'none' && !e.target.closest('#spd-preview-sample-btn')) {
                     ov.style.display = 'none';
+                    ptsPreviewBtn.classList.remove('active');
+                    ptsPreviewBtn.innerHTML = '<i class="fa fa-eye"></i> ' + __('演示预览');
                     e.stopPropagation(); e.preventDefault();
                 }
             }, true);

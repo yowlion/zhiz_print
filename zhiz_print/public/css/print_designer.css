@@ -255,6 +255,7 @@
 .spd-page-tab { font-size:11px !important; padding:3px 8px !important; }
 .spd-page-tab-active { background:#28a745 !important; color:#fff !important; border-color:#28a745 !important; }
 .spd-page-tab-active i { color:#fff !important; }
+#spd-preview-sample-btn.active { background:#28a745 !important; border-color:#28a745 !important; color:#fff !important; }
 .spd-main { display:flex; gap:12px; min-height:400px; position:relative; }
 .spd-preview-overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:#f0f0f0; overflow:auto; z-index:100; display:none; padding:20px; }
 .spd-preview-overlay iframe { width:100%; min-height:calc(100vh - 220px); border:0; }
