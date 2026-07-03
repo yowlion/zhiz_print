@@ -488,11 +488,14 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if child_patterns:
                     is_data_driven = True
 
-                # Auto-detect query data binding
+                # query 绑定(qn/dk 供下方 data-driven 行收集 query_names 用)。
+                # 注意:不再仅凭 data_query cell 就把整行判为 data-driven —— 非数据驱动行
+                # 的 data_query cell 只取 query 首条值(_build_row_html 第1426行 fallback),
+                # 只有 row_type=Data-Driven Row 或子表 {doc.child.field} 模式才按多值展开。
+                # 否则:当 query 未被 parameters 过滤到单条时(如模板平台预览 ds01 返回全表),
+                # 普通标题行会被按结果条数展开成 N 行,出现大量重复行。
                 qn = (item.query_name or '').strip()
                 dk = (item.data_key or '').strip()
-                if qn and dk:
-                    is_data_driven = True
 
                 if is_data_driven:
                     if row_num not in data_driven_rows:
