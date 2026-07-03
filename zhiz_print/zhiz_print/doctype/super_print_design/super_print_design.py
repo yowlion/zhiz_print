@@ -185,20 +185,24 @@ class SuperPrintDesign(frappe.model.document.Document):
                 except Exception:
                     pass
 
-            # Execute queries from child table
+            # Execute queries (仅当有具体 doc 时执行;doc_name=None 是纯模板结构预览,
+            # query parameters 依赖 doc.xxx,doc 为空时无法过滤会返回全表,导致 data-driven
+            # 行展开成海量行 → preview 爆炸推送失败。模板结构预览走 query_results={} 空结果,
+            # 与本地设计器网格"占位符原样"语义一致)
             query_results = {}
-            for q in self.design_queries:
-                if not q.query_code:
-                    continue
-                try:
-                    result = self.execute_query(
-                        q.query_code, q.parameters,
-                        doc_name, self.target_doctype, params
-                    )
-                    query_results[q.query_name] = {'data': result}
-                except Exception as e:
-                    frappe.log_error(frappe.get_traceback(), 'Query execution failed: {0}'.format(q.query_name))
-                    query_results[q.query_name] = {'data': []}
+            if doc_name:
+                for q in self.design_queries:
+                    if not q.query_code:
+                        continue
+                    try:
+                        result = self.execute_query(
+                            q.query_code, q.parameters,
+                            doc_name, self.target_doctype, params
+                        )
+                        query_results[q.query_name] = {'data': result}
+                    except Exception as e:
+                        frappe.log_error(frappe.get_traceback(), 'Query execution failed: {0}'.format(q.query_name))
+                        query_results[q.query_name] = {'data': []}
 
             html = self.build_preview_html(
                 query_results, doc_name, doc, params=params,
