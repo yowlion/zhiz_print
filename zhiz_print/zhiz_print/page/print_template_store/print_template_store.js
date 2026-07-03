@@ -180,8 +180,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         setTimeout(writePreview, 100);
         setTimeout(writePreview, 600);
 
-        loadPaperInfo(tpl);
-        loadComments(tpl.name);
+        loadPaperInfo(tpl, dlg.$wrapper);
+        loadComments(tpl.name, dlg.$wrapper);
 
         // 事件绑定限定本 dialog(事件委托,避免全局 id 冲突)
         dlg.$wrapper.on('click', '#pts-install-btn', () => openInstallDialog(tpl));
@@ -194,7 +194,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 callback: (r) => {
                     if ((r.message || {}).success) {
                         dlg.$wrapper.find('#pts-new-comment').val('');
-                        loadComments(tpl.name);
+                        loadComments(tpl.name, dlg.$wrapper);
                         frappe.show_alert({ message: __('评论已提交'), indicator: 'green' });
                     } else {
                         frappe.show_alert({ message: __('评论失败'), indicator: 'red' });
@@ -202,9 +202,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 }
             });
         });
+        // dialog 关闭后销毁 DOM(bootstrap modal hide 不 remove,残留 #pts-* id 致下次 open 全局 selector 命中旧 dialog)
+        dlg.$wrapper.on('hidden.bs.modal', () => { dlg.$wrapper.remove(); });
     }
 
-    function loadPaperInfo(tpl) {
+    function loadPaperInfo(tpl, $ctx) {
         frappe.call({
             method: 'zhiz_print.api.template_store.get_template',
             args: { template_id: tpl.name },
@@ -212,7 +214,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 const t = r.message || {};
                 let pc = {};
                 try { pc = JSON.parse(t.print_paper_config || '{}'); } catch (e) {}
-                $('#pts-paper-info').html(
+                $ctx.find('#pts-paper-info').html(
                     `<b>${__('单据')}</b>: ${frappe.utils.escape_html(t.target_doctype || '-')} &nbsp;·&nbsp; ` +
                     `<b>${__('纸张')}</b>: ${frappe.utils.escape_html(t.print_paper_name || '-')} ` +
                     `(${__('宽')} ${pc.width || '-'} × ${__('高')} ${pc.height || '-'}, ` +
@@ -222,14 +224,14 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         });
     }
 
-    function loadComments(template_id) {
+    function loadComments(template_id, $ctx) {
         frappe.call({
             method: 'zhiz_print.api.template_store.list_template_comments',
             args: { template_id },
             callback: (r) => {
                 const comments = (r.message || {}).comments || [];
-                if (!comments.length) { $('#pts-comments').html(`<div style="color:#aeaeb2;padding:8px;">${__('暂无评论')}</div>`); return; }
-                $('#pts-comments').html(comments.map(c =>
+                if (!comments.length) { $ctx.find('#pts-comments').html(`<div style="color:#aeaeb2;padding:8px;">${__('暂无评论')}</div>`); return; }
+                $ctx.find('#pts-comments').html(comments.map(c =>
                     `<div class="pts-comment">
                         <span class="pts-comment-author">${frappe.utils.escape_html(c.author_display || __('匿名'))}</span>
                         <span class="pts-comment-date">${(c.created_at || '').slice(0, 16)}</span>
