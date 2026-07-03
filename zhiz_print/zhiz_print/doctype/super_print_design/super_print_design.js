@@ -3290,13 +3290,17 @@ frappe.ui.form.on('Super Print Design', {
                     return;
                 }
                 if (!frm.doc.sample_doc) return;
-                frappe.dom.freeze(__('渲染预览中...'));
+                // 即时反馈:按钮立即变 + overlay 显示 spinner(不等 server)
+                ptsPreviewBtn.classList.add('active');
+                ptsPreviewBtn.innerHTML = '<i class="fa fa-pencil"></i> ' + __('回到设计');
+                overlay.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;color:#666;font-size:14px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;font-size:20px;"></i>' + __('渲染预览中...') + '</div>';
+                overlay.style.display = 'block';
                 frappe.call({
                     method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_with_sample',
                     args: { design_name: frm.doc.design_name, doc_name: frm.doc.sample_doc },
                     callback: (r) => {
-                        frappe.dom.unfreeze();
-                        const ifr = document.getElementById('spd-preview-iframe');
+                        overlay.innerHTML = '<iframe id="spd-preview-iframe" style="width:100%;min-height:calc(100vh - 220px);border:0;"></iframe>';
+                        const ifr = overlay.querySelector('#spd-preview-iframe');
                         if (ifr) {
                             try {
                                 const d = ifr.contentWindow.document;
@@ -3306,11 +3310,10 @@ frappe.ui.form.on('Super Print Design', {
                                 d.head.appendChild(st);
                             } catch (e) {}
                         }
-                        overlay.style.display = 'block';
-                        ptsPreviewBtn.classList.add('active');
-                        ptsPreviewBtn.innerHTML = '<i class="fa fa-pencil"></i> ' + __('回到设计');
                     },
-                    error: () => { frappe.dom.unfreeze(); }
+                    error: () => {
+                        overlay.innerHTML = '<div style="color:#dc3545;text-align:center;padding:40px;font-size:14px;"><i class="fa fa-exclamation-triangle"></i> ' + __('渲染失败,请检查 sample_doc 是否有效') + '</div>';
+                    }
                 });
             };
         }
