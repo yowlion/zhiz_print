@@ -76,7 +76,7 @@ def share_template(design_name):
             preview_html_design = preview_html_design.replace(_c, SENSITIVE_COMPANY)
     # 兜底:正则匹配硬编码公司名(中文2+字+有限公司/科技有限公司/公司等后缀,后非中文避免"公司名称/代号"标签误匹配)
     import re
-    _company_re = re.compile(r'[一-龥]{2,15}(?:有限公司|科技有限公司|有限责任公司|股份有限公司|集团有限公司|公司)(?![一-龥])')
+    _company_re = re.compile(r'[一-龥A-Za-z]{2,15}(?:有限公司|科技有限公司|有限责任公司|股份有限公司|集团有限公司|公司)(?![一-龥A-Za-z])')
     preview_html = _company_re.sub(SENSITIVE_COMPANY, preview_html)
     preview_html_design = _company_re.sub(SENSITIVE_COMPANY, preview_html_design)
 
