@@ -3291,6 +3291,8 @@ frappe.ui.form.on('Super Print Design', {
                     overlay.style.display = 'none';
                     btn.classList.remove('active');
                     btn.innerHTML = '<i class="fa fa-eye"></i> ' + __('演示预览');
+                    const c = document.querySelector('.spd-container');
+                    if (c) c.classList.remove('spd-preview-active');  // 恢复所有按钮可点
                     return;
                 }
                 if (!frm2.doc.sample_doc) return;
@@ -3299,6 +3301,8 @@ frappe.ui.form.on('Super Print Design', {
                 btn.innerHTML = '<i class="fa fa-pencil"></i> ' + __('回到设计');
                 overlay.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;color:#666;font-size:14px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;font-size:20px;"></i>' + __('渲染预览中...') + '</div>';
                 overlay.style.display = 'block';
+                const c2 = document.querySelector('.spd-container');
+                if (c2) c2.classList.add('spd-preview-active');  // 禁用 toolbar/page-bar 按钮(除回到设计)
                 frappe.call({
                     method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_with_sample',
                     args: { design_name: frm2.doc.design_name, doc_name: frm2.doc.sample_doc },

@@ -261,6 +261,11 @@
 .spd-preview-overlay iframe { width:100%; min-height:calc(100vh - 220px); border:0; }
 .spd-preview-overlay { animation: pts-fade-in .2s ease-out; }
 @keyframes pts-fade-in { from { opacity:0; } to { opacity:1; } }
+/* 预览模式:禁用 toolbar 全部按钮 + page-bar 除回到设计外的按钮 */
+.spd-container.spd-preview-active .spd-toolbar button,
+.spd-container.spd-preview-active .spd-page-bar button:not(#spd-preview-sample-btn) {
+    pointer-events: none !important; opacity: 0.5 !important; cursor: not-allowed !important;
+}
 .spd-grid-wrap { flex:1; overflow:auto; max-height:600px; border:1px solid #dee2e6; border-radius:6px; background:#e0e0e0; padding:20px; display:flex; justify-content:center; align-items:flex-start; }
 .spd-paper-preview { }
 .super-zprint-grid-wrapper { display:flex; flex-direction:column; align-items:flex-start; }
