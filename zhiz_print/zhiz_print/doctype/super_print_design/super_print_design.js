@@ -3283,9 +3283,10 @@ frappe.ui.form.on('Super Print Design', {
             document.addEventListener('click', (e) => {
                 const btn = e.target.closest('#spd-preview-sample-btn');
                 if (!btn) return;
-                const frm2 = (typeof spd_designer !== 'undefined' && spd_designer && spd_designer.frm) ? spd_designer.frm : null;
-                if (!frm2) return;
+                const frm2 = (typeof cur_frm !== 'undefined' && cur_frm) ? cur_frm : null;
                 const overlay = document.getElementById('spd-preview-overlay');
+                console.log('[PTS demo preview]', { frm2: frm2 ? frm2.doc.name : null, sample_doc: frm2 ? frm2.doc.sample_doc : null, overlay: !!overlay, display: overlay ? overlay.style.display : '?' });
+                if (!frm2) return;
                 if (!overlay) return;
                 if (overlay.style.display !== 'none') {  // 已预览→回设计
                     overlay.style.display = 'none';
