@@ -51,7 +51,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-card { background:#fff; border:1px solid #e8eaed; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04); cursor:pointer; transition:transform .12s, box-shadow .12s; overflow:hidden; }
         .pts-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); border-color:#d1d1d6; }
         .pts-card-thumb { height:105px; background:#f0f0f2; overflow:hidden; position:relative; }
-        .pts-card-thumb iframe { position:absolute; top:0; left:50%; border:0; transform-origin:top center; pointer-events:none; }
+        .pts-card-thumb iframe { position:absolute; top:0; left:50%; width:794px; height:1123px; border:0; transform:translateX(-50%) scale(0.21); transform-origin:top center; pointer-events:none; }
         .pts-card-body { padding:7px 9px; font-size:11px; }
         .pts-card-name { font-weight:600; color:#1d1d1f; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .pts-card-meta { color:#86868b; margin-top:2px; }
@@ -144,17 +144,6 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                     const st = d.createElement('style');
                     st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
                     (d.head || d.documentElement).appendChild(st);
-                    // 动态适配:读 .print-page 实际 px 尺寸设 iframe 宽高 + scale 满卡片宽
-                    // (原固定 794x1123 scale 0.21 只适配 A4 纵向;横向/标签纸张 952x552 宽>794 会溢出遮挡)
-                    const firstPage = d.querySelector('.print-page');
-                    if (firstPage && firstPage.offsetWidth) {
-                        const pw = firstPage.offsetWidth;
-                        const ph = firstPage.offsetHeight || Math.round(pw * 1.414);
-                        ifr.style.width = pw + 'px';
-                        ifr.style.height = ph + 'px';
-                        const thumbW = ifr.parentElement.offsetWidth || 160;
-                        ifr.style.transform = 'translateX(-50%) scale(' + (thumbW / pw).toFixed(4) + ')';
-                    }
                 } catch (e) {}
             }
         });
