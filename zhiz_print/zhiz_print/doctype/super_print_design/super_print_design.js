@@ -3268,7 +3268,9 @@ frappe.ui.form.on('Super Print Design', {
                         },
                     });
                 });
-            }, 'btn-primary');
+            });
+            // 第三参是 category(会变下拉),改 filter 上色
+            $('.custom-actions .btn').filter(function () { return $(this).text().trim() === __('分享到模板平台'); }).removeClass('btn-default').addClass('btn-primary');
         }
         if (spd_designer) spd_designer = null;
         spd_designer = new SuperPrintDesigner(frm);
