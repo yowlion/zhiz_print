@@ -2,6 +2,10 @@
 $(document).on('shown.bs.dropdown', function() {
     var $menu = $('#toolbar-user');
     if (!$menu.length || $menu.find('.zhiz-print-store-link').length) return;
-    $menu.append('<div class="dropdown-divider"></div>');
-    $menu.append('<a class="dropdown-item zhiz-print-store-link" href="/app/print-template-store"><i class="fa fa-fw fa-print"></i> ' + __('打印模板平台') + '</a>');
+    var $theme = $menu.find('.dropdown-item[onclick*="ThemeSwitcher"]');
+    if ($theme.length) {
+        $theme.after('<a class="dropdown-item zhiz-print-store-link" href="/app/print-template-store">打印模板平台</a>');
+    } else {
+        $menu.append('<a class="dropdown-item zhiz-print-store-link" href="/app/print-template-store">打印模板平台</a>');
+    }
 });
