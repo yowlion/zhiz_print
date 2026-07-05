@@ -74,6 +74,15 @@ def _get_print_designer_boot_settings(setting):
                         doctypes.append(item.doctype_name)
                 result["enabled_doctypes"] = doctypes
 
+            # 精准判定:注入哪些 doctype 有可用的 Super Print Design
+            # print.js make() 据此判定是否进高级打印,避免无设计的 doctype 误入(Enable for All 模式下)
+            try:
+                _dts = frappe.db.get_list("Super Print Design", filters={"enabled": 1},
+                    fields=["target_doctype"], distinct=True, pluck="target_doctype")
+                result["doctype_has_design"] = {dt: True for dt in _dts if dt}
+            except Exception:
+                result["doctype_has_design"] = {}
+
             # Export settings
             result["allow_export_pdf"] = bool(frappe.utils.cint(setting.get("allow_export_pdf")))
             result["allow_export_excel"] = bool(frappe.utils.cint(setting.get("allow_export_excel")))
