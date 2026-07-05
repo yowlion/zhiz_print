@@ -21,7 +21,7 @@ def _install_presets():
     paper_data = presets.get("paper")
     if paper_data and not frappe.db.exists("Super Print Paper", paper_data["paper_name"]):
         paper = frappe.get_doc(paper_data)
-        paper.insert(ignore_permissions=True)
+        paper.insert(ignore_permissions=True, ignore_mandatory=True)
         frappe.db.commit()
         frappe.clear_cache(doctype="Super Print Paper")
 
@@ -37,7 +37,7 @@ def _install_presets():
         frappe.flags.skip_zhiz_print_license = True
         try:
             design = frappe.get_doc(design_data_copy)
-            design.insert(ignore_permissions=True)
+            design.insert(ignore_permissions=True, ignore_mandatory=True)
             frappe.db.commit()
             frappe.clear_cache(doctype="Super Print Design")
         finally:
@@ -60,7 +60,7 @@ def _install_batch_print_page():
             "standard": "Yes",
             "system_page": 1,
         })
-        page.insert(ignore_permissions=True)
+        page.insert(ignore_permissions=True, ignore_mandatory=True)
         frappe.db.commit()
     finally:
         frappe.conf.developer_mode = developer_mode
