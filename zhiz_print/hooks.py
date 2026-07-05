@@ -26,6 +26,7 @@ app_include_css = [
 # Global JS loading (list view batch print interceptor)
 app_include_js = [
     f"/assets/zhiz_print/js/batch/intercept_bulk_print.js?v={app_version}",
+    f"/assets/zhiz_print/js/navbar_menu.js?v={app_version}",
 ]
 
 # Print page JS override
