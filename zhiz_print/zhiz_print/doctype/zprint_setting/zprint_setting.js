@@ -1,16 +1,5 @@
 frappe.ui.form.on('Zprint Setting', {
     refresh(frm) {
-        // 智兆打印APP交流群二维码
-        if (!frm._qr_injected) {
-            frm._qr_injected = true;
-            $(frm.wrapper).find('.form-layout').append(`
-                <div style="text-align:center;padding:20px;margin-top:20px;border-top:1px solid #ebebeb;">
-                    <div style="font-weight:bold;font-size:14px;margin-bottom:10px;">智兆打印APP交流群</div>
-                    <img src="/assets/zhiz_print/images/qr_group.jpg" style="width:200px;height:200px;border:1px solid #ddd;border-radius:8px;">
-                </div>
-            `);
-        }
-
         // Refresh Boot Cache button
         frm.add_custom_button(__('Refresh Boot Cache'), function() {
             frappe.call({
@@ -172,6 +161,10 @@ frappe.ui.form.on('Zprint Setting', {
                 html += '<div style="text-align:center">';
                 html += '<img src="' + (data.whatsapp_qr || '') + '" style="width:140px;height:140px;border-radius:8px;border:1px solid #e0e0e0;object-fit:cover">';
                 html += '<div style="margin-top:6px;font-size:12px;color:#888">WhatsApp</div>';
+                html += '</div>';
+                html += '<div style="text-align:center">';
+                html += '<img src="/assets/zhiz_print/images/qr_group.jpg" style="width:140px;height:140px;border-radius:8px;border:1px solid #e0e0e0;object-fit:cover">';
+                html += '<div style="margin-top:6px;font-size:12px;color:#888">' + __('智兆打印APP交流群') + '</div>';
                 html += '</div>';
                 html += '</div>';
                 html += '<div style="text-align:center;margin-top:12px;font-size:13px;color:#555">';
