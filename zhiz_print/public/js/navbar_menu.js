@@ -1,6 +1,6 @@
 // 用户头像下拉菜单注入「打印模板平台」入口
 $(document).on('shown.bs.dropdown', function(e) {
-    var $menu = $(e.target).find('.dropdown-menu');
+    var $menu = $(e.target).parent().find('.dropdown-menu');
     if (!$menu.length) return;
     // 确认是用户菜单(含 My Settings/Logout/退出)
     if (!$menu.find('a:contains("My Settings"), a:contains("Logout"), a:contains("退出"), a:contains("设置")').length) return;
