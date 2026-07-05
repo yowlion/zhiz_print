@@ -9,3 +9,4 @@ images/report.json
 images/scenario_screenshot.png
 images/scenario_report.json
 images/FAIL_*.png
+images/*.png
