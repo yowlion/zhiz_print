@@ -658,6 +658,82 @@ class SuperPrintDesigner {
         return html;
     }
 
+    // ===== 客户端实测分页(与 print.js render_preview 一致;演示预览用,避免后端估算遮挡) =====
+    _sp_timeout(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async _sp_measure_row_heights(measurement_html, content_w_px) {
+        const mframe = document.createElement('iframe');
+        mframe.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + (content_w_px || 800) + 'px;height:0;border:0;opacity:0;pointer-events:none;';
+        document.body.appendChild(mframe);
+        try {
+            const mdoc = mframe.contentDocument || mframe.contentWindow.document;
+            mdoc.open(); mdoc.write(measurement_html); mdoc.close();
+            if (mdoc.fonts && mdoc.fonts.ready) { await Promise.race([mdoc.fonts.ready, this._sp_timeout(2000)]); } else { await this._sp_timeout(300); }
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            // Auto Shrink 精确字号(measureText)应用到 iframe cell,让行高基于精确字号
+            const shrinks = {};
+            const fontFamily = this.fontFamily || 'Microsoft YaHei';
+            const _ctx = document.createElement('canvas').getContext('2d');
+            mdoc.querySelectorAll('td[data-shrink-cell]').forEach(td => {
+                const key = td.dataset.shrinkCell; const baseFs = parseInt(td.dataset.baseFs, 10) || 12;
+                const cellW = parseInt(td.dataset.cellW, 10) || 0; const text = (td.textContent || '').trim();
+                if (!key || !text || !cellW) return;
+                _ctx.font = baseFs + 'px ' + fontFamily;
+                const textW = _ctx.measureText(text).width;
+                if (textW > cellW) {
+                    const fs = Math.max(6, Math.floor(baseFs * cellW / textW) - 1);
+                    if (fs < baseFs) { td.style.fontSize = fs + 'px'; shrinks[key] = fs; }
+                }
+            });
+            const heights = {}, kinds = {}, order = {}, links = {};
+            mdoc.querySelectorAll('tr[data-serial]').forEach(tr => {
+                const pg = parseInt(tr.dataset.pg, 10); const serial = parseInt(tr.dataset.serial, 10);
+                if (!heights[pg]) { heights[pg] = {}; kinds[pg] = {}; order[pg] = []; links[pg] = []; }
+                heights[pg][serial] = tr.offsetHeight; kinds[pg][serial] = tr.dataset.kind || 'data'; order[pg].push(serial);
+                tr.querySelectorAll('td[rowspan]').forEach(td => { const rs = parseInt(td.getAttribute('rowspan') || '1', 10); if (rs > 1) links[pg].push([serial, rs]); });
+            });
+            return { heights, kinds, order, links, shrinks };
+        } finally { if (mframe.parentNode) mframe.parentNode.removeChild(mframe); }
+    }
+
+    _sp_compute_break_map(measured, msg) {
+        const { heights, kinds, order, links } = measured;
+        const content_h_px = msg.content_h_px; const page_count = msg.page_count || Object.keys(heights).length || 1;
+        const page_break_map = {}; const row_heights = {};
+        for (let pg = 1; pg <= page_count; pg++) {
+            const H = heights[pg]; if (!H) continue;
+            const ord = order[pg] || [];
+            const titleSerials = ord.filter(s => kinds[pg][s] === 'title');
+            const dataSerials = ord.filter(s => kinds[pg][s] !== 'title');
+            const titleH = titleSerials.reduce((a, s) => a + (H[s] || 0), 0);
+            const rh = {}; ord.forEach(s => { rh[s] = H[s] || 0; }); row_heights[pg] = rh;
+            const groupOf = this._sp_build_rowspan_groups(dataSerials, links[pg] || []);
+            const avail = content_h_px - titleH - 1;
+            const pages = []; let cur = [], curH = 0, consumed = new Set();
+            for (let i = 0; i < dataSerials.length; i++) {
+                const s = dataSerials[i]; if (consumed.has(s)) continue;
+                const grp = groupOf[s] || [s]; grp.forEach(g => consumed.add(g));
+                const grpH = grp.reduce((a, g) => a + (H[g] || 0), 0);
+                if (cur.length && curH + grpH > avail) { pages.push(cur); cur = []; curH = 0; }
+                cur = cur.concat(grp); curH += grpH;
+            }
+            if (cur.length) pages.push(cur);
+            if (!pages.length) pages.push([]);
+            page_break_map[pg] = pages;
+        }
+        return { page_break_map, row_heights, shrink_map: measured.shrinks || {} };
+    }
+
+    _sp_build_rowspan_groups(dataSerials, links) {
+        const parent = {}; dataSerials.forEach(s => { parent[s] = s; });
+        const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+        const union = (a, b) => { parent[find(a)] = find(b); };
+        links.forEach(([start, span]) => { if (!parent.hasOwnProperty(start)) return; for (let k = 1; k < span; k++) { const nxt = start + k; if (parent.hasOwnProperty(nxt)) union(start, nxt); } });
+        const byRoot = {}; dataSerials.forEach(s => { const r = find(s); (byRoot[r] = byRoot[r] || []).push(s); });
+        const groupOf = {}; dataSerials.forEach(s => { groupOf[s] = byRoot[find(s)]; });
+        return groupOf;
+    }
+
     alignRowHeaders() {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
@@ -3367,26 +3443,45 @@ frappe.ui.form.on('Super Print Design', {
                 overlay.style.display = 'block';
                 const c2 = document.querySelector('.spd-container');
                 if (c2) c2.classList.add('spd-preview-active');  // 禁用 toolbar/page-bar 按钮(除回到设计)
-                frappe.call({
-                    method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_with_sample',
-                    args: { design_name: frm2.doc.design_name, doc_name: frm2.doc.sample_doc },
-                    callback: (r) => {
-                        overlay.innerHTML = '<iframe id="spd-preview-iframe" style="width:100%;min-height:calc(100vh - 220px);border:0;"></iframe>';
-                        const ifr = overlay.querySelector('#spd-preview-iframe');
-                        if (ifr) {
-                            try {
-                                const d = ifr.contentWindow.document;
-                                d.open(); d.write(r.message || ''); d.close();
-                                const st = d.createElement('style');
-                                st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
-                                d.head.appendChild(st);
-                            } catch (e) {}
-                        }
-                    },
-                    error: () => {
-                        overlay.innerHTML = '<div style="color:#dc3545;text-align:center;padding:40px;font-size:14px;"><i class="fa fa-exclamation-triangle"></i> ' + __('渲染失败,请检查 sample_doc 是否有效') + '</div>';
+                // 演示预览走客户端实测分页(与实际打印预览一致),避免后端估算遮挡
+                const _writePreviewIframe = (html) => {
+                    overlay.innerHTML = '<iframe id="spd-preview-iframe" style="width:100%;min-height:calc(100vh - 220px);border:0;"></iframe>';
+                    const ifr = overlay.querySelector('#spd-preview-iframe');
+                    if (ifr) {
+                        try {
+                            const d = ifr.contentWindow.document;
+                            d.open(); d.write(html || ''); d.close();
+                            const st = d.createElement('style');
+                            st.textContent = 'body{background:#f0f0f0 !important;margin:0 !important;padding:20px !important;} .print-pages-wrapper{margin:0 auto !important;} .print-page{background:#fff !important;box-shadow:0 2px 16px rgba(0,0,0,.12) !important;margin:0 0 20px 0 !important;}';
+                            d.head.appendChild(st);
+                        } catch (e) {}
                     }
-                });
+                };
+                (async () => {
+                    const baseArgs = { doctype: frm2.doc.target_doctype, docname: frm2.doc.sample_doc, design_name: frm2.doc.design_name, params: {} };
+                    try {
+                        // 第一轮:量行架(measurement_only)
+                        const r1 = await frappe.call({ method: 'zhiz_print.api.print_designer.render_print_preview', args: Object.assign({}, baseArgs, { measurement_only: 1 }) });
+                        if (r1.message && r1.message.measurement_html && r1.message.content_h_px) {
+                            const measured = await spd_designer._sp_measure_row_heights(r1.message.measurement_html, r1.message.content_w_px);
+                            if (measured && Object.keys(measured.heights).length) {
+                                const bm = spd_designer._sp_compute_break_map(measured, r1.message);
+                                if (bm) {
+                                    // 第二轮:带 break_map 精确渲染
+                                    const r2 = await frappe.call({ method: 'zhiz_print.api.print_designer.render_print_preview', args: Object.assign({}, baseArgs, { page_break_map: bm.page_break_map, row_heights: bm.row_heights, shrink_map: bm.shrink_map }) });
+                                    if (r2.message && r2.message.precise) { _writePreviewIframe(r2.message.html); return; }
+                                }
+                            }
+                        }
+                        // fallback:估算
+                        const rf = await frappe.call({ method: 'zhiz_print.api.print_designer.render_print_preview', args: baseArgs });
+                        _writePreviewIframe(rf.message && rf.message.html);
+                    } catch (e) {
+                        // 兜底:旧 preview_with_sample(后端估算)
+                        const rb = await frappe.call({ method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.preview_with_sample', args: { design_name: baseArgs.design_name, doc_name: baseArgs.docname } });
+                        _writePreviewIframe(rb.message);
+                    }
+                })();
             });
         }
         // 预览模式点任意 toolbar 按钮(除演示预览)→ 回设计(capture 阶段 + stop 阻止 action)
