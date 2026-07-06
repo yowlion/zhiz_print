@@ -8,11 +8,19 @@ import frappe
 
 def get_boot_settings(bootinfo):
     """boot_session hook: inject zhiz_print settings into frappe.boot.zhiz_print"""
+    # 系统级打印配置对所有登录用户生效。Zprint Setting/Super Print Paper/Super Print Design
+    # 默认仅 System Manager 可读,普通用户查询会抛 PermissionError 被外层 try-except 吞,
+    # 导致其 boot.print_designer.enabled=False / doctype_has_design={},进而走原生打印界面。
+    # 此处临时关闭权限校验,仅读取公共配置(无写入),用完立即恢复。
+    prev = frappe.flags.ignore_permission
+    frappe.flags.ignore_permission = True
     try:
         setting = frappe.get_single("Zprint Setting")
+        result = _get_print_designer_boot_settings(setting)
     except Exception:
-        bootinfo["zhiz_print"] = {"print_designer": {"enabled": False}}
-        return
+        result = {"enabled": False}
+    finally:
+        frappe.flags.ignore_permission = prev
 
     # Get license info (auto-creates trial if needed)
     license_info = {}
@@ -23,7 +31,7 @@ def get_boot_settings(bootinfo):
         pass
 
     bootinfo["zhiz_print"] = {
-        "print_designer": _get_print_designer_boot_settings(setting),
+        "print_designer": result,
         "license": license_info,
     }
 
