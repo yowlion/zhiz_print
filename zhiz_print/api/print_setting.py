@@ -85,8 +85,11 @@ def _get_print_designer_boot_settings(setting):
             # 精准判定:注入哪些 doctype 有可用的 Super Print Design
             # print.js make() 据此判定是否进高级打印,避免无设计的 doctype 误入(Enable for All 模式下)
             try:
-                _dts = frappe.db.get_list("Super Print Design", filters={"enabled": 1},
-                    fields=["target_doctype"], distinct=True, pluck="target_doctype")
+                # 注意:frappe.flags.ignore_permission 对 db.get_list 无效(DatabaseQuery 自带权限层),
+                # 必须用 get_all + 显式 ignore_permissions=True 才能让普通用户也拿到设计列表
+                _dts = frappe.get_all("Super Print Design", filters={"enabled": 1},
+                    fields=["target_doctype"], distinct=True, pluck="target_doctype",
+                    ignore_permissions=True)
                 result["doctype_has_design"] = {dt: True for dt in _dts if dt}
             except Exception:
                 result["doctype_has_design"] = {}
