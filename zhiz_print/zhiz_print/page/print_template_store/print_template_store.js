@@ -248,7 +248,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                             <hr style="margin:8px 0;">
                             <div style="font-weight:600;">${__('评论')}</div>
                             <div style="margin-top:6px;margin-bottom:6px;">
-                                <textarea id="pts-new-comment" class="form-control input-sm" rows="3" placeholder="${__('留言...')} (Ctrl+Enter ${__('提交')})" style="resize:vertical;min-height:60px;"></textarea>
+                                <textarea id="pts-new-comment" class="form-control input-sm" placeholder="${__('留言...')} (Ctrl+Enter ${__('提交')})" style="resize:vertical;height:60px;min-height:60px;"></textarea>
                                 <div style="text-align:right;margin-top:4px;"><button class="btn btn-sm btn-default" id="pts-submit-comment">${__('提交')}</button></div>
                             </div>
                             <div class="pts-comments" id="pts-comments">${__('加载中...')}</div>` },
