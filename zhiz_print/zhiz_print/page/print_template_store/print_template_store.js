@@ -67,7 +67,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-comment { padding:6px 0; border-bottom:1px solid #f0f0f2; font-size:12px; }
         .pts-comment-author { font-weight:600; color:var(--zhiz-super-accent,#007AFF); }
         .pts-comment-date { color:#aeaeb2; font-size:10px; float:right; }
-        .pts-comment-text { color:#1d1d1f; margin-top:2px; }
+        .pts-comment-text { color:#1d1d1f; margin-top:2px; white-space:pre-wrap; word-break:break-word; }
     </style>`);
 
     $sidebar.html(`<div class="pts-sidebar">
@@ -247,9 +247,9 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                             </div>
                             <hr style="margin:8px 0;">
                             <div style="font-weight:600;">${__('评论')}</div>
-                            <div class="input-group" style="margin-top:6px;margin-bottom:6px;">
-                                <input type="text" id="pts-new-comment" class="form-control input-sm" placeholder="${__('留言...')}">
-                                <span class="input-group-btn"><button class="btn btn-sm btn-default" id="pts-submit-comment">${__('提交')}</button></span>
+                            <div style="margin-top:6px;margin-bottom:6px;">
+                                <textarea id="pts-new-comment" class="form-control input-sm" rows="3" placeholder="${__('留言...')} (Ctrl+Enter ${__('提交')})" style="resize:vertical;min-height:60px;"></textarea>
+                                <div style="text-align:right;margin-top:4px;"><button class="btn btn-sm btn-default" id="pts-submit-comment">${__('提交')}</button></div>
                             </div>
                             <div class="pts-comments" id="pts-comments">${__('加载中...')}</div>` },
             ],
@@ -285,15 +285,16 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
 
         // 事件绑定限定本 dialog(事件委托,避免全局 id 冲突)
         dlg.$wrapper.on('click', '#pts-install-btn', () => openInstallDialog(tpl));
-        dlg.$wrapper.on('click', '#pts-submit-comment', () => {
-            const content = dlg.$wrapper.find('#pts-new-comment').val().trim();
+        const submitComment = () => {
+            const $ta = dlg.$wrapper.find('#pts-new-comment');
+            const content = $ta.val().trim();
             if (!content) return;
             frappe.call({
                 method: 'zhiz_print.api.template_store.add_template_comment',
                 args: { template_id: tpl.name, content },
                 callback: (r) => {
                     if ((r.message || {}).success) {
-                        dlg.$wrapper.find('#pts-new-comment').val('');
+                        $ta.val('');
                         loadComments(tpl.name, dlg.$wrapper);
                         frappe.show_alert({ message: __('评论已提交'), indicator: 'green' });
                     } else {
@@ -301,6 +302,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                     }
                 }
             });
+        };
+        dlg.$wrapper.on('click', '#pts-submit-comment', submitComment);
+        // textarea 回车=换行,Ctrl/Cmd+Enter 才提交
+        dlg.$wrapper.on('keydown', '#pts-new-comment', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); submitComment(); }
         });
         // dialog 关闭后销毁 DOM(bootstrap modal hide 不 remove,残留 #pts-* id 致下次 open 全局 selector 命中旧 dialog)
         dlg.$wrapper.on('hidden.bs.modal', () => { dlg.$wrapper.remove(); });
