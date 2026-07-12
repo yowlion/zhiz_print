@@ -71,8 +71,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     $('head').append(`
     <style id="pts-layout">
         .pts-page .layout-main { display:flex !important; }
-        .pts-page .layout-main-section-wrapper { flex:1 1 auto !important; width:auto !important; max-width:none !important; order:1 !important; }
-        .pts-page .layout-side-section { flex:0 0 13% !important; width:13% !important; max-width:13% !important; min-width:0 !important; order:2 !important; }
+        .zhiz-v16 .pts-page .layout-main-section-wrapper { flex:1 1 auto !important; width:auto !important; max-width:none !important; order:1 !important; }
+        .zhiz-v16 .pts-page .layout-side-section { flex:0 0 13% !important; width:13% !important; max-width:13% !important; min-width:0 !important; order:2 !important; }
         .pts-sidebar .pts-cat { padding:7px 12px; margin-bottom:3px; border-radius:7px; cursor:pointer; font-size:12px; color:#6e6e73; }
         .pts-sidebar .pts-cat:hover { background:#f5f5f7; }
         .pts-sidebar .pts-cat.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
