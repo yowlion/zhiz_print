@@ -17,12 +17,12 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		let superPrintEnabled = false;
 		if (pd && pd.enabled && doctype) {
 			if (!pd.enable_mode || pd.enable_mode === 'Enable for All') {
-				// Enable for All: 仅当该 doctype 有可用 Super Print Design 才进高级打印(精准判定)
-				superPrintEnabled = !!pd.doctype_has_design?.[doctype];
+				// Enable for All: 所有 doctype 都进新打印预览(不管有没有设计模板,无设计时进空模板列表可新建)
+				superPrintEnabled = true;
 			} else if (pd.enable_mode === 'Enable for Specific') {
 				const list = pd.enabled_doctypes || [];
-				// Specific 列表内 + 该 doctype 确有设计,双条件
-				superPrintEnabled = list.includes(doctype) && !!pd.doctype_has_design?.[doctype];
+				// Specific: 列表内的 doctype 都进(不管有没有设计模板)
+				superPrintEnabled = list.includes(doctype);
 			}
 		}
 
