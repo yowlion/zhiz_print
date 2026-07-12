@@ -31,10 +31,19 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     // 直接 DOM 清掉 home+空链接,填正确路径(v15 仍走上方 patch 的 API)
     const _fv = (frappe.boot.versions && frappe.boot.versions.frappe) || '';
     if (_fv.startsWith('16')) {
-        // v16 已自动渲染 home + 高级打印设计,在末尾追加 /模板平台(防重复 append)
-        const $bc = $(wrapper).find('.navbar-breadcrumbs');
-        if ($bc.length && !$bc.find('a[href*="print-template-store"]').length) {
-            $bc.append('<li><a href="/desk/print-template-store" class="title-text"> / ' + __('模板平台') + '</a></li>');
+        // v16 原生 set_custom_breadcrumbs 不支持 items,Custom 会渲染空链接覆盖掉自动的 home+高级打印设计;
+        // 删 Custom 让 v16 自动渲染,MutationObserver 监听 update(会多次覆盖)持续追加 /模板平台
+        delete frappe.breadcrumbs.all['print-template-store'];
+        const appendTmpl = () => {
+            const $bc = $(wrapper).find('.navbar-breadcrumbs');
+            if ($bc.length && !$bc.find('a[href$="/desk/print-template-store"]').length) {
+                $bc.append('<li><a href="/desk/print-template-store" class="title-text"> / ' + __('模板平台') + '</a></li>');
+            }
+        };
+        appendTmpl();
+        const $bc0 = $(wrapper).find('.navbar-breadcrumbs');
+        if ($bc0.length) {
+            new MutationObserver(appendTmpl).observe($bc0[0], { childList: true });
         }
     }
 
