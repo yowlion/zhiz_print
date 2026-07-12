@@ -27,6 +27,16 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     };
     frappe.breadcrumbs.update();
 
+    // EN16 适配:navbar-breadcrumbs 的 set_custom_breadcrumbs 只认单 route+label,不支持多级 items,
+    // 多级 patch 在 v16 不渲染。改为在 page-indicator-pill 显示 "高级打印设计 / 模板平台"(v15 仍用上方 breadcrumbs)
+    const _fv = (frappe.boot.versions && frappe.boot.versions.frappe) || '';
+    if (_fv.startsWith('16')) {
+        const $pill = $(wrapper).find('.page-indicator-pill');
+        if ($pill.length) {
+            $pill.html(`<a href="/app/super-print-design" style="color:inherit;text-decoration:none">${__('高级打印设计')}</a> / <a href="/app/print-template-store" style="color:inherit;text-decoration:none">${__('模板平台')}</a>`);
+        }
+    }
+
     // 顶部刷新按钮
     const $iconGroup = $(wrapper).find('.page-icon-group');
     $iconGroup.removeClass('hide hidden-xs hidden-sm')
@@ -43,7 +53,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     <style id="pts-layout">
         .pts-page .layout-main { display:flex !important; }
         .pts-page .layout-main-section-wrapper { flex:1 1 auto !important; width:auto !important; max-width:none !important; order:1 !important; }
-        .pts-page .layout-side-section { flex:0 0 13% !important; max-width:13% !important; order:2 !important; }
+        .pts-page .layout-side-section { flex:0 0 13% !important; width:13% !important; max-width:13% !important; min-width:0 !important; order:2 !important; }
         .pts-sidebar .pts-cat { padding:7px 12px; margin-bottom:3px; border-radius:7px; cursor:pointer; font-size:12px; color:#6e6e73; }
         .pts-sidebar .pts-cat:hover { background:#f5f5f7; }
         .pts-sidebar .pts-cat.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
