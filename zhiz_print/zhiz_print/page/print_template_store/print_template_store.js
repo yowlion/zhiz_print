@@ -34,7 +34,15 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         // 用 frappe 自带 append_breadcrumb_element 在 update 后(只剩 home)补 workspace + 当前页
         const renderBC = () => {
             const $bc = $(wrapper).find('.navbar-breadcrumbs');
-            if (!$bc.length || $bc.find('a[href$="/desk/print-template-store"]').length) return;
+            if (!$bc.length) return;
+            // 删 v16 update 渲染的空链接 li(href 相对路径/无文本,如 print-template-store 空链接)
+            $bc.find('li').each(function () {
+                const $a = $(this).children('a');
+                if ($a.length && (!$a.attr('href') || !$a.attr('href').startsWith('/')) && !$a.text().trim()) {
+                    $(this).remove();
+                }
+            });
+            if ($bc.find('a[href$="/desk/print-template-store"]').length) return;  // 已补 workspace+当前页
             frappe.breadcrumbs.$breadcrumbs = $bc;
             frappe.breadcrumbs.append_breadcrumb_element('/desk/super-print-design', __('高级打印设计'), 'worksapce-breadcrumb');
             frappe.breadcrumbs.append_breadcrumb_element('/desk/print-template-store', __('模板平台'), 'title-text');
