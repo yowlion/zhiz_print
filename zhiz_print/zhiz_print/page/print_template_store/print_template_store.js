@@ -4,46 +4,47 @@
 frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({ parent: wrapper, title: __('模板平台'), single_column: false });
     $(wrapper).find('.page-form.row.hide').remove();
-    // 面包屑:高级打印设计 > 模板平台。用 Frappe breadcrumbs API 注册到 all[current_page],route 变化/回退由 container.update() 自动渲染(原手动设 DOM 会被 update().clear() 覆盖)。
-    // patch set_custom_breadcrumbs 支持 items 多级(原生只认单 route+label);仅对有 items 的生效,其他走原逻辑。
-    if (!frappe.breadcrumbs._pts_patched) {
-        const _orig_scb = frappe.breadcrumbs.set_custom_breadcrumbs;
-        frappe.breadcrumbs.set_custom_breadcrumbs = function (bc) {
-            if (bc && bc.items) {
-                this.$breadcrumbs.empty();
-                bc.items.forEach(it => this.append_breadcrumb_element(it.route, it.label));
-            } else {
-                _orig_scb.call(this, bc);
-            }
-        };
-        frappe.breadcrumbs._pts_patched = true;
-    }
-    frappe.breadcrumbs.all['print-template-store'] = {
-        type: 'Custom',
-        items: [
-            { route: '/app/super-print-design', label: __('高级打印设计') },
-            { route: '/app/print-template-store', label: __('模板平台') },
-        ],
-    };
-    frappe.breadcrumbs.update();
-
-    // EN16 适配:navbar-breadcrumbs 的 set_custom_breadcrumbs 只认单 route+label,多级 items 不渲染;
-    // 直接 DOM 清掉 home+空链接,填正确路径(v15 仍走上方 patch 的 API)
+    // 面包屑:v15 用 Frappe breadcrumbs API(patch set_custom_breadcrumbs 支持 items 多级);
+    // v16 原生 set_custom_breadcrumbs 只认单 route+label,Custom 渲染空链接,改手动 DOM 渲染完整面包屑
     const _fv = (frappe.boot.versions && frappe.boot.versions.frappe) || '';
-    if (_fv.startsWith('16')) {
-        // v16 原生 set_custom_breadcrumbs 不支持 items,Custom 会渲染空链接覆盖掉自动的 home+高级打印设计;
-        // 删 Custom 让 v16 自动渲染,MutationObserver 监听 update(会多次覆盖)持续追加 /模板平台
-        delete frappe.breadcrumbs.all['print-template-store'];
-        const appendTmpl = () => {
-            const $bc = $(wrapper).find('.navbar-breadcrumbs');
-            if ($bc.length && !$bc.find('a[href$="/desk/print-template-store"]').length) {
-                $bc.append('<li><a href="/desk/print-template-store" class="title-text"> / ' + __('模板平台') + '</a></li>');
-            }
+    const _isV16 = _fv.startsWith('16');
+    if (!_isV16) {
+        if (!frappe.breadcrumbs._pts_patched) {
+            const _orig_scb = frappe.breadcrumbs.set_custom_breadcrumbs;
+            frappe.breadcrumbs.set_custom_breadcrumbs = function (bc) {
+                if (bc && bc.items) {
+                    this.$breadcrumbs.empty();
+                    bc.items.forEach(it => this.append_breadcrumb_element(it.route, it.label));
+                } else {
+                    _orig_scb.call(this, bc);
+                }
+            };
+            frappe.breadcrumbs._pts_patched = true;
+        }
+        frappe.breadcrumbs.all['print-template-store'] = {
+            type: 'Custom',
+            items: [
+                { route: '/app/super-print-design', label: __('高级打印设计') },
+                { route: '/app/print-template-store', label: __('模板平台') },
+            ],
         };
-        appendTmpl();
+        frappe.breadcrumbs.update();
+    } else {
+        // v16: 手动渲染 home + 高级打印设计(workspace) + 模板平台(当前页),参考正常 doctype 结构;
+        // MutationObserver 应对 update 多次覆盖,去重防循环
+        const renderBC = () => {
+            const $bc = $(wrapper).find('.navbar-breadcrumbs');
+            if (!$bc.length) return;
+            if ($bc.find('a.title-text[href$="/desk/print-template-store"]').length) return;
+            $bc.empty();
+            $bc.append('<li><a href="/desk">' + frappe.utils.icon('home', 'icon-sm') + '</a></li>');
+            $bc.append('<li class="ellipsis"><a href="/desk/super-print-design" class="worksapce-breadcrumb">' + __('高级打印设计') + '</a></li>');
+            $bc.append('<li class="ellipsis"><a href="/desk/print-template-store" class="title-text" title="' + __('模板平台') + '">' + __('模板平台') + '</a></li>');
+        };
+        renderBC();
         const $bc0 = $(wrapper).find('.navbar-breadcrumbs');
         if ($bc0.length) {
-            new MutationObserver(appendTmpl).observe($bc0[0], { childList: true });
+            new MutationObserver(renderBC).observe($bc0[0], { childList: true });
         }
     }
 
