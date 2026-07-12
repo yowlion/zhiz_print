@@ -34,15 +34,16 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
 
     const $sidebar = $(wrapper).find('.layout-side-section');
     const $main = $(wrapper).find('.layout-main-section');
-    // 边栏移到右侧 + 收窄到原宽度的 2/3(layout-side-section 默认 col-2=2/12,2/3≈11%)
+    // EN16 layout: .layout-main(flex) > .layout-main-section-wrapper(80%) + .layout-side-section(20%)
+    // 用 CSS order 把边栏移右、收窄,不动 DOM(动 DOM 会把 side 塞进 wrapper 致堆叠)
     $(wrapper).addClass('pts-page');
-    $main.after($sidebar);
 
     // CSS
     $('head').append(`
     <style id="pts-layout">
-        .pts-page .layout-main-section { flex:1 1 auto !important; max-width:none !important; }
-        .pts-page .layout-side-section { flex:0 0 11% !important; max-width:11% !important; }
+        .pts-page .layout-main { display:flex !important; }
+        .pts-page .layout-main-section-wrapper { flex:1 1 auto !important; width:auto !important; max-width:none !important; order:1 !important; }
+        .pts-page .layout-side-section { flex:0 0 13% !important; max-width:13% !important; order:2 !important; }
         .pts-sidebar .pts-cat { padding:7px 12px; margin-bottom:3px; border-radius:7px; cursor:pointer; font-size:12px; color:#6e6e73; }
         .pts-sidebar .pts-cat:hover { background:#f5f5f7; }
         .pts-sidebar .pts-cat.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
