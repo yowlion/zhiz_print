@@ -30,22 +30,22 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         };
         frappe.breadcrumbs.update();
     } else {
-        // v16: 手动渲染 home + 高级打印设计(workspace) + 模板平台(当前页),参考正常 doctype 结构;
-        // MutationObserver 应对 update 多次覆盖,去重防循环
+        // v16: 不设 Custom all(原生 set_custom_breadcrumbs 只单级,Custom 渲染空链接);
+        // 用 frappe 自带 append_breadcrumb_element 在 update 后(只剩 home)补 workspace + 当前页
         const renderBC = () => {
             const $bc = $(wrapper).find('.navbar-breadcrumbs');
-            if (!$bc.length) return;
-            if ($bc.find('a.title-text[href$="/desk/print-template-store"]').length) return;
-            $bc.empty();
-            $bc.append('<li><a href="/desk">' + frappe.utils.icon('home', 'icon-sm') + '</a></li>');
-            $bc.append('<li class="ellipsis"><a href="/desk/super-print-design" class="worksapce-breadcrumb">' + __('高级打印设计') + '</a></li>');
-            $bc.append('<li class="ellipsis"><a href="/desk/print-template-store" class="title-text" title="' + __('模板平台') + '">' + __('模板平台') + '</a></li>');
+            if (!$bc.length || $bc.find('a[href$="/desk/print-template-store"]').length) return;
+            frappe.breadcrumbs.$breadcrumbs = $bc;
+            frappe.breadcrumbs.append_breadcrumb_element('/desk/super-print-design', __('高级打印设计'), 'worksapce-breadcrumb');
+            frappe.breadcrumbs.append_breadcrumb_element('/desk/print-template-store', __('模板平台'), 'title-text');
         };
-        renderBC();
-        const $bc0 = $(wrapper).find('.navbar-breadcrumbs');
-        if ($bc0.length) {
-            new MutationObserver(renderBC).observe($bc0[0], { childList: true });
-        }
+        [0, 100, 300, 800, 1500].forEach(ms => setTimeout(renderBC, ms));
+        const observeBC = () => {
+            const $bc0 = $(wrapper).find('.navbar-breadcrumbs');
+            if ($bc0.length) new MutationObserver(renderBC).observe($bc0[0], { childList: true });
+            else setTimeout(observeBC, 100);
+        };
+        observeBC();
     }
 
     // 顶部刷新按钮
