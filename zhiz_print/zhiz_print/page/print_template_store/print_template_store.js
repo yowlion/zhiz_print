@@ -27,13 +27,14 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     };
     frappe.breadcrumbs.update();
 
-    // EN16 适配:navbar-breadcrumbs 的 set_custom_breadcrumbs 只认单 route+label,不支持多级 items,
-    // 多级 patch 在 v16 不渲染。改为在 page-indicator-pill 显示 "高级打印设计 / 模板平台"(v15 仍用上方 breadcrumbs)
+    // EN16 适配:navbar-breadcrumbs 的 set_custom_breadcrumbs 只认单 route+label,多级 items 不渲染;
+    // 直接 DOM 清掉 home+空链接,填正确路径(v15 仍走上方 patch 的 API)
     const _fv = (frappe.boot.versions && frappe.boot.versions.frappe) || '';
     if (_fv.startsWith('16')) {
-        const $pill = $(wrapper).find('.page-indicator-pill');
-        if ($pill.length) {
-            $pill.html(`<a href="/app/super-print-design" style="color:inherit;text-decoration:none">${__('高级打印设计')}</a> / <a href="/app/print-template-store" style="color:inherit;text-decoration:none">${__('模板平台')}</a>`);
+        // v16 已自动渲染 home + 高级打印设计,在末尾追加 /模板平台(防重复 append)
+        const $bc = $(wrapper).find('.navbar-breadcrumbs');
+        if ($bc.length && !$bc.find('a[href*="print-template-store"]').length) {
+            $bc.append('<li><a href="/desk/print-template-store" class="title-text"> / ' + __('模板平台') + '</a></li>');
         }
     }
 
