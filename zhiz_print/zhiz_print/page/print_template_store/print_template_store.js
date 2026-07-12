@@ -34,10 +34,15 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
 
     const $sidebar = $(wrapper).find('.layout-side-section');
     const $main = $(wrapper).find('.layout-main-section');
+    // 边栏移到右侧 + 收窄到原宽度的 2/3(layout-side-section 默认 col-2=2/12,2/3≈11%)
+    $(wrapper).addClass('pts-page');
+    $main.after($sidebar);
 
     // CSS
     $('head').append(`
     <style id="pts-layout">
+        .pts-page .layout-main-section { flex:1 1 auto !important; max-width:none !important; }
+        .pts-page .layout-side-section { flex:0 0 11% !important; max-width:11% !important; }
         .pts-sidebar .pts-cat { padding:7px 12px; margin-bottom:3px; border-radius:7px; cursor:pointer; font-size:12px; color:#6e6e73; }
         .pts-sidebar .pts-cat:hover { background:#f5f5f7; }
         .pts-sidebar .pts-cat.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
