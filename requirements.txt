@@ -1,6 +1,6 @@
-frappe>=15.0.0
-# v16 的 uv 不接受 frappe 的 pypika URL 间接依赖,需提升为直接依赖(frappe v16 锁定的 fork hash)
-PyPika @ git+https://github.com/frappe/pypika@2c50e6142b2d61d2d243e466fdd5dc03b3d918f2
+# 不声明 frappe 依赖:v16 uv 解析 frappe 会触发 pypika URL 间接依赖冲突
+# (frappe v16 内部 pypika URL 的 commit 已 404,且与 zhiz_print 自声明的 pypika URL 冲突);
+# frappe+pypika 已在 bench 环境装好,zhiz_print 运行时 import frappe 即可,无需声明
 qrcode
 beautifulsoup4
 openpyxl
