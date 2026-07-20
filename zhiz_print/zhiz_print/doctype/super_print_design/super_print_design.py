@@ -1333,7 +1333,12 @@ class SuperPrintDesign(frappe.model.document.Document):
             # Auto wrap (default)
             row_style_attr += 'word-wrap:break-word;word-break:break-all;'
 
-        row_style_attr += 'line-height:1;'
+        # Auto Wrap 时按行间距设 line-height(行与行之间额外间距);其他模式 line-height:1
+        _line_spacing = int(row_style.get('line_spacing') or 0)
+        if row_display == '' and _line_spacing > 0:
+            row_style_attr += f'line-height:calc(1em + {_line_spacing}px);'
+        else:
+            row_style_attr += 'line-height:1;'
 
         html = f'<tr{tr_extra_attr} style="{row_style_attr}">'
 

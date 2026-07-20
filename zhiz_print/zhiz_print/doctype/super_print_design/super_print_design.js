@@ -583,7 +583,11 @@ class SuperPrintDesigner {
             const rowDisplay = rowDisplayCell?.row_display || '';
             if (rowDisplay === 'Fixed Height') rowStyleAttr += 'overflow:hidden;white-space:nowrap;';
             else if (rowDisplay === 'Auto Shrink Font') rowStyleAttr += 'overflow:hidden;';
-            rowStyleAttr += 'line-height:1;';
+            // Auto Wrap(空值)时按行间距设 line-height;其他模式 line-height:1
+            const _lineSpacing = parseInt(rowStyle.line_spacing, 10) || 0;
+            rowStyleAttr += (rowDisplay === '' && _lineSpacing > 0)
+                ? 'line-height:calc(1em + ' + _lineSpacing + 'px);'
+                : 'line-height:1;';
             const rowSelectedClass = this.selectedRow === row ? ' row-selected' : '';
 
             html += '<tr class="' + rowSelectedClass + '" style="' + rowStyleAttr + '">';
@@ -930,6 +934,7 @@ class SuperPrintDesigner {
         const rowStyle = this.rowStyles[row] || {};
         const _firstCellForRow = this.getFirstNonMergedCell(row);
         const rowType = _firstCellForRow?.row_type || '';
+        const rowDisplay = _firstCellForRow?.row_display || '';
         let cssPreview = '';
         if (rowStyle.height) cssPreview += 'height:' + rowStyle.height + 'px; ';
         if (rowStyle.font_size) cssPreview += 'font-size:' + rowStyle.font_size + 'px; ';
@@ -1003,6 +1008,17 @@ class SuperPrintDesigner {
                     '</select>' +
                 '</div>' +
             '</div>' +
+            '<div class="super-zprint-property-section" id="spd-row-spacing-section" style="display:' + (rowDisplay === '' ? '' : 'none') + '">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-arrows-v"></i> ' + __('Line Spacing') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Auto Wrap') + ')</small></div>' +
+                '<div class="property-section-body" style="padding:8px">' +
+                    '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
+                        '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-line-spacing" data-step="1">-</button>' +
+                        '<input type="number" id="row-line-spacing" class="form-control super-zprint-spin-input" value="' + (rowStyle.line_spacing || '') + '" min="0" max="20" step="1" placeholder="0">' +
+                        '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-line-spacing" data-step="1">+</button>' +
+                    '</div>' +
+                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('Extra spacing between wrapped lines, 0-20px (0=default)') + '</div>' +
+                '</div>' +
+            '</div>' +
             '<div class="super-zprint-property-section">' +
                 '<div class="super-zprint-property-section-header"><i class="fa fa-paint-brush"></i> ' + __('Row Style') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
@@ -1064,7 +1080,18 @@ class SuperPrintDesigner {
         if (rowDisplaySelect) {
             const firstNonMerged = this.getFirstNonMergedCell(row);
             rowDisplaySelect.value = firstNonMerged?.row_display || '';
-            rowDisplaySelect.addEventListener('change', (e) => this.setRowDisplay(row, e.target.value));
+            rowDisplaySelect.addEventListener('change', (e) => {
+                this.setRowDisplay(row, e.target.value);
+                const spacingSection = container.querySelector('#spd-row-spacing-section');
+                if (spacingSection) spacingSection.style.display = (e.target.value === '') ? '' : 'none';
+            });
+        }
+        // Line spacing (Auto Wrap only)
+        const lineSpacingInput = container.querySelector('#row-line-spacing');
+        if (lineSpacingInput) {
+            lineSpacingInput.addEventListener('change', (e) => {
+                this.updateRowStyle(row, 'line_spacing', parseInt(e.target.value) || undefined);
+            });
         }
         // Vertical alignment buttons
         container.querySelectorAll('.row-align-btn').forEach(btn => {
