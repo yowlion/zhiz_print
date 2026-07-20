@@ -370,3 +370,5 @@ Duplicate Current Page,复制当前页
 Page  duplicated from page ,第  页已从第  页复制
 Data Sort,数据排序
 row.N = display value of column N. Comma = multi-level. Empty = natural order.,row.N=第N列显示值。逗号分隔多级排序。留空=原顺序
+Line Spacing,行间距
+"Extra spacing between wrapped lines, 0-20px (0=default)",自动换行行间额外间距 0-20px(0=默认)
