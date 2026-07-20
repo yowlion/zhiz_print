@@ -974,9 +974,9 @@ class SuperPrintDesigner {
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px;margin-bottom:4px">' + __('Vertical Align') + ':</label>' +
                     '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="top" title="' + __('Top Align') + '"><i class="fa fa-arrow-up"></i> ' + __('Top') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="middle" title="' + __('Center') + '"><i class="fa fa-arrows-v"></i> ' + __('Center') + '</button>' +
-                        '<button type="button" class="btn btn-xs btn-default row-align-btn" data-align="bottom" title="' + __('Bottom Align') + '"><i class="fa fa-arrow-down"></i> ' + __('Bottom') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" style="font-size:9px" data-align="top" title="' + __('Top Align') + '"><i class="fa fa-arrow-up"></i> ' + __('Top') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" style="font-size:9px" data-align="middle" title="' + __('Center') + '"><i class="fa fa-arrows-v"></i> ' + __('Center') + '</button>' +
+                        '<button type="button" class="btn btn-xs btn-default row-align-btn" style="font-size:9px" data-align="bottom" title="' + __('Bottom Align') + '"><i class="fa fa-arrow-down"></i> ' + __('Bottom') + '</button>' +
                         '<button type="button" class="btn btn-xs btn-default" id="row-format-painter-btn" title="' + __('Format Painter') + '" style="width:auto;padding:0 6px;font-size:9px;margin-left:8px"><i class="fa fa-paint-brush"></i> ' + __('Format Painter') + '</button>' +
                     '</div>' +
                 '</div>' +
