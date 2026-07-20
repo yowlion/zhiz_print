@@ -602,7 +602,7 @@ class SuperPrintDesigner {
                     const rs = rowspan > 1 ? ' rowspan="' + rowspan + '"' : '';
                     const cs = colspan > 1 ? ' colspan="' + colspan + '"' : '';
 
-                    let cellStyle = 'line-height:1;';
+                    let cellStyle = 'line-height:inherit;';
                     let fontSize = rowStyle.font_size || this.fontSize;
                     cellStyle += 'font-size:' + fontSize + 'px;';
                     if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
@@ -648,7 +648,7 @@ class SuperPrintDesigner {
                         }
                     }
                 } else {
-                    let cellStyle = 'line-height:1;';
+                    let cellStyle = 'line-height:inherit;';
                     if (rowStyle.font_size) cellStyle += 'font-size:' + rowStyle.font_size + 'px;';
                     if (rowVa) cellStyle += 'vertical-align:' + rowVa + ';';
                     const colStyle = this.colStyles[col] || {};
@@ -1847,7 +1847,7 @@ class SuperPrintDesigner {
                     el.classList.remove('fp-painted');
                 });
                 // Apply the actual CSS style to the cell so user sees the change
-                let cellStyle = 'line-height:1;';
+                let cellStyle = 'line-height:inherit;';
                 if (this.formatPainterSourceCss) cellStyle += this.formatPainterSourceCss;
                 td.setAttribute('style', cellStyle);
                 td.classList.add('fp-painted');

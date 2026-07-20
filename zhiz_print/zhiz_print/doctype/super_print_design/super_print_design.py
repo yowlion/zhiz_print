@@ -1081,7 +1081,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
                 '* { box-sizing: border-box; }'
                 f'body {{ font-family: \'{font_family}\', sans-serif; font-size: {font_size}px; margin:0; padding:0; }}'
-                '.print-form-table td { padding:0; text-align:center; vertical-align:middle; line-height:1; }'
+                '.print-form-table td { padding:0; text-align:center; vertical-align:middle; line-height:inherit; }'
                 '.sp-measure-block { overflow:visible; }'
                 f'</style></head><body>{"".join(blocks_html)}</body></html>'
             )
@@ -1361,7 +1361,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 colspan_attr = f'colspan="{cell_data["colspan"]}"' if cell_data['colspan'] > 1 else ''
 
                 # Build styles
-                style_attr = cell_h_constraint + 'line-height:1;'
+                style_attr = cell_h_constraint + 'line-height:inherit;'
                 font_size = row_style.get(
                     'font_size') or (self.font_size or 12)
                 style_attr += f'font-size:{font_size}px;'
@@ -1525,7 +1525,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 html += f'<td {rowspan_attr} {colspan_attr}{shrink_attr} style="{style_attr}">{content}</td>'
             else:
                 # Empty cell - also needs merge border suppression
-                empty_style = cell_h_constraint + 'line-height:1;'
+                empty_style = cell_h_constraint + 'line-height:inherit;'
                 col_style = col_styles.get(str(col), {})
                 if row_va:
                     empty_style += f'vertical-align:{row_va};'
@@ -1701,7 +1701,7 @@ body {{
 	text-align: center;
 	vertical-align: middle;
 	overflow: hidden;
-	line-height: 1;
+	line-height: inherit;
 }}
 </style>
 </head>
