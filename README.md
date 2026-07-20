@@ -61,7 +61,7 @@ zhiz_print 用表格式网格设计打印版面,支持单元格合并、四种�
 
 ```bash
 cd /home/frappe/frappe-bench
-git clone git@gitee.com:gdzhiz/zhiz_print-dist.git apps/zhiz_print
+git clone git@gitee.com:gdzhiz/zhiz_print.git apps/zhiz_print
 bench get-app zhiz_print ./apps/zhiz_print
 bench --site <site-name> install-app zhiz_print
 bench build
