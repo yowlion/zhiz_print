@@ -229,13 +229,9 @@ def check_license_valid():
         _cache_result(result)
         return (False, result)
 
-    last_validated = frappe.utils.get_datetime(lic.last_validated_at) if lic.last_validated_at else None
-    offline_days = 0
-    if last_validated:
-        offline_days = (now - last_validated).days
-
+    # 远程验证:同步服务端 expires_at(服务端改了到期时间,客户端跟) + 通过则更新 last_validated_at;
+    # 验证失败/连不上都不阻断(只看过期时间;offline 7 天阻断已去掉)
     try:
-        remote_result = None
         if _can_remote_validate():
             remote_result = _call_license_api("validate", {
                 "license_key": lic.license_key,
@@ -243,74 +239,80 @@ def check_license_valid():
                 "site_name": frappe.local.site if hasattr(frappe.local, "site") else "",
                 "company_name": _get_company_name(),
             })
-            if remote_result and remote_result.get("valid"):
-                _mark_remote_validated()
-
-        if remote_result and remote_result.get("valid"):
-            new_hash = _compute_license_hash(
-                lic.license_key, lic.plan, lic.status, lic.expires_at,
-                lic.machine_id, now
-            )
-            frappe.db.set_value("Zprint License", lic.name, {
-                "last_validated_at": now,
-                "license_hash": new_hash,
-            })
-            lic.last_validated_at = now
-        elif remote_result and not remote_result.get("valid"):
-            error = remote_result.get("error", "")
-            if "locked" in error.lower():
-                result = {
-                    "valid": False,
-                    "status": "Locked",
-                    "plan": lic.plan,
-                    "expired": True,
-                    "expires_at": str(lic.expires_at),
-                    "message": "License has been locked. Please contact vendor.",
-                }
-                _cache_result(result)
-                return (False, result)
-            if "expired" in error.lower():
-                _update_license_status(lic.name, "Expired")
-                result = {
-                    "valid": False,
-                    "status": "Expired",
-                    "plan": lic.plan,
-                    "expired": True,
-                    "expires_at": str(lic.expires_at),
-                    "message": "License has been expired by the server.",
-                }
-                _cache_result(result)
-                return (False, result)
-            if "not found" in error.lower():
-                frappe.delete_doc("Zprint License", lic.name, force=True)
-                frappe.db.commit()
-                frappe.cache().delete_value(LICENSE_CACHE_KEY)
-                result = {
-                    "valid": False,
-                    "status": "No License",
-                    "plan": None,
-                    "expired": True,
-                    "message": "License no longer exists on server. Please refresh boot cache.",
-                }
-                _cache_result(result)
-                return (False, result)
+            if remote_result:
+                # 同步服务端到期时间(服务端修改了 expires_at,客户端跟着变)
+                server_expires = remote_result.get("expires_at")
+                if server_expires:
+                    server_expires_dt = frappe.utils.get_datetime(server_expires)
+                    if server_expires_dt != expires_at:
+                        new_hash = _compute_license_hash(
+                            lic.license_key, lic.plan, lic.status, server_expires_dt,
+                            lic.machine_id, lic.last_validated_at
+                        )
+                        frappe.db.set_value("Zprint License", lic.name, {
+                            "expires_at": server_expires_dt,
+                            "license_hash": new_hash,
+                        }, update_modified=False)
+                        lic.expires_at = server_expires_dt
+                        expires_at = server_expires_dt
+                # 远程通过:更新 last_validated_at
+                if remote_result.get("valid"):
+                    _mark_remote_validated()
+                    new_hash = _compute_license_hash(
+                        lic.license_key, lic.plan, lic.status, lic.expires_at,
+                        lic.machine_id, now
+                    )
+                    frappe.db.set_value("Zprint License", lic.name, {
+                        "last_validated_at": now,
+                        "license_hash": new_hash,
+                    }, update_modified=False)
+                    lic.last_validated_at = now
+                    # 同步后重新检查过期(服务端可能缩短了 expires_at)
+                    if now > expires_at:
+                        _update_license_status(lic.name, "Expired")
+                        result = {
+                            "valid": False,
+                            "status": "Expired",
+                            "plan": lic.plan,
+                            "expired": True,
+                            "expires_at": str(lic.expires_at),
+                            "message": "License expired on {0}.".format(
+                                frappe.utils.format_datetime(lic.expires_at)
+                            ),
+                        }
+                        _cache_result(result)
+                        return (False, result)
+                else:
+                    # 远程明确拒绝:locked(强制锁定)/not found(服务器不存在)阻断;
+                    # expired 不阻断(按本地 expires_at 判定)
+                    error = (remote_result.get("error") or "").lower()
+                    if "locked" in error:
+                        result = {
+                            "valid": False,
+                            "status": "Locked",
+                            "plan": lic.plan,
+                            "expired": True,
+                            "expires_at": str(lic.expires_at),
+                            "message": "License has been locked. Please contact vendor.",
+                        }
+                        _cache_result(result)
+                        return (False, result)
+                    if "not found" in error:
+                        frappe.delete_doc("Zprint License", lic.name, force=True)
+                        frappe.db.commit()
+                        frappe.cache().delete_value(LICENSE_CACHE_KEY)
+                        result = {
+                            "valid": False,
+                            "status": "No License",
+                            "plan": None,
+                            "expired": True,
+                            "message": "License no longer exists on server.",
+                        }
+                        _cache_result(result)
+                        return (False, result)
+                    # expired/其他:不阻断,按本地 expires_at
     except Exception:
-        company = _get_company_name()
-        if "昊凯精密" in company:
-            pass
-        elif offline_days > MAX_OFFLINE_DAYS:
-            result = {
-                "valid": False,
-                "status": "Offline Expired",
-                "plan": lic.plan,
-                "expired": True,
-                "expires_at": str(lic.expires_at),
-                "message": "Unable to verify license for {0} days. Please connect to internet.".format(
-                    offline_days
-                ),
-            }
-            _cache_result(result)
-            return (False, result)
+        pass  # 连不上服务器不阻断,只看到期时间
 
     result = {
         "valid": True,
