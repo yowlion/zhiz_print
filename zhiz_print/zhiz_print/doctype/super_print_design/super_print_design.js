@@ -948,7 +948,7 @@ class SuperPrintDesigner {
         let formHtml = '<form id="row-property-form" class="property-form">' +
             '<div class="super-zprint-property-section">' +
                 '<div class="super-zprint-property-section-header"><i class="fa fa-expand"></i> ' + __('Row Dimensions') + '</div>' +
-                '<div class="property-section-body" style="padding:8px">' +
+                '<div class="property-section-body" style="padding:3px 8px">' +
                     '<div class="super-zprint-layout-controls">' +
                         '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px">' + __('Row Height') + ':</label>' +
@@ -971,7 +971,7 @@ class SuperPrintDesigner {
             '</div>' +
             '<div class="super-zprint-property-section">' +
                 '<div class="super-zprint-property-section-header"><i class="fa fa-bars"></i> ' + __('Text Alignment') + '</div>' +
-                '<div class="property-section-body" style="padding:8px">' +
+                '<div class="property-section-body" style="padding:3px 8px">' +
                     '<label style="font-size:9px;margin-bottom:4px">' + __('Vertical Align') + ':</label>' +
                     '<div class="super-zprint-btn-group-wrap" style="margin-top:3px">' +
                         '<button type="button" class="btn btn-xs btn-default row-align-btn" style="font-size:9px" data-align="top" title="' + __('Top Align') + '"><i class="fa fa-arrow-up"></i> ' + __('Top') + '</button>' +
