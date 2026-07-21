@@ -829,6 +829,8 @@ class SuperPrintDesigner {
                     return;
                 }
                 this.handleCellClick(cell.dataset.cellId);
+            } else if (!e.target.closest('.spd-props,.spd-toolbar,.spd-page-bar,button,input,select,textarea')) {
+                this.showPageProperties();
             }
         });
 
