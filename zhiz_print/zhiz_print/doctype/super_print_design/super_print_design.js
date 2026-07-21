@@ -1235,14 +1235,14 @@ class SuperPrintDesigner {
             const el = container.querySelector(sel);
             if (el) el.addEventListener('change', (e) => {
                 this[memKey] = e.target.value;
-                // 直接更新画布对应区域 textContent（实时显示，不触发 refresh/rebuild → per-栏 align 保留）
                 const target = document.getElementById(this.designContainerId)?.querySelector(_childMap[memKey]);
                 if (target) target.textContent = e.target.value;
+                if (this.frm) this.frm.dirty();
             });
         });
         const _onAlignChange = (memKey, docKey, isHeader) => (e) => {
             this[memKey] = e.target.value;
-            if (this.frm) this.frm.set_value(docKey, e.target.value);
+            if (this.frm) this.frm.dirty();
             const _am = { 'Top': 'flex-start', 'Center': 'center', 'Bottom': 'flex-end' };
             const aid = isHeader ? '#spd-header-area' : '#spd-footer-area';
             const ael = document.getElementById(this.designContainerId)?.querySelector(aid);
@@ -1264,7 +1264,7 @@ class SuperPrintDesigner {
         _hAligns.forEach(([sel, docKey, targetSel]) => {
             const el = container.querySelector(sel);
             if (el) el.addEventListener('change', (e) => {
-                if (this.frm) this.frm.set_value(docKey, e.target.value);
+                if (this.frm) this.frm.dirty();
                 const target = document.getElementById(this.designContainerId)?.querySelector(targetSel);
                 if (target) target.style.textAlign = e.target.value.toLowerCase();
             });
