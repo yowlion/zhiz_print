@@ -1186,9 +1186,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                     getattr(self, 'page_header_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:{header_align};">'
-                page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{header_left}</div>'
-                page_html += f'<div style="flex:1;text-align:center;">{header_center}</div>'
-                page_html += f'<div style="flex:1;text-align:right;padding-right:{margin_right * PX_PER_MM:.1f}px;">{header_right}</div>'
+                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_header_left_align","") or "Left").lower()};padding-left:{margin_left * PX_PER_MM:.1f}px;">{header_left}</div>'
+                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_header_center_align","") or "Center").lower()};">{header_center}</div>'
+                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_header_right_align","") or "Right").lower()};padding-right:{margin_right * PX_PER_MM:.1f}px;">{header_right}</div>'
                 page_html += '</div>'
 
             # Content area
@@ -1227,9 +1227,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                     getattr(self, 'page_footer_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:{footer_align};">'
-                page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{footer_left}</div>'
-                page_html += f'<div style="flex:1;text-align:center;">{footer_center}</div>'
-                page_html += f'<div style="flex:1;text-align:right;padding-right:{margin_right * PX_PER_MM:.1f}px;">{footer_right}</div>'
+                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_footer_left_align","") or "Left").lower()};padding-left:{margin_left * PX_PER_MM:.1f}px;">{footer_left}</div>'
+                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_footer_center_align","") or "Center").lower()};">{footer_center}</div>'
+                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_footer_right_align","") or "Right").lower()};padding-right:{margin_right * PX_PER_MM:.1f}px;">{footer_right}</div>'
                 page_html += '</div>'
 
             page_html += '</div>'

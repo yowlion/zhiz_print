@@ -487,9 +487,9 @@ class SuperPrintDesigner {
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_header_align||this.pageHeaderAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;text-align:center;">' + (hc || '') + '</div>';
-            html += '<div style="flex:1;text-align:right;padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_header_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_header_center_align || 'Center').toLowerCase() + ';">' + (hc || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_header_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
             html += '</div>';
         }
         // Footer area (left/center/right columns)
@@ -504,9 +504,9 @@ class SuperPrintDesigner {
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_footer_align||this.pageFooterAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;text-align:center;">' + (fc || '') + '</div>';
-            html += '<div style="flex:1;text-align:right;padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_footer_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_footer_center_align || 'Center').toLowerCase() + ';">' + (fc || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
             html += '</div>';
         }
         return html;

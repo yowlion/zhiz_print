@@ -291,6 +291,9 @@
       "default": "Center",
       "description": "Vertical alignment of header within top margin"
     },
+    {"fieldname": "page_header_left_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Left", "hidden": 1},
+    {"fieldname": "page_header_center_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
+    {"fieldname": "page_header_right_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Right", "hidden": 1},
     {
       "fieldname": "section_page_footer",
       "fieldtype": "Section Break",
@@ -334,6 +337,9 @@
       "default": "Center",
       "description": "Vertical alignment of footer within bottom margin"
     },
+    {"fieldname": "page_footer_left_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Left", "hidden": 1},
+    {"fieldname": "page_footer_center_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
+    {"fieldname": "page_footer_right_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Right", "hidden": 1},
     {
       "fieldname": "items_tab",
       "fieldtype": "Tab Break",
