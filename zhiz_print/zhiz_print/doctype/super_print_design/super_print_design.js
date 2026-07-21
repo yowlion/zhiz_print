@@ -1146,8 +1146,8 @@ class SuperPrintDesigner {
         if (titleElement) {
             titleElement.innerHTML = '<i class="fa fa-file-o"></i> ' + __('Page Settings') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Page') + ' ' + this.currentPageNo + ')</small>';
         }
-        const hAlign = this.pageHeaderAlign || 'Center';
-        const fAlign = this.pageFooterAlign || 'Center';
+        const hAlign = this.frm?.doc?.page_header_align || this.pageHeaderAlign || 'Center';
+        const fAlign = this.frm?.doc?.page_footer_align || this.pageFooterAlign || 'Center';
         const ph = __('Placeholders: {page} {pages} {now_date} {now_time} {date_time}');
         const _row = (id, label, val) => '<textarea id="' + id + '" class="form-control input-sm" rows="2" placeholder="' + label + '" style="flex:1;font-size:11px;min-width:0">' + (val || '') + '</textarea>';
         const _align = (id, cur) => '<select id="' + id + '" class="form-control input-sm" style="margin-bottom:6px">' +
@@ -1206,17 +1206,6 @@ class SuperPrintDesigner {
         const _onAlignChange = (memKey, docKey) => (e) => {
             this[memKey] = e.target.value;
             if (this.frm) this.frm.set_value(docKey, e.target.value);
-            if (this.frm && this.frm.doc.name && !this.frm.doc.__islocal) {
-                frappe.db.set_value('Super Print Design', this.frm.doc.name, docKey, e.target.value).then(() => {
-                    frappe.show_alert({ message: __('对齐已保存,重新点演示预览查看效果'), indicator: 'green' });
-                    const overlay = document.getElementById('spd-preview-overlay');
-                    const btn = document.getElementById('spd-preview-sample-btn');
-                    if (overlay && btn && window.getComputedStyle(overlay).display !== 'none') {
-                        btn.click();  // 关闭当前预览
-                        setTimeout(() => btn.click(), 250);  // 重新打开(用新align重新渲染)
-                    }
-                });
-            }
         };
         const hAlignSel = container.querySelector('#page-header-align');
         if (hAlignSel) hAlignSel.addEventListener('change', _onAlignChange('pageHeaderAlign', 'page_header_align'));
