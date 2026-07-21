@@ -485,7 +485,7 @@ class SuperPrintDesigner {
             html += '<div class="spd-header-area" id="spd-header-area" style="' +
                 'position:absolute;top:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mTop + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
-                'display:flex;align-items:center;' +
+                'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.pageHeaderAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
             html += '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
             html += '<div style="flex:1;text-align:center;">' + (hc || '') + '</div>';
@@ -502,7 +502,7 @@ class SuperPrintDesigner {
             html += '<div class="spd-footer-area" id="spd-footer-area" style="' +
                 'position:absolute;bottom:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mBottom + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
-                'display:flex;align-items:center;' +
+                'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.pageFooterAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
             html += '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
             html += '<div style="flex:1;text-align:center;">' + (fc || '') + '</div>';
@@ -1208,8 +1208,9 @@ class SuperPrintDesigner {
             this[memKey] = e.target.value;
             if (this.frm) this.frm.set_value(docKey, e.target.value);
             const _am = { 'Top': 'flex-start', 'Center': 'center', 'Bottom': 'flex-end' };
-            const hf = document.getElementById(this.designContainerId)?.querySelector('#spd-header-footer');
-            if (hf && hf.children[isHeader ? 0 : 1]) hf.children[isHeader ? 0 : 1].style.alignItems = _am[e.target.value] || 'center';
+            const aid = isHeader ? '#spd-header-area' : '#spd-footer-area';
+            const ael = document.getElementById(this.designContainerId)?.querySelector(aid);
+            if (ael) ael.style.alignItems = _am[e.target.value] || 'center';
         };
         const hAlignSel = container.querySelector('#page-header-align');
         if (hAlignSel) hAlignSel.addEventListener('change', _onAlignChange('pageHeaderAlign', 'page_header_align', true));
