@@ -1149,7 +1149,7 @@ class SuperPrintDesigner {
         const hAlign = this.frm?.doc?.page_header_align || this.pageHeaderAlign || 'Center';
         const fAlign = this.frm?.doc?.page_footer_align || this.pageFooterAlign || 'Center';
         const ph = __('Placeholders: {page} {pages} {now_date} {now_time} {date_time}');
-        const _row = (id, label, val, aid, aval) => '<div style="display:flex;flex-direction:column;gap:2px;margin-bottom:4px"><label style="font-size:9px;margin:0">' + label + '区对齐</label><select id="' + aid + '" class="form-control input-sm" style="width:100% !important;font-size:10px;padding:2px"><option value="Left"' + (aval==='Left'?' selected':'') + '>L</option><option value="Center"' + (aval==='Center'?' selected':'') + '>C</option><option value="Right"' + (aval==='Right'?' selected':'') + '>R</option></select><label style="font-size:9px;margin:0">' + label + '区内容</label><textarea id="' + id + '" class="form-control input-sm" rows="1" placeholder="' + label + '区内容" style="width:100% !important;font-size:11px;height:36px !important;padding:2px 4px !important;line-height:16px">' + (val || '') + '</textarea></div>';
+        const _row = (id, label, val, aid, aval) => '<div style="display:flex;flex-direction:column;gap:2px;margin-bottom:4px"><label style="font-size:9px;margin:0">' + label + '对齐</label><select id="' + aid + '" class="form-control input-sm" style="width:100% !important;font-size:10px;padding:2px"><option value="Left"' + (aval==='Left'?' selected':'') + '>左对齐</option><option value="Center"' + (aval==='Center'?' selected':'') + '>居中对齐</option><option value="Right"' + (aval==='Right'?' selected':'') + '>右对齐</option></select><label style="font-size:9px;margin:0">' + label + '内容</label><textarea id="' + id + '" class="form-control input-sm" rows="1" placeholder="' + label + '内容" style="width:100% !important;font-size:11px;height:36px !important;padding:2px 4px !important;line-height:16px">' + (val || '') + '</textarea></div>';
         const _align = (id, cur) => '<select id="' + id + '" class="form-control input-sm" style="margin-bottom:6px">' +
             '<option value="Top"' + (cur==='Top'?' selected':'') + '>' + __('Top') + '</option>' +
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
@@ -1164,9 +1164,9 @@ class SuperPrintDesigner {
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
                         '<div style="display:flex;flex-direction:column;gap:4px">' +
-                            _row('page-header-left', '左', this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
-                            _row('page-header-center', '中', this.pageHeaderCenter, 'ph-ca', this.frm?.doc?.page_header_center_align || 'Center') +
-                            _row('page-header-right', '右', this.pageHeaderRight, 'ph-ra', this.frm?.doc?.page_header_right_align || 'Right') +
+                            _row('page-header-left', '左区', this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
+                            _row('page-header-center', '中区', this.pageHeaderCenter, 'ph-ca', this.frm?.doc?.page_header_center_align || 'Center') +
+                            _row('page-header-right', '右区', this.pageHeaderRight, 'ph-ra', this.frm?.doc?.page_header_right_align || 'Right') +
                         '</div>' +
                         '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
@@ -1175,9 +1175,9 @@ class SuperPrintDesigner {
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
                         '<div style="display:flex;flex-direction:column;gap:4px">' +
-                            _row('page-footer-left', '左', this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
-                            _row('page-footer-center', '中', this.pageFooterCenter, 'pf-ca', this.frm?.doc?.page_footer_center_align || 'Center') +
-                            _row('page-footer-right', '右', this.pageFooterRight, 'pf-ra', this.frm?.doc?.page_footer_right_align || 'Right') +
+                            _row('page-footer-left', '左区', this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
+                            _row('page-footer-center', '中区', this.pageFooterCenter, 'pf-ca', this.frm?.doc?.page_footer_center_align || 'Center') +
+                            _row('page-footer-right', '右区', this.pageFooterRight, 'pf-ra', this.frm?.doc?.page_footer_right_align || 'Right') +
                         '</div>' +
                         '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
