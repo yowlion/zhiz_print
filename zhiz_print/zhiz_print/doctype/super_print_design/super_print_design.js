@@ -884,17 +884,37 @@ class SuperPrintDesigner {
         this.bindPropertyEvents();
     }
 
+    _setToolbarState(mode) {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        const allBtns = ['spd-apply-grid','spd-font','spd-insert-row-btn','spd-delete-row-btn','spd-insert-col-btn','spd-delete-col-btn','btn-unmerge-left','btn-unmerge-inherit','spd-repeat-title-btn','spd-data-driven-btn','spd-normal-row-btn'];
+        const modeMap = {
+            'page': ['spd-apply-grid','spd-font'],
+            'cell': ['btn-unmerge-left','btn-unmerge-inherit'],
+            'row': ['spd-insert-row-btn','spd-delete-row-btn','spd-repeat-title-btn','spd-data-driven-btn','spd-normal-row-btn'],
+            'col': ['spd-insert-col-btn','spd-delete-col-btn'],
+        };
+        const enabled = modeMap[mode] || [];
+        allBtns.forEach(id => {
+            const btn = container.querySelector('#' + id);
+            if (!btn) return;
+            const on = enabled.includes(id);
+            btn.disabled = !on;
+            btn.style.opacity = on ? '' : '0.4';
+            btn.style.cursor = on ? '' : 'not-allowed';
+            btn.style.display = '';
+        });
+        const rtc = container.querySelector('.spd-row-type-controls');
+        if (rtc) rtc.style.display = (mode === 'row') ? '' : 'none';
+    }
+
     handleCellClick(cellId) {
         this.selectionMode = 'cell';
         this.selectedRow = null;
         this.selectedCol = null;
         this.currentCell = cellId;
         const container = document.getElementById(this.designContainerId);
-        container?.querySelector('.spd-row-type-controls')?.style && (container.querySelector('.spd-row-type-controls').style.display = 'none');
-        ['spd-insert-row-btn', 'spd-delete-row-btn', 'spd-insert-col-btn', 'spd-delete-col-btn'].forEach(id => {
-            const btn = container?.querySelector('#' + id);
-            if (btn) btn.style.display = 'none';
-        });
+        this._setToolbarState('cell');
         const [row, col] = this.parseCellId(cellId);
         const cell = this.grid[row - 1]?.[col - 1];
 
@@ -913,16 +933,7 @@ class SuperPrintDesigner {
         this.selectedCells = [];
         const container = document.getElementById(this.designContainerId);
         container?.querySelector('.spd-props')?.classList.add('visible');
-        const typeControls = container?.querySelector('.spd-row-type-controls');
-        if (typeControls) typeControls.style.display = '';
-        const insertRowBtn = container?.querySelector('#spd-insert-row-btn');
-        const deleteRowBtn = container?.querySelector('#spd-delete-row-btn');
-        const insertColBtn = container?.querySelector('#spd-insert-col-btn');
-        const deleteColBtn = container?.querySelector('#spd-delete-col-btn');
-        if (insertRowBtn) insertRowBtn.style.display = '';
-        if (deleteRowBtn) deleteRowBtn.style.display = '';
-        if (insertColBtn) insertColBtn.style.display = 'none';
-        if (deleteColBtn) deleteColBtn.style.display = 'none';
+        this._setToolbarState('row');
         this.renderRowProperties(row);
         this.refreshGrid();
     }
@@ -933,16 +944,8 @@ class SuperPrintDesigner {
         this.selectedRow = null;
         this.currentCell = null;
         const container = document.getElementById(this.designContainerId);
-        container?.querySelector('.spd-row-type-controls')?.style && (container.querySelector('.spd-row-type-controls').style.display = 'none');
         this.selectedCells = [];
-        const insertRowBtn = container?.querySelector('#spd-insert-row-btn');
-        const deleteRowBtn = container?.querySelector('#spd-delete-row-btn');
-        const insertColBtn = container?.querySelector('#spd-insert-col-btn');
-        const deleteColBtn = container?.querySelector('#spd-delete-col-btn');
-        if (insertRowBtn) insertRowBtn.style.display = 'none';
-        if (deleteRowBtn) deleteRowBtn.style.display = 'none';
-        if (insertColBtn) insertColBtn.style.display = '';
-        if (deleteColBtn) deleteColBtn.style.display = '';
+        this._setToolbarState('col');
         this.renderColProperties(col);
         container?.querySelector('.spd-props')?.classList.add('visible');
         this.refreshGrid();
@@ -1153,6 +1156,7 @@ class SuperPrintDesigner {
         this.currentCell = null;
         // 不调 refreshGrid(会重建 spd-header-area/spd-footer-area 导致 per-栏 align 重置为默认)
         container.querySelectorAll('.spd-cell-selected,.row-selected,.col-selected').forEach(el => el.classList.remove('spd-cell-selected','row-selected','col-selected'));
+        this._setToolbarState('page');
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
             titleElement.innerHTML = '<i class="fa fa-file-o"></i> ' + __('Page Settings') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Page') + ' ' + this.currentPageNo + ')</small>';
