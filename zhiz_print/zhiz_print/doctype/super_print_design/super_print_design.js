@@ -1223,12 +1223,21 @@ class SuperPrintDesigner {
             ['#page-footer-center', 'page_footer_center', 'pageFooterCenter'],
             ['#page-footer-right', 'page_footer_right', 'pageFooterRight'],
         ];
+        const _childMap = {
+            pageHeaderLeft: '#spd-header-area > div:nth-child(1)',
+            pageHeaderCenter: '#spd-header-area > div:nth-child(2)',
+            pageHeaderRight: '#spd-header-area > div:nth-child(3)',
+            pageFooterLeft: '#spd-footer-area > div:nth-child(1)',
+            pageFooterCenter: '#spd-footer-area > div:nth-child(2)',
+            pageFooterRight: '#spd-footer-area > div:nth-child(3)',
+        };
         fields.forEach(([sel, docKey, memKey]) => {
             const el = container.querySelector(sel);
             if (el) el.addEventListener('change', (e) => {
                 this[memKey] = e.target.value;
-                // 不调 frm.set_value(触发 form refresh → refreshGrid → spd-footer-area 重建 → per-栏 align 重置)
-                // save 时统一从 this.xxx 写 frm.doc
+                // 直接更新画布对应区域 textContent（实时显示，不触发 refresh/rebuild → per-栏 align 保留）
+                const target = document.getElementById(this.designContainerId)?.querySelector(_childMap[memKey]);
+                if (target) target.textContent = e.target.value;
             });
         });
         const _onAlignChange = (memKey, docKey, isHeader) => (e) => {
