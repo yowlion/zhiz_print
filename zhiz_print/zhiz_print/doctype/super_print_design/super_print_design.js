@@ -485,7 +485,7 @@ class SuperPrintDesigner {
             html += '<div class="spd-header-area" id="spd-header-area" style="' +
                 'position:absolute;top:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mTop + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
-                'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.pageHeaderAlign||'Center']||'center') + ';' +
+                'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_header_align||this.pageHeaderAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
             html += '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
             html += '<div style="flex:1;text-align:center;">' + (hc || '') + '</div>';
@@ -502,7 +502,7 @@ class SuperPrintDesigner {
             html += '<div class="spd-footer-area" id="spd-footer-area" style="' +
                 'position:absolute;bottom:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mBottom + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
-                'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.pageFooterAlign||'Center']||'center') + ';' +
+                'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_footer_align||this.pageFooterAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
             html += '<div style="flex:1;text-align:left;padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
             html += '<div style="flex:1;text-align:center;">' + (fc || '') + '</div>';
