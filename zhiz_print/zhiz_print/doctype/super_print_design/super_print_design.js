@@ -887,10 +887,10 @@ class SuperPrintDesigner {
     _setToolbarState(mode) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
-        const allBtns = ['spd-apply-grid','spd-font','spd-insert-row-btn','spd-delete-row-btn','spd-insert-col-btn','spd-delete-col-btn','btn-unmerge-left','btn-unmerge-inherit','spd-repeat-title-btn','spd-data-driven-btn','spd-normal-row-btn'];
+        const allBtns = ['spd-rows','spd-cols','spd-apply-grid','spd-font','spd-insert-row-btn','spd-delete-row-btn','spd-insert-col-btn','spd-delete-col-btn','btn-unmerge-left','btn-unmerge-inherit','spd-repeat-title-btn','spd-data-driven-btn','spd-normal-row-btn'];
         const modeMap = {
             'none': [],
-            'page': ['spd-apply-grid','spd-font'],
+            'page': ['spd-rows','spd-cols','spd-apply-grid','spd-font'],
             'cell': ['btn-unmerge-left','btn-unmerge-inherit'],
             'row': ['spd-insert-row-btn','spd-delete-row-btn','spd-repeat-title-btn','spd-data-driven-btn','spd-normal-row-btn'],
             'col': ['spd-insert-col-btn','spd-delete-col-btn'],
@@ -3641,7 +3641,7 @@ frappe.ui.form.on('Super Print Design', {
         }
         if (spd_designer) spd_designer = null;
         spd_designer = new SuperPrintDesigner(frm);
-        spd_designer._setToolbarState('none');
+        setTimeout(() => { if (spd_designer) spd_designer._setToolbarState('none'); }, 200);
 
         // 演示预览按钮 + toolbar 回设计(同步绑委托/事件,document 级不依赖按钮 DOM 时序,解决首次点击赶不上 setTimeout 100ms)
         const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
