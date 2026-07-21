@@ -265,6 +265,8 @@ class SuperPrintDesigner {
             this.pageHeaderCenter = this.frm.doc.page_header_center || '';
             this.pageHeaderRight = this.frm.doc.page_header_right || '';
             this.pageFooterLeft = this.frm.doc.page_footer_left || '';
+            this.pageHeaderAlign = this.frm.doc.page_header_align || 'Center';
+            this.pageFooterAlign = this.frm.doc.page_footer_align || 'Center';
             this.pageFooterCenter = this.frm.doc.page_footer_center || '';
             this.pageFooterRight = this.frm.doc.page_footer_right || '';
 
@@ -1209,7 +1211,10 @@ class SuperPrintDesigner {
                     frappe.show_alert({ message: __('对齐已保存,重新点演示预览查看效果'), indicator: 'green' });
                     const overlay = document.getElementById('spd-preview-overlay');
                     const btn = document.getElementById('spd-preview-sample-btn');
-                    if (overlay && btn && window.getComputedStyle(overlay).display !== 'none') btn.click();
+                    if (overlay && btn && window.getComputedStyle(overlay).display !== 'none') {
+                        btn.click();  // 关闭当前预览
+                        setTimeout(() => btn.click(), 250);  // 重新打开(用新align重新渲染)
+                    }
                 });
             }
         };
