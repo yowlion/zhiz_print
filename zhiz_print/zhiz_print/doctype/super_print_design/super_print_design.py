@@ -1151,6 +1151,10 @@ class SuperPrintDesign(frappe.model.document.Document):
         header_area_h = margin_top * PX_PER_MM
         footer_area_h = margin_bottom * PX_PER_MM
         content_top = header_area_h
+        # 页眉页脚垂直对齐(Top=flex-start / Center=center / Bottom=flex-end),默认居中
+        _align_map = {'Top': 'flex-start', 'Center': 'center', 'Bottom': 'flex-end'}
+        header_align = _align_map.get((getattr(self, 'page_header_align', '') or 'Center'), 'center')
+        footer_align = _align_map.get((getattr(self, 'page_footer_align', '') or 'Center'), 'center')
 
         total_pages = len(pages)
         pages_html = []
@@ -1181,7 +1185,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 header_right = self._replace_header_footer_placeholders(
                     getattr(self, 'page_header_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
-                page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:center;">'
+                page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:{header_align};">'
                 page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{header_left}</div>'
                 page_html += f'<div style="flex:1;text-align:center;">{header_center}</div>'
                 page_html += f'<div style="flex:1;text-align:right;padding-right:{margin_right * PX_PER_MM:.1f}px;">{header_right}</div>'
@@ -1222,7 +1226,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 footer_right = self._replace_header_footer_placeholders(
                     getattr(self, 'page_footer_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
-                page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:center;">'
+                page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:{footer_align};">'
                 page_html += f'<div style="flex:1;text-align:left;padding-left:{margin_left * PX_PER_MM:.1f}px;">{footer_left}</div>'
                 page_html += f'<div style="flex:1;text-align:center;">{footer_center}</div>'
                 page_html += f'<div style="flex:1;text-align:right;padding-right:{margin_right * PX_PER_MM:.1f}px;">{footer_right}</div>'

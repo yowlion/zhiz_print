@@ -167,6 +167,8 @@ class SuperPrintDesigner {
             this.pageFooterLeft = serverData.page_footer_left || '';
             this.pageFooterCenter = serverData.page_footer_center || '';
             this.pageFooterRight = serverData.page_footer_right || '';
+            this.pageHeaderAlign = serverData.page_header_align || 'Center';
+            this.pageFooterAlign = serverData.page_footer_align || 'Center';
 
             // Load paper info from server data
             if (serverData.paper) {
@@ -783,6 +785,7 @@ class SuperPrintDesigner {
                 const tab = e.target.closest('.spd-page-tab');
                 if (!tab) return;
                 this.switchPage(tab.dataset.page);
+                this.showPageProperties();
             });
         }
         this.renderPageTabs();
@@ -1117,6 +1120,89 @@ class SuperPrintDesigner {
                 frappe.show_alert({ message: __('Format Painter activated'), indicator: 'blue' });
             });
         }
+    }
+
+    // ==================== Page Properties (header/footer) ====================
+
+    showPageProperties() {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        this.selectionMode = 'page';
+        this.selectedRow = null;
+        this.selectedCol = null;
+        this.currentCell = null;
+        this.refreshGrid();
+        const titleElement = container.querySelector('.spd-props h4');
+        if (titleElement) {
+            titleElement.innerHTML = '<i class="fa fa-file-o"></i> ' + __('Page Settings') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Page') + ' ' + this.currentPageNo + ')</small>';
+        }
+        const hAlign = this.pageHeaderAlign || 'Center';
+        const fAlign = this.pageFooterAlign || 'Center';
+        const ph = __('Placeholders: {page} {pages} {now_date} {now_time} {date_time}');
+        const _row = (id, label, val) => '<textarea id="' + id + '" class="form-control input-sm" rows="2" placeholder="' + label + '" style="flex:1;font-size:11px;min-width:0">' + (val || '') + '</textarea>';
+        const _align = (id, cur) => '<select id="' + id + '" class="form-control input-sm" style="margin-bottom:6px">' +
+            '<option value="Top"' + (cur==='Top'?' selected':'') + '>' + __('Top') + '</option>' +
+            '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
+            '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
+        const formHtml = '<form id="row-property-form" class="property-form">' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
+                '<div class="property-section-body" style="padding:8px">' +
+                    '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
+                    '<div style="display:flex;gap:4px">' +
+                        _row('page-header-left', __('Left'), this.pageHeaderLeft) +
+                        _row('page-header-center', __('Center'), this.pageHeaderCenter) +
+                        _row('page-header-right', __('Right'), this.pageHeaderRight) +
+                    '</div>' +
+                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="super-zprint-property-section">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
+                '<div class="property-section-body" style="padding:8px">' +
+                    '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
+                    '<div style="display:flex;gap:4px">' +
+                        _row('page-footer-left', __('Left'), this.pageFooterLeft) +
+                        _row('page-footer-center', __('Center'), this.pageFooterCenter) +
+                        _row('page-footer-right', __('Right'), this.pageFooterRight) +
+                    '</div>' +
+                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
+                '</div>' +
+            '</div>' +
+        '</form>';
+        container.querySelector('#spd-prop-form').innerHTML = formHtml;
+        this.bindPagePropertyEvents();
+        container?.querySelector('.spd-props')?.classList.add('visible');
+    }
+
+    bindPagePropertyEvents() {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        const fields = [
+            ['#page-header-left', 'page_header_left', 'pageHeaderLeft'],
+            ['#page-header-center', 'page_header_center', 'pageHeaderCenter'],
+            ['#page-header-right', 'page_header_right', 'pageHeaderRight'],
+            ['#page-footer-left', 'page_footer_left', 'pageFooterLeft'],
+            ['#page-footer-center', 'page_footer_center', 'pageFooterCenter'],
+            ['#page-footer-right', 'page_footer_right', 'pageFooterRight'],
+        ];
+        fields.forEach(([sel, docKey, memKey]) => {
+            const el = container.querySelector(sel);
+            if (el) el.addEventListener('change', (e) => {
+                this[memKey] = e.target.value;
+                if (this.frm) this.frm.set_value(docKey, e.target.value);
+            });
+        });
+        const hAlignSel = container.querySelector('#page-header-align');
+        if (hAlignSel) hAlignSel.addEventListener('change', (e) => {
+            this.pageHeaderAlign = e.target.value;
+            if (this.frm) this.frm.set_value('page_header_align', e.target.value);
+        });
+        const fAlignSel = container.querySelector('#page-footer-align');
+        if (fAlignSel) fAlignSel.addEventListener('change', (e) => {
+            this.pageFooterAlign = e.target.value;
+            if (this.frm) this.frm.set_value('page_footer_align', e.target.value);
+        });
     }
 
     // ==================== Row Type / Row Display Effect ====================
@@ -2194,6 +2280,8 @@ class SuperPrintDesigner {
         this.frm.set_value('page_footer_left', this.pageFooterLeft);
         this.frm.set_value('page_footer_center', this.pageFooterCenter);
         this.frm.set_value('page_footer_right', this.pageFooterRight);
+        this.frm.set_value('page_header_align', this.pageHeaderAlign || 'Center');
+        this.frm.set_value('page_footer_align', this.pageFooterAlign || 'Center');
         this.frm.set_value('design_items', designItems);
         return { cells: designItems.length, pages: pageNumbers.length };
     }
