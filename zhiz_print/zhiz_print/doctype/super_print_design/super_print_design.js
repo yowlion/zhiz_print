@@ -487,9 +487,9 @@ class SuperPrintDesigner {
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_header_align||this.pageHeaderAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_header_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_header_center_align || 'Center').toLowerCase() + ';">' + (hc || '') + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_header_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.pageHeaderLeftAlign||this.frm?.doc?.page_header_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.pageHeaderCenterAlign||this.frm?.doc?.page_header_center_align || 'Center').toLowerCase() + ';">' + (hc || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.pageHeaderRightAlign||this.frm?.doc?.page_header_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
             html += '</div>';
         }
         // Footer area (left/center/right columns)
@@ -504,9 +504,9 @@ class SuperPrintDesigner {
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_footer_align||this.pageFooterAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_footer_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_footer_center_align || 'Center').toLowerCase() + ';">' + (fc || '') + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.pageFooterLeftAlign||this.frm?.doc?.page_footer_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center').toLowerCase() + ';">' + (fc || '') + '</div>';
+            html += '<div style="flex:1;text-align:' + (this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
             html += '</div>';
         }
         return html;
@@ -1175,9 +1175,9 @@ class SuperPrintDesigner {
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
                         '<div style="display:flex;flex-direction:column;gap:4px">' +
-                            _row('page-header-left', '左区', this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
-                            _row('page-header-center', '中区', this.pageHeaderCenter, 'ph-ca', this.frm?.doc?.page_header_center_align || 'Center') +
-                            _row('page-header-right', '右区', this.pageHeaderRight, 'ph-ra', this.frm?.doc?.page_header_right_align || 'Right') +
+                            _row('page-header-left', '左区', this.pageHeaderLeft, 'ph-la', this.pageHeaderLeftAlign||this.frm?.doc?.page_header_left_align || 'Left') +
+                            _row('page-header-center', '中区', this.pageHeaderCenter, 'ph-ca', this.pageHeaderCenterAlign||this.frm?.doc?.page_header_center_align || 'Center') +
+                            _row('page-header-right', '右区', this.pageHeaderRight, 'ph-ra', this.pageHeaderRightAlign||this.frm?.doc?.page_header_right_align || 'Right') +
                         '</div>' +
                         '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
@@ -1186,9 +1186,9 @@ class SuperPrintDesigner {
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
                         '<div style="display:flex;flex-direction:column;gap:4px">' +
-                            _row('page-footer-left', '左区', this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
-                            _row('page-footer-center', '中区', this.pageFooterCenter, 'pf-ca', this.frm?.doc?.page_footer_center_align || 'Center') +
-                            _row('page-footer-right', '右区', this.pageFooterRight, 'pf-ra', this.frm?.doc?.page_footer_right_align || 'Right') +
+                            _row('page-footer-left', '左区', this.pageFooterLeft, 'pf-la', this.pageFooterLeftAlign||this.frm?.doc?.page_footer_left_align || 'Left') +
+                            _row('page-footer-center', '中区', this.pageFooterCenter, 'pf-ca', this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center') +
+                            _row('page-footer-right', '右区', this.pageFooterRight, 'pf-ra', this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right') +
                         '</div>' +
                         '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
@@ -2709,6 +2709,12 @@ class SuperPrintDesigner {
         this.pageFooterRight = this.frm.doc.page_footer_right || '';
         this.pageHeaderAlign = this.frm.doc.page_header_align || 'Center';
         this.pageFooterAlign = this.frm.doc.page_footer_align || 'Center';
+        this.pageHeaderLeftAlign = this.frm.doc.page_header_left_align || 'Left';
+        this.pageHeaderCenterAlign = this.frm.doc.page_header_center_align || 'Center';
+        this.pageHeaderRightAlign = this.frm.doc.page_header_right_align || 'Right';
+        this.pageFooterLeftAlign = this.frm.doc.page_footer_left_align || 'Left';
+        this.pageFooterCenterAlign = this.frm.doc.page_footer_center_align || 'Center';
+        this.pageFooterRightAlign = this.frm.doc.page_footer_right_align || 'Right';
         this._renderHeaderFooterPreview();
         const headerArea = container.querySelector('#spd-header-area');
         const footerArea = container.querySelector('#spd-footer-area');
