@@ -1149,7 +1149,7 @@ class SuperPrintDesigner {
         const hAlign = this.frm?.doc?.page_header_align || this.pageHeaderAlign || 'Center';
         const fAlign = this.frm?.doc?.page_footer_align || this.pageFooterAlign || 'Center';
         const ph = __('Placeholders: {page} {pages} {now_date} {now_time} {date_time}');
-        const _row = (id, label, val) => '<textarea id="' + id + '" class="form-control input-sm" rows="2" placeholder="' + label + '" style="flex:1;font-size:11px;min-width:0">' + (val || '') + '</textarea>';
+        const _row = (id, label, val, aid, aval) => '<div style="display:flex;gap:4px;align-items:center"><textarea id="' + id + '" class="form-control input-sm" rows="1" placeholder="' + label + '" style="flex:1;font-size:11px;min-width:0">' + (val || '') + '</textarea><select id="' + aid + '" class="form-control input-sm" style="width:55px;font-size:10px;padding:2px"><option value="Left"' + (aval==='Left'?' selected':'') + '>L</option><option value="Center"' + (aval==='Center'?' selected':'') + '>C</option><option value="Right"' + (aval==='Right'?' selected':'') + '>R</option></select></div>';
         const _align = (id, cur) => '<select id="' + id + '" class="form-control input-sm" style="margin-bottom:6px">' +
             '<option value="Top"' + (cur==='Top'?' selected':'') + '>' + __('Top') + '</option>' +
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
@@ -1160,9 +1160,9 @@ class SuperPrintDesigner {
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
                     '<div style="display:flex;flex-direction:column;gap:4px">' +
-                        _row('page-header-left', __('Left'), this.pageHeaderLeft) +
-                        _row('page-header-center', __('Center'), this.pageHeaderCenter) +
-                        _row('page-header-right', __('Right'), this.pageHeaderRight) +
+                        _row('page-header-left', __('Left'), this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
+                        _row('page-header-center', __('Center'), this.pageHeaderCenter, 'ph-ca', this.frm?.doc?.page_header_center_align || 'Center') +
+                        _row('page-header-right', __('Right'), this.pageHeaderRight, 'ph-ra', this.frm?.doc?.page_header_right_align || 'Right') +
                     '</div>' +
                     '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                 '</div>' +
@@ -1172,9 +1172,9 @@ class SuperPrintDesigner {
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
                     '<div style="display:flex;flex-direction:column;gap:4px">' +
-                        _row('page-footer-left', __('Left'), this.pageFooterLeft) +
-                        _row('page-footer-center', __('Center'), this.pageFooterCenter) +
-                        _row('page-footer-right', __('Right'), this.pageFooterRight) +
+                        _row('page-footer-left', __('Left'), this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
+                        _row('page-footer-center', __('Center'), this.pageFooterCenter, 'pf-ca', this.frm?.doc?.page_footer_center_align || 'Center') +
+                        _row('page-footer-right', __('Right'), this.pageFooterRight, 'pf-ra', this.frm?.doc?.page_footer_right_align || 'Right') +
                     '</div>' +
                     '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                 '</div>' +
@@ -1216,6 +1216,23 @@ class SuperPrintDesigner {
         if (hAlignSel) hAlignSel.addEventListener('change', _onAlignChange('pageHeaderAlign', 'page_header_align', true));
         const fAlignSel = container.querySelector('#page-footer-align');
         if (fAlignSel) fAlignSel.addEventListener('change', _onAlignChange('pageFooterAlign', 'page_footer_align', false));
+        // per-栏水平对齐: select change → 写 frm.doc + 实时更新画布对应栏 text-align
+        const _hAligns = [
+            ['#ph-la', 'page_header_left_align', '#spd-header-area > div:nth-child(1)'],
+            ['#ph-ca', 'page_header_center_align', '#spd-header-area > div:nth-child(2)'],
+            ['#ph-ra', 'page_header_right_align', '#spd-header-area > div:nth-child(3)'],
+            ['#pf-la', 'page_footer_left_align', '#spd-footer-area > div:nth-child(1)'],
+            ['#pf-ca', 'page_footer_center_align', '#spd-footer-area > div:nth-child(2)'],
+            ['#pf-ra', 'page_footer_right_align', '#spd-footer-area > div:nth-child(3)'],
+        ];
+        _hAligns.forEach(([sel, docKey, targetSel]) => {
+            const el = container.querySelector(sel);
+            if (el) el.addEventListener('change', (e) => {
+                if (this.frm) this.frm.set_value(docKey, e.target.value);
+                const target = document.getElementById(this.designContainerId)?.querySelector(targetSel);
+                if (target) target.style.textAlign = e.target.value.toLowerCase();
+            });
+        });
         // textarea/select change 后实时刷新画布的页眉页脚预览
         container.querySelectorAll('#page-header-left,#page-header-center,#page-header-right,#page-footer-left,#page-footer-center,#page-footer-right,#page-header-align,#page-footer-align').forEach(el => {
             el.addEventListener('change', () => this._renderHeaderFooterPreview());
@@ -2323,6 +2340,10 @@ class SuperPrintDesigner {
         this.frm.set_value('page_footer_right', this.pageFooterRight);
         this.frm.set_value('page_header_align', this.pageHeaderAlign || 'Center');
         this.frm.set_value('page_footer_align', this.pageFooterAlign || 'Center');
+        ['page_header_left_align','page_header_center_align','page_header_right_align',
+         'page_footer_left_align','page_footer_center_align','page_footer_right_align'].forEach(f => {
+            this.frm.set_value(f, this.frm.doc[f] || '');
+        });
         this.frm.set_value('design_items', designItems);
         return { cells: designItems.length, pages: pageNumbers.length };
     }
