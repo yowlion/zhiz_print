@@ -3553,9 +3553,10 @@ frappe.ui.form.on('Super Print Design', {
                     fields: [{ fieldtype: 'Link', fieldname: 'sample_doc', label: __('Sample Document'), options: frm2.doc.target_doctype, reqd: 1, default: frm2.doc.sample_doc }],
                     primary_action_label: __('保存'),
                     primary_action(v) {
-                        frm2.set_value('sample_doc', v.sample_doc);
-                        frm2.save('Server').then(() => {
+                        if (!frm2.doc.name || frm2.doc.__islocal) { frappe.msgprint(__('请先保存设计文档')); return; }
+                        frappe.db.set_value('Super Print Design', frm2.doc.name, 'sample_doc', v.sample_doc).then(() => {
                             d.hide();
+                            frm2.doc.sample_doc = v.sample_doc;
                             frappe.show_alert({ message: __('已保存,刷新中'), indicator: 'green' });
                             setTimeout(() => location.reload(), 600);
                         }).catch(() => frappe.show_alert({ message: __('保存失败'), indicator: 'red' }));
