@@ -46,7 +46,8 @@
         <button class="btn btn-default btn-xs" id="spd-duplicate-page-btn" title="{{ _('Duplicate Current Page') }}"><i class="fa fa-copy" style="color:#17a2b8"></i></button>
         <button class="btn btn-default btn-xs" id="spd-paper-setting-btn" title="{{ _('Paper Setting') }}"><i class="fa fa-cog" style="color:#6c757d"></i></button>
         <button class="btn btn-default btn-xs" id="spd-remove-page-btn" style="display:none" title="{{ _('Remove Current Page') }}"><i class="fa fa-minus" style="color:#dc3545"></i></button>
-        <button class="btn btn-info btn-xs" id="spd-preview-sample-btn" style="margin-left:auto;{% if not sample_doc %}display:none;{% endif %}" title="{{ _('Preview with sample doc') }}"><i class="fa fa-eye"></i> {{ _("演示预览") }}</button>
+        <button class="btn btn-default btn-xs" id="spd-sample-doc-btn" style="margin-left:auto" title="{{ _('Set sample document') }}">{% if sample_doc %}<i class="fa fa-pencil"></i> {{ _("修改模板关联单据") }}{% else %}<i class="fa fa-plus"></i> {{ _("添加模板关联单据") }}{% endif %}</button>
+        <button class="btn btn-info btn-xs" id="spd-preview-sample-btn" style="{% if not sample_doc %}display:none;{% endif %}" title="{{ _('Preview with sample doc') }}"><i class="fa fa-eye"></i> {{ _("演示预览") }}</button>
     </div>
     <div class="spd-main">
         <div class="spd-preview-overlay" id="spd-preview-overlay"><iframe id="spd-preview-iframe"></iframe></div>

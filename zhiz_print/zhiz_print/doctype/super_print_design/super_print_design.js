@@ -3540,6 +3540,28 @@ frappe.ui.form.on('Super Print Design', {
 
         // 演示预览按钮 + toolbar 回设计(同步绑委托/事件,document 级不依赖按钮 DOM 时序,解决首次点击赶不上 setTimeout 100ms)
         const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
+        const sampleDocBtn = document.getElementById('spd-sample-doc-btn');
+        if (sampleDocBtn && !sampleDocBtn._pts_bound) {
+            sampleDocBtn._pts_bound = true;
+            sampleDocBtn.addEventListener('click', () => {
+                const frm2 = (typeof cur_frm !== 'undefined' && cur_frm) ? cur_frm : null;
+                if (!frm2 || !frm2.doc.target_doctype) { frappe.msgprint(__('请先设置目标单据类型')); return; }
+                const d = new frappe.ui.Dialog({
+                    title: __('选择模板演示单据'),
+                    fields: [{ fieldtype: 'Link', fieldname: 'sample_doc', label: __('Sample Document'), options: frm2.doc.target_doctype, reqd: 1, default: frm2.doc.sample_doc }],
+                    primary_action_label: __('保存'),
+                    primary_action(v) {
+                        frm2.set_value('sample_doc', v.sample_doc);
+                        frm2.save('Server').then(() => {
+                            d.hide();
+                            frappe.show_alert({ message: __('已保存,刷新中'), indicator: 'green' });
+                            setTimeout(() => location.reload(), 600);
+                        }).catch(() => frappe.show_alert({ message: __('保存失败'), indicator: 'red' }));
+                    }
+                });
+                d.show();
+            });
+        }
         // 演示预览用事件委托(document 级,不依赖 onclick 绑定时序/按钮重建,解决点击没反应)
         if (!document._pts_preview_delegated) {
             document._pts_preview_delegated = true;
