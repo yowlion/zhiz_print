@@ -830,7 +830,15 @@ class SuperPrintDesigner {
                 }
                 this.handleCellClick(cell.dataset.cellId);
             } else if (!e.target.closest('.spd-props,.spd-toolbar,.spd-page-bar,button,input,select,textarea')) {
+                const paper = container.querySelector('#spd-paper');
+                let preferTab = 'header';
+                if (paper) {
+                    const rect = paper.getBoundingClientRect();
+                    preferTab = (e.clientY - rect.top) < rect.height / 2 ? 'header' : 'footer';
+                }
                 this.showPageProperties();
+                const tabBtn = container.querySelector('.super-zprint-prop-tab[data-tab="' + preferTab + '"]');
+                if (tabBtn) tabBtn.click();
             }
         });
 
