@@ -918,6 +918,14 @@ class SuperPrintDesigner {
         this._setToolbarState('cell');
         const [row, col] = this.parseCellId(cellId);
         const cell = this.grid[row - 1]?.[col - 1];
+        // 非合并单元格(rowspan/colspan都<=1)禁用打散
+        const _isMerged = cell && (cell.rowspan > 1 || cell.colspan > 1);
+        if (!_isMerged) {
+            ['btn-unmerge-left', 'btn-unmerge-inherit'].forEach(id => {
+                const btn = container.querySelector('#' + id);
+                if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed'; }
+            });
+        }
 
         if (cell?._merged) return;
         if (!cell) this.createCellData(row, col);
