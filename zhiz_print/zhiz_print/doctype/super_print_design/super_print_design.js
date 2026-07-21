@@ -1182,6 +1182,7 @@ class SuperPrintDesigner {
         '</form>';
         container.querySelector('#spd-prop-form').innerHTML = formHtml;
         this.bindPagePropertyEvents();
+        this._renderHeaderFooterPreview();
         container?.querySelector('.spd-props')?.classList.add('visible');
     }
 
@@ -1211,6 +1212,34 @@ class SuperPrintDesigner {
         if (hAlignSel) hAlignSel.addEventListener('change', _onAlignChange('pageHeaderAlign', 'page_header_align'));
         const fAlignSel = container.querySelector('#page-footer-align');
         if (fAlignSel) fAlignSel.addEventListener('change', _onAlignChange('pageFooterAlign', 'page_footer_align'));
+        // textarea/select change 后实时刷新画布的页眉页脚预览
+        container.querySelectorAll('#page-header-left,#page-header-center,#page-header-right,#page-footer-left,#page-footer-center,#page-footer-right,#page-header-align,#page-footer-align').forEach(el => {
+            el.addEventListener('change', () => this._renderHeaderFooterPreview());
+        });
+    }
+
+    _renderHeaderFooterPreview() {
+        const container = document.getElementById(this.designContainerId);
+        const hf = container?.querySelector('#spd-header-footer');
+        if (!hf) return;
+        const ta = container.querySelector('.spd-table-area');
+        const ml = container.querySelector('.spd-margin-line');
+        const mTop = parseInt(ta?.style.top) || 0;
+        const mLeft = parseInt(ta?.style.left) || 0;
+        const mRight = parseInt(ta?.style.right) || 0;
+        const mBottom = parseInt(ml?.style.bottom) || 0;
+        const _am = { 'Top': 'flex-start', 'Center': 'center', 'Bottom': 'flex-end' };
+        const d = this.frm?.doc || {};
+        const hA = _am[d.page_header_align || this.pageHeaderAlign || 'Center'] || 'center';
+        const fA = _am[d.page_footer_align || this.pageFooterAlign || 'Center'] || 'center';
+        const _sec = (l, c, r) => `<div style="flex:1;text-align:left;padding:0 2px">${l||''}</div><div style="flex:1;text-align:center;padding:0 2px">${c||''}</div><div style="flex:1;text-align:right;padding:0 2px">${r||''}</div>`;
+        hf.innerHTML =
+            `<div style="position:absolute;top:0;left:${mLeft}px;right:${mRight}px;height:${mTop}px;display:flex;align-items:${hA};overflow:hidden;font-size:11px;color:#888;">` +
+                _sec(d.page_header_left||this.pageHeaderLeft, d.page_header_center||this.pageHeaderCenter, d.page_header_right||this.pageHeaderRight) +
+            `</div>` +
+            `<div style="position:absolute;bottom:0;left:${mLeft}px;right:${mRight}px;height:${mBottom}px;display:flex;align-items:${fA};overflow:hidden;font-size:11px;color:#888;">` +
+                _sec(d.page_footer_left||this.pageFooterLeft, d.page_footer_center||this.pageFooterCenter, d.page_footer_right||this.pageFooterRight) +
+            `</div>`;
     }
 
     // ==================== Row Type / Row Display Effect ====================
@@ -2627,6 +2656,9 @@ class SuperPrintDesigner {
         this.pageFooterLeft = this.frm.doc.page_footer_left || '';
         this.pageFooterCenter = this.frm.doc.page_footer_center || '';
         this.pageFooterRight = this.frm.doc.page_footer_right || '';
+        this.pageHeaderAlign = this.frm.doc.page_header_align || 'Center';
+        this.pageFooterAlign = this.frm.doc.page_footer_align || 'Center';
+        this._renderHeaderFooterPreview();
         const headerArea = container.querySelector('#spd-header-area');
         const footerArea = container.querySelector('#spd-footer-area');
         const mBottom = (this.marginBottom || 0) * PX_PER_MM;
