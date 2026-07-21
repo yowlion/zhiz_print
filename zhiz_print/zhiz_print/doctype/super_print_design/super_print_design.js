@@ -1155,8 +1155,10 @@ class SuperPrintDesigner {
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
             '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
         const formHtml = '<form id="row-property-form" class="property-form">' +
-            '<div class="super-zprint-prop-tab active" data-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
-            '<div class="super-zprint-prop-tab" data-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
+            '<div style="display:flex">' +
+                '<div class="super-zprint-prop-tab active" data-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
+                '<div class="super-zprint-prop-tab" data-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
+            '</div>' +
             '<div class="super-zprint-prop-tab-contents">' +
                 '<div class="super-zprint-prop-tab-content active" data-tab="header">' +
                     '<div class="property-section-body" style="padding:8px">' +
