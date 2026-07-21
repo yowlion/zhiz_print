@@ -1155,28 +1155,30 @@ class SuperPrintDesigner {
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
             '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
         const formHtml = '<form id="row-property-form" class="property-form">' +
-            '<div class="super-zprint-property-section">' +
-                '<div class="super-zprint-property-section-header spd-hf-tab" data-hf-tab="header" style="cursor:pointer;background:#e8e8e8"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
-                '<div class="property-section-body spd-hf-panel" data-hf-panel="header" style="padding:8px">' +
-                    '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
-                    '<div style="display:flex;flex-direction:column;gap:4px">' +
-                        _row('page-header-left', __('Left'), this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
-                        _row('page-header-center', __('Center'), this.pageHeaderCenter, 'ph-ca', this.frm?.doc?.page_header_center_align || 'Center') +
-                        _row('page-header-right', __('Right'), this.pageHeaderRight, 'ph-ra', this.frm?.doc?.page_header_right_align || 'Right') +
+            '<div class="super-zprint-prop-tab active" data-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
+            '<div class="super-zprint-prop-tab" data-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
+            '<div class="super-zprint-prop-tab-contents">' +
+                '<div class="super-zprint-prop-tab-content active" data-tab="header">' +
+                    '<div class="property-section-body" style="padding:8px">' +
+                        '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
+                        '<div style="display:flex;flex-direction:column;gap:4px">' +
+                            _row('page-header-left', __('Left'), this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
+                            _row('page-header-center', __('Center'), this.pageHeaderCenter, 'ph-ca', this.frm?.doc?.page_header_center_align || 'Center') +
+                            _row('page-header-right', __('Right'), this.pageHeaderRight, 'ph-ra', this.frm?.doc?.page_header_right_align || 'Right') +
+                        '</div>' +
+                        '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
-                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                 '</div>' +
-            '</div>' +
-            '<div class="super-zprint-property-section">' +
-                '<div class="super-zprint-property-section-header spd-hf-tab" data-hf-tab="footer" style="cursor:pointer"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
-                '<div class="property-section-body spd-hf-panel" data-hf-panel="footer" style="padding:8px;display:none">' +
-                    '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
-                    '<div style="display:flex;flex-direction:column;gap:4px">' +
-                        _row('page-footer-left', __('Left'), this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
-                        _row('page-footer-center', __('Center'), this.pageFooterCenter, 'pf-ca', this.frm?.doc?.page_footer_center_align || 'Center') +
-                        _row('page-footer-right', __('Right'), this.pageFooterRight, 'pf-ra', this.frm?.doc?.page_footer_right_align || 'Right') +
+                '<div class="super-zprint-prop-tab-content" data-tab="footer">' +
+                    '<div class="property-section-body" style="padding:8px">' +
+                        '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
+                        '<div style="display:flex;flex-direction:column;gap:4px">' +
+                            _row('page-footer-left', __('Left'), this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
+                            _row('page-footer-center', __('Center'), this.pageFooterCenter, 'pf-ca', this.frm?.doc?.page_footer_center_align || 'Center') +
+                            _row('page-footer-right', __('Right'), this.pageFooterRight, 'pf-ra', this.frm?.doc?.page_footer_right_align || 'Right') +
+                        '</div>' +
+                        '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
-                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                 '</div>' +
             '</div>' +
         '</form>';
@@ -1190,12 +1192,14 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
         // 页眉/页脚 tab 切换
-        container.querySelectorAll('.spd-hf-tab').forEach(t => {
+        container.querySelectorAll('.super-zprint-prop-tab').forEach(t => {
             t.addEventListener('click', () => {
-                const tab = t.dataset.hfTab;
-                container.querySelectorAll('.spd-hf-tab').forEach(x => x.style.background = '');
-                t.style.background = '#e8e8e8';
-                container.querySelectorAll('.spd-hf-panel').forEach(p => p.style.display = p.dataset.hfPanel === tab ? '' : 'none');
+                const tab = t.dataset.tab;
+                container.querySelectorAll('.super-zprint-prop-tab').forEach(x => x.classList.remove('active'));
+                t.classList.add('active');
+                container.querySelectorAll('.super-zprint-prop-tab-content').forEach(c => c.classList.remove('active'));
+                const target = container.querySelector('.super-zprint-prop-tab-content[data-tab="' + tab + '"]');
+                if (target) target.classList.add('active');
             });
         });
         const fields = [
