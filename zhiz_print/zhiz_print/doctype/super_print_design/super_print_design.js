@@ -1149,15 +1149,15 @@ class SuperPrintDesigner {
         const hAlign = this.frm?.doc?.page_header_align || this.pageHeaderAlign || 'Center';
         const fAlign = this.frm?.doc?.page_footer_align || this.pageFooterAlign || 'Center';
         const ph = __('Placeholders: {page} {pages} {now_date} {now_time} {date_time}');
-        const _row = (id, label, val, aid, aval) => '<div style="display:flex;gap:4px;align-items:center"><textarea id="' + id + '" class="form-control input-sm" rows="1" placeholder="' + label + '" style="flex:1;font-size:11px;min-width:0">' + (val || '') + '</textarea><select id="' + aid + '" class="form-control input-sm" style="width:55px;font-size:10px;padding:2px"><option value="Left"' + (aval==='Left'?' selected':'') + '>L</option><option value="Center"' + (aval==='Center'?' selected':'') + '>C</option><option value="Right"' + (aval==='Right'?' selected':'') + '>R</option></select></div>';
+        const _row = (id, label, val, aid, aval) => '<div style="display:flex;gap:4px;align-items:center"><select id="' + aid + '" class="form-control input-sm" style="width:50px;font-size:10px;padding:2px;flex-shrink:0"><option value="Left"' + (aval==='Left'?' selected':'') + '>L</option><option value="Center"' + (aval==='Center'?' selected':'') + '>C</option><option value="Right"' + (aval==='Right'?' selected':'') + '>R</option></select><textarea id="' + id + '" class="form-control input-sm" rows="1" placeholder="' + label + '" style="flex:1;font-size:11px;min-width:0">' + (val || '') + '</textarea></div>';
         const _align = (id, cur) => '<select id="' + id + '" class="form-control input-sm" style="margin-bottom:6px">' +
             '<option value="Top"' + (cur==='Top'?' selected':'') + '>' + __('Top') + '</option>' +
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
             '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
         const formHtml = '<form id="row-property-form" class="property-form">' +
             '<div class="super-zprint-property-section">' +
-                '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
-                '<div class="property-section-body" style="padding:8px">' +
+                '<div class="super-zprint-property-section-header spd-hf-tab" data-hf-tab="header" style="cursor:pointer;background:#e8e8e8"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
+                '<div class="property-section-body spd-hf-panel" data-hf-panel="header" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
                     '<div style="display:flex;flex-direction:column;gap:4px">' +
                         _row('page-header-left', __('Left'), this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
@@ -1168,8 +1168,8 @@ class SuperPrintDesigner {
                 '</div>' +
             '</div>' +
             '<div class="super-zprint-property-section">' +
-                '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
-                '<div class="property-section-body" style="padding:8px">' +
+                '<div class="super-zprint-property-section-header spd-hf-tab" data-hf-tab="footer" style="cursor:pointer"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
+                '<div class="property-section-body spd-hf-panel" data-hf-panel="footer" style="padding:8px;display:none">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
                     '<div style="display:flex;flex-direction:column;gap:4px">' +
                         _row('page-footer-left', __('Left'), this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
@@ -1193,8 +1193,8 @@ class SuperPrintDesigner {
         container.querySelectorAll('.spd-hf-tab').forEach(t => {
             t.addEventListener('click', () => {
                 const tab = t.dataset.hfTab;
-                container.querySelectorAll('.spd-hf-tab').forEach(x => x.className = 'btn btn-xs btn-default spd-hf-tab');
-                t.className = 'btn btn-xs btn-info spd-hf-tab';
+                container.querySelectorAll('.spd-hf-tab').forEach(x => x.style.background = '');
+                t.style.background = '#e8e8e8';
                 container.querySelectorAll('.spd-hf-panel').forEach(p => p.style.display = p.dataset.hfPanel === tab ? '' : 'none');
             });
         });
