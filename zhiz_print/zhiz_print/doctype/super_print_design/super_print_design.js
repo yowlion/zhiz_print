@@ -1201,16 +1201,22 @@ class SuperPrintDesigner {
                 if (this.frm) this.frm.set_value(docKey, e.target.value);
             });
         });
+        const _onAlignChange = (memKey, docKey) => (e) => {
+            this[memKey] = e.target.value;
+            if (this.frm) this.frm.set_value(docKey, e.target.value);
+            if (this.frm && this.frm.doc.name && !this.frm.doc.__islocal) {
+                frappe.db.set_value('Super Print Design', this.frm.doc.name, docKey, e.target.value).then(() => {
+                    frappe.show_alert({ message: __('对齐已保存,重新点演示预览查看效果'), indicator: 'green' });
+                    const overlay = document.getElementById('spd-preview-overlay');
+                    const btn = document.getElementById('spd-preview-sample-btn');
+                    if (overlay && btn && window.getComputedStyle(overlay).display !== 'none') btn.click();
+                });
+            }
+        };
         const hAlignSel = container.querySelector('#page-header-align');
-        if (hAlignSel) hAlignSel.addEventListener('change', (e) => {
-            this.pageHeaderAlign = e.target.value;
-            if (this.frm) this.frm.set_value('page_header_align', e.target.value);
-        });
+        if (hAlignSel) hAlignSel.addEventListener('change', _onAlignChange('pageHeaderAlign', 'page_header_align'));
         const fAlignSel = container.querySelector('#page-footer-align');
-        if (fAlignSel) fAlignSel.addEventListener('change', (e) => {
-            this.pageFooterAlign = e.target.value;
-            if (this.frm) this.frm.set_value('page_footer_align', e.target.value);
-        });
+        if (fAlignSel) fAlignSel.addEventListener('change', _onAlignChange('pageFooterAlign', 'page_footer_align'));
     }
 
     // ==================== Row Type / Row Display Effect ====================
