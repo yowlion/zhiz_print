@@ -1227,7 +1227,8 @@ class SuperPrintDesigner {
             const el = container.querySelector(sel);
             if (el) el.addEventListener('change', (e) => {
                 this[memKey] = e.target.value;
-                if (this.frm) this.frm.set_value(docKey, e.target.value);
+                // 不调 frm.set_value(触发 form refresh → refreshGrid → spd-footer-area 重建 → per-栏 align 重置)
+                // save 时统一从 this.xxx 写 frm.doc
             });
         });
         const _onAlignChange = (memKey, docKey, isHeader) => (e) => {
