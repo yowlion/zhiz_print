@@ -3641,7 +3641,6 @@ frappe.ui.form.on('Super Print Design', {
         }
         if (spd_designer) spd_designer = null;
         spd_designer = new SuperPrintDesigner(frm);
-        setTimeout(() => { if (spd_designer) spd_designer._setToolbarState('none'); }, 200);
 
         // 演示预览按钮 + toolbar 回设计(同步绑委托/事件,document 级不依赖按钮 DOM 时序,解决首次点击赶不上 setTimeout 100ms)
         const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
