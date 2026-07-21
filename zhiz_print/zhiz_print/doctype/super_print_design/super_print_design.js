@@ -778,6 +778,14 @@ class SuperPrintDesigner {
         // Multi-page tab events
         container.querySelector('#spd-add-page-btn')?.addEventListener('click', () => this.addPage());
         container.querySelector('#spd-duplicate-page-btn')?.addEventListener('click', () => this.duplicatePage());
+        container.querySelector('#spd-paper-setting-btn')?.addEventListener('click', () => {
+            const pname = this.frm.doc.print_paper;
+            if (!pname) { frappe.msgprint(__('请先在设计中设置纸张')); return; }
+            const dlg = new frappe.ui.Dialog({ title: __('纸张设置') + ' - ' + pname });
+            dlg.$body.html('<iframe src="/app/super-print-paper/' + encodeURIComponent(pname) + '" style="width:100%;height:70vh;border:0;"></iframe>');
+            dlg.$wrapper.find('.modal-dialog').css('max-width', '900px');
+            dlg.show();
+        });
         container.querySelector('#spd-remove-page-btn')?.addEventListener('click', () => this.removePage(this.currentPageNo));
         const tabsEl = container.querySelector('#spd-page-tabs');
         if (tabsEl) {
