@@ -1151,7 +1151,8 @@ class SuperPrintDesigner {
         this.selectedRow = null;
         this.selectedCol = null;
         this.currentCell = null;
-        this.refreshGrid();
+        // 不调 refreshGrid(会重建 spd-header-area/spd-footer-area 导致 per-栏 align 重置为默认)
+        container.querySelectorAll('.spd-cell-selected,.row-selected,.col-selected').forEach(el => el.classList.remove('spd-cell-selected','row-selected','col-selected'));
         const titleElement = container.querySelector('.spd-props h4');
         if (titleElement) {
             titleElement.innerHTML = '<i class="fa fa-file-o"></i> ' + __('Page Settings') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Page') + ' ' + this.currentPageNo + ')</small>';
