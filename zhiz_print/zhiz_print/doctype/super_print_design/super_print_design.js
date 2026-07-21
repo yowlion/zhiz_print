@@ -3540,10 +3540,12 @@ frappe.ui.form.on('Super Print Design', {
 
         // 演示预览按钮 + toolbar 回设计(同步绑委托/事件,document 级不依赖按钮 DOM 时序,解决首次点击赶不上 setTimeout 100ms)
         const ptsPreviewBtn = document.getElementById('spd-preview-sample-btn');
-        const sampleDocBtn = document.getElementById('spd-sample-doc-btn');
-        if (sampleDocBtn && !sampleDocBtn._pts_bound) {
-            sampleDocBtn._pts_bound = true;
-            sampleDocBtn.addEventListener('click', () => {
+        // 模板关联单据按钮:document 事件委托(不依赖按钮 DOM 重建,同演示预览)
+        if (!document._pts_sampledoc_delegated) {
+            document._pts_sampledoc_delegated = true;
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('#spd-sample-doc-btn');
+                if (!btn) return;
                 const frm2 = (typeof cur_frm !== 'undefined' && cur_frm) ? cur_frm : null;
                 if (!frm2 || !frm2.doc.target_doctype) { frappe.msgprint(__('请先设置目标单据类型')); return; }
                 const d = new frappe.ui.Dialog({
