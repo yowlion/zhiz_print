@@ -1149,7 +1149,7 @@ class SuperPrintDesigner {
                 '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
-                    '<div style="display:flex;gap:4px">' +
+                    '<div style="display:flex;flex-direction:column;gap:4px">' +
                         _row('page-header-left', __('Left'), this.pageHeaderLeft) +
                         _row('page-header-center', __('Center'), this.pageHeaderCenter) +
                         _row('page-header-right', __('Right'), this.pageHeaderRight) +
@@ -1161,7 +1161,7 @@ class SuperPrintDesigner {
                 '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
-                    '<div style="display:flex;gap:4px">' +
+                    '<div style="display:flex;flex-direction:column;gap:4px">' +
                         _row('page-footer-left', __('Left'), this.pageFooterLeft) +
                         _row('page-footer-center', __('Center'), this.pageFooterCenter) +
                         _row('page-footer-right', __('Right'), this.pageFooterRight) +
