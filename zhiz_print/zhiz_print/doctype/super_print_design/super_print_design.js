@@ -1204,14 +1204,17 @@ class SuperPrintDesigner {
                 if (this.frm) this.frm.set_value(docKey, e.target.value);
             });
         });
-        const _onAlignChange = (memKey, docKey) => (e) => {
+        const _onAlignChange = (memKey, docKey, isHeader) => (e) => {
             this[memKey] = e.target.value;
             if (this.frm) this.frm.set_value(docKey, e.target.value);
+            const _am = { 'Top': 'flex-start', 'Center': 'center', 'Bottom': 'flex-end' };
+            const hf = document.getElementById(this.designContainerId)?.querySelector('#spd-header-footer');
+            if (hf && hf.children[isHeader ? 0 : 1]) hf.children[isHeader ? 0 : 1].style.alignItems = _am[e.target.value] || 'center';
         };
         const hAlignSel = container.querySelector('#page-header-align');
-        if (hAlignSel) hAlignSel.addEventListener('change', _onAlignChange('pageHeaderAlign', 'page_header_align'));
+        if (hAlignSel) hAlignSel.addEventListener('change', _onAlignChange('pageHeaderAlign', 'page_header_align', true));
         const fAlignSel = container.querySelector('#page-footer-align');
-        if (fAlignSel) fAlignSel.addEventListener('change', _onAlignChange('pageFooterAlign', 'page_footer_align'));
+        if (fAlignSel) fAlignSel.addEventListener('change', _onAlignChange('pageFooterAlign', 'page_footer_align', false));
         // textarea/select change 后实时刷新画布的页眉页脚预览
         container.querySelectorAll('#page-header-left,#page-header-center,#page-header-right,#page-footer-left,#page-footer-center,#page-footer-right,#page-header-align,#page-footer-align').forEach(el => {
             el.addEventListener('change', () => this._renderHeaderFooterPreview());
