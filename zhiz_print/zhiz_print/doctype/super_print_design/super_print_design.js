@@ -1155,9 +1155,12 @@ class SuperPrintDesigner {
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
             '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
         const formHtml = '<form id="row-property-form" class="property-form">' +
-            '<div class="super-zprint-property-section">' +
-                '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
-                '<div class="property-section-body" style="padding:8px">' +
+            '<div style="display:flex;gap:4px;margin-bottom:8px">' +
+                '<button type="button" class="btn btn-xs btn-info spd-hf-tab" data-hf-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Header') + '</button>' +
+                '<button type="button" class="btn btn-xs btn-default spd-hf-tab" data-hf-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Footer') + '</button>' +
+            '</div>' +
+            '<div class="spd-hf-panel" data-hf-panel="header">' +
+                '<div class="property-section-body" style="padding:4px 8px">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
                     '<div style="display:flex;flex-direction:column;gap:4px">' +
                         _row('page-header-left', __('Left'), this.pageHeaderLeft, 'ph-la', this.frm?.doc?.page_header_left_align || 'Left') +
@@ -1167,9 +1170,8 @@ class SuperPrintDesigner {
                     '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="super-zprint-property-section">' +
-                '<div class="super-zprint-property-section-header"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
-                '<div class="property-section-body" style="padding:8px">' +
+            '<div class="spd-hf-panel" data-hf-panel="footer" style="display:none">' +
+                '<div class="property-section-body" style="padding:4px 8px">' +
                     '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
                     '<div style="display:flex;flex-direction:column;gap:4px">' +
                         _row('page-footer-left', __('Left'), this.pageFooterLeft, 'pf-la', this.frm?.doc?.page_footer_left_align || 'Left') +
@@ -1189,6 +1191,15 @@ class SuperPrintDesigner {
     bindPagePropertyEvents() {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
+        // 页眉/页脚 tab 切换
+        container.querySelectorAll('.spd-hf-tab').forEach(t => {
+            t.addEventListener('click', () => {
+                const tab = t.dataset.hfTab;
+                container.querySelectorAll('.spd-hf-tab').forEach(x => x.className = 'btn btn-xs btn-default spd-hf-tab');
+                t.className = 'btn btn-xs btn-info spd-hf-tab';
+                container.querySelectorAll('.spd-hf-panel').forEach(p => p.style.display = p.dataset.hfPanel === tab ? '' : 'none');
+            });
+        });
         const fields = [
             ['#page-header-left', 'page_header_left', 'pageHeaderLeft'],
             ['#page-header-center', 'page_header_center', 'pageHeaderCenter'],
