@@ -509,6 +509,30 @@ class SuperPrintDesigner {
             html += '<div style="flex:1;text-align:' + (this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
             html += '</div>';
         }
+        // Left header area (竖排)
+        if (mLeft > 0) {
+            const lhContent = this.frm?.doc?.page_left_header || '';
+            const lhHA = ({'Left':'flex-start','Center':'center','Right':'flex-end'})[this.pageLeftHeaderHAlign||this.frm?.doc?.page_left_header_h_align||'Center'];
+            const lhVA = ({'Top':'flex-start','Center':'center','Bottom':'flex-end'})[this.pageLeftHeaderVAlign||this.frm?.doc?.page_left_header_v_align||'Center'];
+            const lhPlaceholder = '<span style="color:#ccc;font-size:10px;">' + __('Left Header') + '</span>';
+            html += '<div class="spd-left-header-area" id="spd-left-header-area" style="' +
+                'position:absolute;left:0;top:' + mTop + 'px;bottom:' + mBottom + 'px;width:' + mLeft + 'px;' +
+                'overflow:hidden;display:flex;flex-direction:column;justify-content:' + lhVA + ';align-items:' + lhHA + ';">' +
+                '<div style="writing-mode:vertical-rl;font-size:12px;color:#666;">' + (lhContent || lhPlaceholder) + '</div>' +
+                '</div>';
+        }
+        // Right footer area (竖排)
+        if (mRight > 0) {
+            const rfContent = this.frm?.doc?.page_right_footer || '';
+            const rfHA = ({'Left':'flex-start','Center':'center','Right':'flex-end'})[this.pageRightFooterHAlign||this.frm?.doc?.page_right_footer_h_align||'Center'];
+            const rfVA = ({'Top':'flex-start','Center':'center','Bottom':'flex-end'})[this.pageRightFooterVAlign||this.frm?.doc?.page_right_footer_v_align||'Center'];
+            const rfPlaceholder = '<span style="color:#ccc;font-size:10px;">' + __('Right Footer') + '</span>';
+            html += '<div class="spd-right-footer-area" id="spd-right-footer-area" style="' +
+                'position:absolute;right:0;top:' + + mTop + 'px;bottom:' + mBottom + 'px;width:' + mRight + 'px;' +
+                'overflow:hidden;display:flex;flex-direction:column;justify-content:' + rfVA + ';align-items:' + rfHA + ';">' +
+                '<div style="writing-mode:vertical-rl;font-size:12px;color:#666;">' + (rfContent || rfPlaceholder) + '</div>' +
+                '</div>';
+        }
         return html;
     }
 
