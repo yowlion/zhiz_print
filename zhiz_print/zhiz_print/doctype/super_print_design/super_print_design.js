@@ -858,11 +858,27 @@ class SuperPrintDesigner {
                 let preferTab = 'header';
                 if (paper) {
                     const rect = paper.getBoundingClientRect();
-                    preferTab = (e.clientY - rect.top) < rect.height / 2 ? 'header' : 'footer';
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    // 判断左眉/右脚/页眉/页脚区域
+                    const mLeftPx = parseInt(container.querySelector('.spd-table-area')?.style.left) || 0;
+                    const mRightPx = parseInt(container.querySelector('.spd-table-area')?.style.right) || 0;
+                    const mTopPx = parseInt(container.querySelector('.spd-table-area')?.style.top) || 0;
+                    const mBottomPx = parseInt(container.querySelector('.spd-margin-line')?.style.bottom) || 0;
+                    const contentW = rect.width - mLeftPx - mRightPx;
+                    const contentLeft = mLeftPx;
+                    const contentRight = rect.width - mRightPx;
+                    if (x < contentLeft) {
+                        preferTab = 'leftheader';
+                    } else if (x > contentRight) {
+                        preferTab = 'rightfooter';
+                    } else if (y < rect.height / 2) {
+                        preferTab = 'header';
+                    } else {
+                        preferTab = 'footer';
+                    }
                 }
-                this.showPageProperties();
-                const tabBtn = container.querySelector('.super-zprint-prop-tab[data-tab="' + preferTab + '"]');
-                if (tabBtn) tabBtn.click();
+                this.showPageProperties(preferTab);
             }
         });
 
@@ -1180,14 +1196,13 @@ class SuperPrintDesigner {
 
     // ==================== Page Properties (header/footer) ====================
 
-    showPageProperties() {
+    showPageProperties(preferTab) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
         this.selectionMode = 'page';
         this.selectedRow = null;
         this.selectedCol = null;
         this.currentCell = null;
-        // 不调 refreshGrid(会重建 spd-header-area/spd-footer-area 导致 per-栏 align 重置为默认)
         container.querySelectorAll('.spd-cell-selected,.row-selected,.col-selected').forEach(el => el.classList.remove('spd-cell-selected','row-selected','col-selected'));
         this._setToolbarState('page');
         const titleElement = container.querySelector('.spd-props h4');
@@ -1203,12 +1218,14 @@ class SuperPrintDesigner {
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
             '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
         const formHtml = '<form id="row-property-form" class="property-form">' +
-            '<div style="display:flex">' +
-                '<div class="super-zprint-prop-tab active" data-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Page Header') + '</div>' +
-                '<div class="super-zprint-prop-tab" data-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Page Footer') + '</div>' +
+            '<div style="display:flex;flex-wrap:wrap">' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Header') + '</div>' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='footer'?' active':'') + '" data-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Footer') + '</div>' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='leftheader'?' active':'') + '" data-tab="leftheader"><i class="fa fa-arrow-left"></i> ' + __('Left Header') + '</div>' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='rightfooter'?' active':'') + '" data-tab="rightfooter"><i class="fa fa-arrow-right"></i> ' + __('Right Footer') + '</div>' +
             '</div>' +
             '<div class="super-zprint-prop-tab-contents">' +
-                '<div class="super-zprint-prop-tab-content active" data-tab="header">' +
+                '<div class="super-zprint-prop-tab-content' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header">' +
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
                         '<div style="display:flex;flex-direction:column;gap:4px">' +
@@ -1219,7 +1236,7 @@ class SuperPrintDesigner {
                         '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
                 '</div>' +
-                '<div class="super-zprint-prop-tab-content" data-tab="footer">' +
+                '<div class="super-zprint-prop-tab-content' + (preferTab==='footer'?' active':'') + '" data-tab="footer">' +
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
                         '<div style="display:flex;flex-direction:column;gap:4px">' +
@@ -1227,6 +1244,28 @@ class SuperPrintDesigner {
                             _row('page-footer-center', '中区', this.pageFooterCenter, 'pf-ca', this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center') +
                             _row('page-footer-right', '右区', this.pageFooterRight, 'pf-ra', this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right') +
                         '</div>' +
+                        '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="super-zprint-prop-tab-content' + (preferTab==='leftheader'?' active':'') + '" data-tab="leftheader">' +
+                    '<div class="property-section-body" style="padding:8px">' +
+                        '<label style="font-size:9px">水平对齐:</label>' +
+                        '<select id="lh-ha" class="form-control input-sm" style="margin-bottom:6px"><option value="Left"' + ((this.frm?.doc?.page_left_header_h_align||'Center')==='Left'?' selected':'') + '>左对齐</option><option value="Center"' + ((this.frm?.doc?.page_left_header_h_align||'Center')==='Center'?' selected':'') + '>居中</option><option value="Right"' + ((this.frm?.doc?.page_left_header_h_align||'Center')==='Right'?' selected':'') + '>右对齐</option></select>' +
+                        '<label style="font-size:9px">垂直对齐:</label>' +
+                        _align('lh-va', this.frm?.doc?.page_left_header_v_align || 'Center') +
+                        '<label style="font-size:9px">左眉内容(竖排):</label>' +
+                        '<textarea id="page-left-header" class="form-control input-sm" rows="2" style="width:100% !important;font-size:11px">' + (this.frm?.doc?.page_left_header || '') + '</textarea>' +
+                        '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="super-zprint-prop-tab-content' + (preferTab==='rightfooter'?' active':'') + '" data-tab="rightfooter">' +
+                    '<div class="property-section-body" style="padding:8px">' +
+                        '<label style="font-size:9px">水平对齐:</label>' +
+                        '<select id="rf-ha" class="form-control input-sm" style="margin-bottom:6px"><option value="Left"' + ((this.frm?.doc?.page_right_footer_h_align||'Center')==='Left'?' selected':'') + '>左对齐</option><option value="Center"' + ((this.frm?.doc?.page_right_footer_h_align||'Center')==='Center'?' selected':'') + '>居中</option><option value="Right"' + ((this.frm?.doc?.page_right_footer_h_align||'Center')==='Right'?' selected':'') + '>右对齐</option></select>' +
+                        '<label style="font-size:9px">垂直对齐:</label>' +
+                        _align('rf-va', this.frm?.doc?.page_right_footer_v_align || 'Center') +
+                        '<label style="font-size:9px">右脚内容(竖排):</label>' +
+                        '<textarea id="page-right-footer" class="form-control input-sm" rows="2" style="width:100% !important;font-size:11px">' + (this.frm?.doc?.page_right_footer || '') + '</textarea>' +
                         '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + ph + '</div>' +
                     '</div>' +
                 '</div>' +
@@ -1259,6 +1298,8 @@ class SuperPrintDesigner {
             ['#page-footer-left', 'page_footer_left', 'pageFooterLeft'],
             ['#page-footer-center', 'page_footer_center', 'pageFooterCenter'],
             ['#page-footer-right', 'page_footer_right', 'pageFooterRight'],
+            ['#page-left-header', 'page_left_header', 'pageLeftHeader'],
+            ['#page-right-footer', 'page_right_footer', 'pageRightFooter'],
         ];
         const _childMap = {
             pageHeaderLeft: '#spd-header-area > div:nth-child(1)',
@@ -1274,7 +1315,29 @@ class SuperPrintDesigner {
                 this[memKey] = e.target.value;
                 const target = document.getElementById(this.designContainerId)?.querySelector(_childMap[memKey]);
                 if (target) target.textContent = e.target.value;
+                // 左眉/右脚: 更新竖排内容
+                if (sel === '#page-left-header') {
+                    const lh = document.getElementById(this.designContainerId)?.querySelector('#spd-left-header-area > div');
+                    if (lh) lh.textContent = e.target.value || '';
+                }
+                if (sel === '#page-right-footer') {
+                    const rf = document.getElementById(this.designContainerId)?.querySelector('#spd-right-footer-area > div');
+                    if (rf) rf.textContent = e.target.value || '';
+                }
                 if (this.frm) this.frm.dirty();
+            });
+        });
+        // 左眉/右脚 垂直+水平对齐 change
+        [['#lh-va','#spd-left-header-area','justifyContent'], ['#rf-va','#spd-right-footer-area','justifyContent'],
+         ['#lh-ha','#spd-left-header-area','alignItems'], ['#rf-ha','#spd-right-footer-area','alignItems']].forEach(([sel, targetSel, prop]) => {
+            const el = container.querySelector(sel);
+            if (el) el.addEventListener('change', (e) => {
+                if (this.frm) this.frm.dirty();
+                const target = document.getElementById(this.designContainerId)?.querySelector(targetSel);
+                if (target) {
+                    const _map = { 'Top':'flex-start','Center':'center','Bottom':'flex-end','Left':'flex-start','Right':'flex-end' };
+                    target.style[prop] = _map[e.target.value] || 'center';
+                }
             });
         });
         const _onAlignChange = (memKey, docKey, isHeader) => (e) => {
@@ -2414,7 +2477,9 @@ class SuperPrintDesigner {
         this.frm.set_value('page_header_align', this.pageHeaderAlign || 'Center');
         this.frm.set_value('page_footer_align', this.pageFooterAlign || 'Center');
         ['page_header_left_align','page_header_center_align','page_header_right_align',
-         'page_footer_left_align','page_footer_center_align','page_footer_right_align'].forEach(f => {
+         'page_footer_left_align','page_footer_center_align','page_footer_right_align',
+         'page_left_header','page_left_header_h_align','page_left_header_v_align',
+         'page_right_footer','page_right_footer_h_align','page_right_footer_v_align'].forEach(f => {
             this.frm.set_value(f, this.frm.doc[f] || '');
         });
         this.frm.set_value('design_items', designItems);
