@@ -1313,6 +1313,7 @@ class SuperPrintDesigner {
             const el = container.querySelector(sel);
             if (el) el.addEventListener('change', (e) => {
                 this[memKey] = e.target.value;
+                if (this.frm) this.frm.doc[docKey] = e.target.value;
                 const target = document.getElementById(this.designContainerId)?.querySelector(_childMap[memKey]);
                 if (target) target.textContent = e.target.value;
                 // 左眉/右脚: 更新竖排内容
