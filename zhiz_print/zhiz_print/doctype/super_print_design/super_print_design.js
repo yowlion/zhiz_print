@@ -1329,11 +1329,13 @@ class SuperPrintDesigner {
             });
         });
         // 左眉/右脚 垂直+水平对齐 change
-        [['#lh-va','#spd-left-header-area','justifyContent'], ['#rf-va','#spd-right-footer-area','justifyContent'],
-         ['#lh-ha','#spd-left-header-area','alignItems'], ['#rf-ha','#spd-right-footer-area','alignItems']].forEach(([sel, targetSel, prop]) => {
+        [['#lh-va','#spd-left-header-area','justifyContent','page_left_header_v_align'],
+         ['#rf-va','#spd-right-footer-area','justifyContent','page_right_footer_v_align'],
+         ['#lh-ha','#spd-left-header-area','alignItems','page_left_header_h_align'],
+         ['#rf-ha','#spd-right-footer-area','alignItems','page_right_footer_h_align']].forEach(([sel, targetSel, prop, docKey]) => {
             const el = container.querySelector(sel);
             if (el) el.addEventListener('change', (e) => {
-                if (this.frm) this.frm.dirty();
+                if (this.frm) { this.frm.doc[docKey] = e.target.value; this.frm.dirty(); }
                 const target = document.getElementById(this.designContainerId)?.querySelector(targetSel);
                 if (target) {
                     const _map = { 'Top':'flex-start','Center':'center','Bottom':'flex-end','Left':'flex-start','Right':'flex-end' };
