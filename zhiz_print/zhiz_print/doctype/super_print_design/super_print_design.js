@@ -117,7 +117,7 @@ class SuperPrintDesigner {
     }
 
     getDefaultCellCss() {
-        return 'text-align: center; vertical-align: middle; border: 1px solid black; font-size: ' + this.fontSize + 'px;';
+        return 'text-align: center; vertical-align: middle; border: 1px solid black; padding: 2px; font-size: ' + this.fontSize + 'px;';
     }
 
     isMergedMark(value) {
@@ -2062,25 +2062,60 @@ class SuperPrintDesigner {
         const startCol = cell.col - 1;
         const oldRowspan = cell.rowspan;
         const oldColspan = cell.colspan;
+        const masterCss = cell.css_style || '';
 
+        // 智能边框打散:外圈子格保留 master 对应外框,内部相邻边 transparent
+        // → 打散后视觉与合并格一致(外框不变、内部无线),避免出现内部分割线
         for (let r = startRow; r < startRow + oldRowspan; r++) {
             for (let c = startCol; c < startCol + oldColspan; c++) {
-                if (r === startRow && c === startCol) continue;
-                if (r < this.rows && c < this.cols) {
+                if (r >= this.rows || c >= this.cols) continue;
+                const ri = r - startRow;
+                const ci = c - startCol;
+                const newCss = this._buildUnmergeCellCss(masterCss, ri, ci, oldRowspan, oldColspan);
+                if (r === startRow && c === startCol) {
+                    // master 位置:保留 cell_type/cell_value,只重设 border + 复位 rowspan/colspan
+                    cell.css_style = newCss;
+                    cell.rowspan = 1;
+                    cell.colspan = 1;
+                    this.cellDataMap[cell.cell_id] = cell;
+                    this.grid[r][c] = cell;
+                } else {
                     const newCell = this._createFreedCell(r + 1, c + 1, cell, inherit);
+                    newCell.css_style = newCss;
                     this.grid[r][c] = newCell;
                     this.cellDataMap[newCell.cell_id] = newCell;
                 }
             }
         }
 
-        cell.rowspan = 1;
-        cell.colspan = 1;
-        this.cellDataMap[cell.cell_id] = cell;
         this.refreshGrid();
         this.renderCellProperties(this.currentCell);
         this.frm.dirty();
         frappe.show_alert({ message: inherit ? __('Unmerged with content inherited') : __('Unmerged, content kept in first cell'), indicator: 'green' });
+    }
+
+    // 构建打散后单个子格的 css:外周边继承 master 对应外框,内部相邻边 transparent
+    _buildUnmergeCellCss(masterCss, ri, ci, totalRows, totalCols) {
+        const pairs = this.parseCssString(masterCss);
+        // 解析 master 四边 border(整体 border 拆到四边,分边 border 优先覆盖)
+        let top = pairs['border'] !== undefined ? pairs['border'] : null;
+        let right = top, bottom = top, left = top;
+        if (pairs['border-top'] !== undefined) top = pairs['border-top'];
+        if (pairs['border-right'] !== undefined) right = pairs['border-right'];
+        if (pairs['border-bottom'] !== undefined) bottom = pairs['border-bottom'];
+        if (pairs['border-left'] !== undefined) left = pairs['border-left'];
+        const HIDDEN = '1px solid transparent';
+        // 清除原 border 属性,重建四边
+        delete pairs['border'];
+        delete pairs['border-top'];
+        delete pairs['border-right'];
+        delete pairs['border-bottom'];
+        delete pairs['border-left'];
+        pairs['border-top'] = (ri === 0) ? (top || HIDDEN) : HIDDEN;
+        pairs['border-bottom'] = (ri === totalRows - 1) ? (bottom || HIDDEN) : HIDDEN;
+        pairs['border-left'] = (ci === 0) ? (left || HIDDEN) : HIDDEN;
+        pairs['border-right'] = (ci === totalCols - 1) ? (right || HIDDEN) : HIDDEN;
+        return Object.entries(pairs).map(([k, v]) => k + ':' + v).join('; ');
     }
 
     toggleFormatPainter() {
