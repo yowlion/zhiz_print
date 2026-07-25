@@ -106,16 +106,16 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 						<div class="sp-sidebar-body" id="sp-template-list">
 							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__('Loading...')}</div>
 						</div>
-						${enableNative ? `
-						<div class="sp-native-section" id="sp-native-section">
-							<div class="sp-native-header" id="sp-native-header">
-								<i class="fa fa-caret-right sp-native-caret"></i> 原生打印模板
-							</div>
-							<div class="sp-native-body" id="sp-native-list" style="display:none">
-								<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__('Loading...')}</div>
-							</div>
-						</div>` : ''}
 					</div>
+					${enableNative ? `
+					<div class="sp-native-section" id="sp-native-section">
+						<div class="sp-native-header" id="sp-native-header">
+							<i class="fa fa-caret-right sp-native-caret"></i> 原生打印模板
+						</div>
+						<div class="sp-native-body" id="sp-native-list" style="display:none">
+							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__('Loading...')}</div>
+						</div>
+					</div>` : ''}
 					<div class="sp-sidebar-bottom">
 						<div class="sp-sidebar-header" id="sp-log-header">
 							<i class="fa fa-history"></i> ${__('Printed')} <span id="sp-log-count">0</span> ${__('times')}
@@ -900,9 +900,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			listEl.innerHTML = '';
 			formats.forEach(f => {
 				const item = document.createElement('div');
-				item.className = 'sp-native-item';
+				item.className = 'sp-template-item sp-native-item';
 				item.dataset.name = f.name;
-				item.innerHTML = '<i class="fa fa-file-o"></i><span>' + this.escapeHtml(f.label) + '</span>';
+				item.innerHTML = '<i class="fa fa-file-text-o"></i><span>' + this.escapeHtml(f.label) + '</span>';
 				item.addEventListener('click', () => this.on_native_template_click(f, item));
 				listEl.appendChild(item);
 			});
