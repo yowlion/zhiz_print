@@ -1221,8 +1221,8 @@ class SuperPrintDesigner {
             '<div style="display:flex;flex-wrap:wrap">' +
                 '<div class="super-zprint-prop-tab' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Header') + '</div>' +
                 '<div class="super-zprint-prop-tab' + (preferTab==='footer'?' active':'') + '" data-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Footer') + '</div>' +
-                '<div class="super-zprint-prop-tab' + (preferTab==='leftheader'?' active':'') + '" data-tab="leftheader"><i class="fa fa-arrow-left"></i> ' + __('Left Header') + '</div>' +
-                '<div class="super-zprint-prop-tab' + (preferTab==='rightfooter'?' active':'') + '" data-tab="rightfooter"><i class="fa fa-arrow-right"></i> ' + __('Right Footer') + '</div>' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='leftheader'?' active':'') + '" data-tab="leftheader"><i class="fa fa-arrow-left"></i> 左眉</div>' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='rightfooter'?' active':'') + '" data-tab="rightfooter"><i class="fa fa-arrow-right"></i> 右脚</div>' +
             '</div>' +
             '<div class="super-zprint-prop-tab-contents">' +
                 '<div class="super-zprint-prop-tab-content' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header">' +
