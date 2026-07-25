@@ -1219,8 +1219,8 @@ class SuperPrintDesigner {
             '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
         const formHtml = '<form id="row-property-form" class="property-form">' +
             '<div style="display:flex;flex-wrap:wrap">' +
-                '<div class="super-zprint-prop-tab' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header"><i class="fa fa-arrow-up"></i> ' + __('Header') + '</div>' +
-                '<div class="super-zprint-prop-tab' + (preferTab==='footer'?' active':'') + '" data-tab="footer"><i class="fa fa-arrow-down"></i> ' + __('Footer') + '</div>' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header"><i class="fa fa-arrow-up"></i> 页眉</div>' +
+                '<div class="super-zprint-prop-tab' + (preferTab==='footer'?' active':'') + '" data-tab="footer"><i class="fa fa-arrow-down"></i> 页脚</div>' +
                 '<div class="super-zprint-prop-tab' + (preferTab==='leftheader'?' active':'') + '" data-tab="leftheader"><i class="fa fa-arrow-left"></i> 左眉</div>' +
                 '<div class="super-zprint-prop-tab' + (preferTab==='rightfooter'?' active':'') + '" data-tab="rightfooter"><i class="fa fa-arrow-right"></i> 右脚</div>' +
             '</div>' +
@@ -1274,7 +1274,36 @@ class SuperPrintDesigner {
         container.querySelector('#spd-prop-form').innerHTML = formHtml;
         this.bindPagePropertyEvents();
         this._renderHeaderFooterPreview();
+        this._highlightPageArea(preferTab || 'header', false);
         container?.querySelector('.spd-props')?.classList.add('visible');
+    }
+
+    // 页面设置区域高亮:tab→画布区域闪烁+着色
+    _pageAreaId(tab) {
+        return ({header:'spd-header-area', footer:'spd-footer-area',
+            leftheader:'spd-left-header-area', rightfooter:'spd-right-footer-area'})[tab];
+    }
+    _highlightPageArea(tab, flash) {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        this.clearPageAreaHighlights();
+        const areaId = this._pageAreaId(tab);
+        const area = areaId && container.querySelector('#' + areaId);
+        if (!area) return;
+        area.classList.add('spd-area-active');
+        if (flash && area.animate) {
+            area.animate([
+                { backgroundColor: 'rgba(255,193,7,0.55)' },
+                { backgroundColor: 'rgba(255,193,7,0.10)' },
+                { backgroundColor: 'rgba(255,193,7,0.55)' },
+                { backgroundColor: 'rgba(255,193,7,0.18)' }
+            ], { duration: 900, easing: 'ease-out' });
+        }
+    }
+    clearPageAreaHighlights() {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        container.querySelectorAll('.spd-area-active').forEach(el => el.classList.remove('spd-area-active'));
     }
 
     bindPagePropertyEvents() {
@@ -1289,6 +1318,7 @@ class SuperPrintDesigner {
                 container.querySelectorAll('.super-zprint-prop-tab-content').forEach(c => c.classList.remove('active'));
                 const target = container.querySelector('.super-zprint-prop-tab-content[data-tab="' + tab + '"]');
                 if (target) target.classList.add('active');
+                this._highlightPageArea(tab, true);
             });
         });
         const fields = [
@@ -1484,6 +1514,7 @@ class SuperPrintDesigner {
     renderColProperties(col) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
+        this.clearPageAreaHighlights();
 
         const colStyle = this.colStyles[col] || {};
         let cssPreview = '';
@@ -1594,6 +1625,7 @@ class SuperPrintDesigner {
     renderCellProperties(cellId) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
+        this.clearPageAreaHighlights();
         const [row, col] = this.parseCellId(cellId);
         let cell = this.grid[row - 1]?.[col - 1];
         if (!cell) return;

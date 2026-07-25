@@ -304,6 +304,8 @@
 .spd-grid td.selected { background:#e3f2fd !important; border:2px solid #2196f3 !important; }
 .spd-grid tr.row-selected td { background-color:#fff3e0 !important; }
 .spd-grid td.col-selected { background-color:#e8f5e9 !important; }
+/* 页面设置区域选中高亮(页眉/页脚/左眉/右脚 tab) */
+.spd-paper .spd-area-active { background-color:rgba(255,193,7,0.18); box-shadow:inset 0 0 0 2px rgba(255,152,0,0.75); border-radius:2px; }
 .super-zprint-cell-preview { display:block; font-size:8px; color:#999; }
 .super-zprint-cell-preview i { font-size:10px; margin-right:2px; }
 .super-zprint-cell-content { font-size:inherit; padding:2px; word-break:break-all; overflow:hidden; }
