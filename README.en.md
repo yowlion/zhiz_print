@@ -50,17 +50,11 @@ Python runtime automatically loads the matching `.so` file — no additional con
 ## Installation
 
 ```bash
-# Navigate to bench directory
 cd /home/frappe/frappe-bench
-
-# Clone and specify directory name (repo contains compiled artifacts, directory must be named zhiz_print)
-git clone git@gitee.com:gdzhiz/zhiz_print-dist.git apps/zhiz_print
-
-# Register the app correctly
+git clone git@gitee.com:gdzhiz/zhiz_print.git apps/zhiz_print
 bench get-app zhiz_print ./apps/zhiz_print
-
-# Install to site
 bench --site <site-name> install-app zhiz_print
+bench build
 ```
 
 ## Dependencies
@@ -196,11 +190,13 @@ You can set a row's `row_type` in the designer:
 | `qrcode` | QR code | Set `barcode_width`, `barcode_height` |
 | `image` | Image, set `cell_value` to image URL | None |
 
-### 5. Header & Footer
+### 5. Header / Footer / Left Header / Right Footer
 
-In the Header & Footer section of Super Print Design, you can set left, center, and right content for both header and footer. HTML is supported.
+The four edge bands of the paper (top/bottom/left/right margin bands) hold company name, page numbers, signature lines, copy markers, etc. Configure them in **Designer → Page Settings**; switch among the **Header / Footer / Left Header / Right Footer** tabs — the corresponding paper area **flashes and highlights** to show the current selection. All four areas **share one set of settings per page**.
 
-**Header & Footer Placeholders:**
+> Active area = paper margin band. Reserve the corresponding margin (`margin_top/bottom/left/right > 0`) in **Paper Setting / Super Print Paper** first; otherwise the area is not rendered.
+
+#### 5.1 Placeholders (common to all four areas)
 
 | Placeholder | Description | Example Output |
 |-------------|-------------|----------------|
@@ -228,6 +224,43 @@ Header right — print time:
 ```html
 <div style="text-align:right">Printed: {date_time}</div>
 ```
+
+#### 5.2 Header / Footer (horizontal · top/bottom margin bands)
+
+Each area is split horizontally into **Left / Center / Right** columns; each accepts HTML and is aligned independently:
+
+| Setting | Field | Values |
+|---|---|---|
+| Vertical align (whole row) | `page_header_align` / `page_footer_align` | Top / Center / Bottom |
+| Left column align | `page_header_left_align` / `page_footer_left_align` | Left / Center / Right |
+| Center column align | `page_header_center_align` / `page_footer_center_align` | Left / Center / Right |
+| Right column align | `page_header_right_align` / `page_footer_right_align` | Left / Center / Right |
+
+```
+Footer·Center:  Page {page} of {pages}        (center align = Center)
+Footer·Right:   Printed: {date_time}          (right align = Right)
+Header·Left:    No: {doc.name}                (left align = Left)
+Header vertical align: Bottom (row sits at the bottom of the margin band)
+```
+
+#### 5.3 Left Header / Right Footer (vertical · left/right margin bands)
+
+Text is rendered **vertically** (`writing-mode: vertical-rl`) along the left margin band (Left Header) or right margin band (Right Footer). Typical use: multi-copy form markers arranged vertically along the paper edge — e.g. a delivery note's right edge `⑴ Stub ⑵ Finance ⑶ Accounting ⑷ Warehouse ⑸ Receiver`.
+
+| Setting | Field | Values |
+|---|---|---|
+| Horizontal align (across band width) | `page_left_header_h_align` / `page_right_footer_h_align` | Left (toward edge) / Center / Right (toward table) |
+| Vertical align (along band length) | `page_left_header_v_align` / `page_right_footer_v_align` | Top / Center / Bottom |
+
+```
+Right Footer content:   ⑴ Stub   ⑵ Finance   ⑶ Accounting   ⑷ Warehouse   ⑸ Receiver
+Right Footer h-align:   Center (centered across the right margin band)
+Right Footer v-align:   Center (centered vertically)
+```
+
+#### 5.4 Spaces & layout (common to all four areas)
+
+All four areas **preserve consecutive spaces** (`white-space: pre-wrap`); you can pad with spaces to tune spacing — they are not collapsed by HTML. In horizontal areas (Header/Footer) spaces are horizontal gaps; in vertical areas (Left Header/Right Footer) spaces are vertical gaps along the writing direction.
 
 ### 6. Enable Condition
 

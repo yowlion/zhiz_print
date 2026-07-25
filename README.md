@@ -16,7 +16,7 @@
 6. [行控制与排序](#六行控制与排序)
 7. [单元格类型](#七单元格类型)
 8. [分页与多页设计](#八分页与多页设计)
-9. [页眉页脚](#九页眉页脚)
+9. [页眉/页脚/左眉/右脚](#九页眉页脚左眉右脚)
 10. [启用条件](#十启用条件-enable_condition)
 11. [草稿拦截](#十一草稿拦截-draft_no_print)
 12. [输出(预览/PDF/Excel/批量)](#十二输出预览pdfexcel批量)
@@ -426,11 +426,13 @@ page_count = 2
 
 ---
 
-## 九、页眉页脚
+## 九、页眉/页脚/左眉/右脚
 
-设计的 Header & Footer 区域,可分别设置左 / 中 / 右三个位置,支持 HTML。
+纸张的四条边缘区域(上/下/左/右边距带),可放公司名、页码、签字栏、联单标记等。在「设计器 → 页面设置」右侧栏配置,点 **页眉/页脚/左眉/右脚** 四个页签切换,对应纸张区域会**闪烁高亮**提示当前选中区。四区**每页共用同一套设置**(单页设置,非多页独立)。
 
-### 占位符
+> 作用区域 = 纸张边距带。需先在「纸张设置 / Super Print Paper」里留出对应边距(margin_top/bottom/left/right > 0),否则该区域不渲染。
+
+### 9.1 占位符(四区通用)
 
 | 占位符 | 含义 | 示例输出 |
 |---|---|---|
@@ -446,6 +448,43 @@ page_count = 2
 页脚右侧:  打印时间:{date_time}
 页眉左侧:  单号:{doc.name}
 ```
+
+### 9.2 页眉 / 页脚(水平横向 · 上/下边距带)
+
+每个区域横向分 **左区 / 中区 / 右区** 三列,各列可填 HTML,并独立配置对齐:
+
+| 设置项 | 字段 | 取值 |
+|---|---|---|
+| 垂直对齐(整行) | `page_header_align` / `page_footer_align` | Top 顶 / Center 中 / Bottom 底 |
+| 左区水平对齐 | `page_header_left_align` / `page_footer_left_align` | Left / Center / Right |
+| 中区水平对齐 | `page_header_center_align` / `page_footer_center_align` | Left / Center / Right |
+| 右区水平对齐 | `page_header_right_align` / `page_footer_right_align` | Left / Center / Right |
+
+```
+页脚·中区:    第 {page} 页 / 共 {pages} 页      (中区对齐=Center)
+页脚·右区:    打印时间:{date_time}              (右区对齐=Right)
+页眉·左区:    单号:{doc.name}                   (左区对齐=Left)
+页眉垂直对齐: Bottom(整行贴到边距带底部)
+```
+
+### 9.3 左眉 / 右脚(竖排 · 左/右边距带)
+
+文字**竖排**(`writing-mode: vertical-rl`),沿左边距带(左眉)或右边距带(右脚)纵向排布。典型用途:多联单的存根/财务/仓库标记竖排于纸边——如送货单右侧「⑴存根白 ⑵财务红 ⑶账务员蓝 ⑷仓库紫 ⑸收货黄」。
+
+| 设置项 | 字段 | 取值 |
+|---|---|---|
+| 水平对齐(宽度方向) | `page_left_header_h_align` / `page_right_footer_h_align` | Left 靠纸边 / Center / Right 靠表格 |
+| 垂直对齐(长度方向) | `page_left_header_v_align` / `page_right_footer_v_align` | Top 顶 / Center 中 / Bottom 底 |
+
+```
+右脚内容:     ⑴存根白   ⑵财务红   ⑶账务员蓝   ⑷仓库紫   ⑸收货黄
+右脚水平对齐:  Center(居中于右边距带)
+右脚垂直对齐:  Center(纵向居中)
+```
+
+### 9.4 空格与布局(四区通用)
+
+四区内容均**保留连续空格**(`white-space: pre-wrap`),可用空格手动撑开对齐,不会被 HTML 折叠。横向区域(页眉/页脚)的空格 = 横向间距;竖排区域(左眉/右脚)的空格 = 纵向间距(沿书写方向)。
 
 ---
 
