@@ -340,6 +340,12 @@
     {"fieldname": "page_footer_left_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Left", "hidden": 1},
     {"fieldname": "page_footer_center_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
     {"fieldname": "page_footer_right_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Right", "hidden": 1},
+    {"fieldname": "page_left_header", "fieldtype": "Code", "options": "HTML", "hidden": 1, "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"},
+    {"fieldname": "page_left_header_h_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
+    {"fieldname": "page_left_header_v_align", "fieldtype": "Select", "options": "Top\nCenter\nBottom", "default": "Center", "hidden": 1},
+    {"fieldname": "page_right_footer", "fieldtype": "Code", "options": "HTML", "hidden": 1, "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"},
+    {"fieldname": "page_right_footer_h_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
+    {"fieldname": "page_right_footer_v_align", "fieldtype": "Select", "options": "Top\nCenter\nBottom", "default": "Center", "hidden": 1},
     {
       "fieldname": "items_tab",
       "fieldtype": "Tab Break",
