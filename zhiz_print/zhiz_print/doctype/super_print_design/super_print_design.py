@@ -1186,9 +1186,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                     getattr(self, 'page_header_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:{header_align};">'
-                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_header_left_align","") or "Left").lower()};padding-left:{margin_left * PX_PER_MM:.1f}px;">{header_left}</div>'
-                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_header_center_align","") or "Center").lower()};">{header_center}</div>'
-                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_header_right_align","") or "Right").lower()};padding-right:{margin_right * PX_PER_MM:.1f}px;">{header_right}</div>'
+                page_html += f'<div style="flex:1;white-space:pre-wrap;text-align:{(getattr(self,"page_header_left_align","") or "Left").lower()};padding-left:{margin_left * PX_PER_MM:.1f}px;">{header_left}</div>'
+                page_html += f'<div style="flex:1;white-space:pre-wrap;text-align:{(getattr(self,"page_header_center_align","") or "Center").lower()};">{header_center}</div>'
+                page_html += f'<div style="flex:1;white-space:pre-wrap;text-align:{(getattr(self,"page_header_right_align","") or "Right").lower()};padding-right:{margin_right * PX_PER_MM:.1f}px;">{header_right}</div>'
                 page_html += '</div>'
 
             # Content area
@@ -1227,9 +1227,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                     getattr(self, 'page_footer_right', '') or '', page_num, total_pages, raw=(doc is None)
                 )
                 page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:{footer_align};">'
-                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_footer_left_align","") or "Left").lower()};padding-left:{margin_left * PX_PER_MM:.1f}px;">{footer_left}</div>'
-                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_footer_center_align","") or "Center").lower()};">{footer_center}</div>'
-                page_html += f'<div style="flex:1;text-align:{(getattr(self,"page_footer_right_align","") or "Right").lower()};padding-right:{margin_right * PX_PER_MM:.1f}px;">{footer_right}</div>'
+                page_html += f'<div style="flex:1;white-space:pre-wrap;text-align:{(getattr(self,"page_footer_left_align","") or "Left").lower()};padding-left:{margin_left * PX_PER_MM:.1f}px;">{footer_left}</div>'
+                page_html += f'<div style="flex:1;white-space:pre-wrap;text-align:{(getattr(self,"page_footer_center_align","") or "Center").lower()};">{footer_center}</div>'
+                page_html += f'<div style="flex:1;white-space:pre-wrap;text-align:{(getattr(self,"page_footer_right_align","") or "Right").lower()};padding-right:{margin_right * PX_PER_MM:.1f}px;">{footer_right}</div>'
                 page_html += '</div>'
 
             # Left header area (竖排)
@@ -1238,7 +1238,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             if margin_left > 0 and left_header:
                 _lha = {'Left':'flex-start','Center':'center','Right':'flex-end'}.get(getattr(self,'page_left_header_h_align','') or 'Center','center')
                 _lva = {'Top':'flex-start','Center':'center','Bottom':'flex-end'}.get(getattr(self,'page_left_header_v_align','') or 'Center','center')
-                page_html += f'<div style="position:absolute;left:0;top:{header_area_h:.1f}px;bottom:{footer_area_h:.1f}px;width:{margin_left * PX_PER_MM:.1f}px;overflow:hidden;display:flex;flex-direction:column;justify-content:{_lva};align-items:{_lha};"><div style="writing-mode:vertical-rl;font-size:12px;color:#666;">{left_header}</div></div>'
+                page_html += f'<div style="position:absolute;left:0;top:{header_area_h:.1f}px;bottom:{footer_area_h:.1f}px;width:{margin_left * PX_PER_MM:.1f}px;overflow:hidden;display:flex;flex-direction:column;justify-content:{_lva};align-items:{_lha};"><div style="writing-mode:vertical-rl;white-space:pre-wrap;font-size:12px;color:#666;">{left_header}</div></div>'
 
             # Right footer area (竖排)
             right_footer = self._replace_header_footer_placeholders(
@@ -1246,7 +1246,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             if margin_right > 0 and right_footer:
                 _rha = {'Left':'flex-start','Center':'center','Right':'flex-end'}.get(getattr(self,'page_right_footer_h_align','') or 'Center','center')
                 _rva = {'Top':'flex-start','Center':'center','Bottom':'flex-end'}.get(getattr(self,'page_right_footer_v_align','') or 'Center','center')
-                page_html += f'<div style="position:absolute;right:0;top:{header_area_h:.1f}px;bottom:{footer_area_h:.1f}px;width:{margin_right * PX_PER_MM:.1f}px;overflow:hidden;display:flex;flex-direction:column;justify-content:{_rva};align-items:{_rha};"><div style="writing-mode:vertical-rl;font-size:12px;color:#666;">{right_footer}</div></div>'
+                page_html += f'<div style="position:absolute;right:0;top:{header_area_h:.1f}px;bottom:{footer_area_h:.1f}px;width:{margin_right * PX_PER_MM:.1f}px;overflow:hidden;display:flex;flex-direction:column;justify-content:{_rva};align-items:{_rha};"><div style="writing-mode:vertical-rl;white-space:pre-wrap;font-size:12px;color:#666;">{right_footer}</div></div>'
 
             page_html += '</div>'
             pages_html.append(page_html)

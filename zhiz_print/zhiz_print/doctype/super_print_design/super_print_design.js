@@ -487,9 +487,9 @@ class SuperPrintDesigner {
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_header_align||this.pageHeaderAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;text-align:' + (this.pageHeaderLeftAlign||this.frm?.doc?.page_header_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.pageHeaderCenterAlign||this.frm?.doc?.page_header_center_align || 'Center').toLowerCase() + ';">' + (hc || '') + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.pageHeaderRightAlign||this.frm?.doc?.page_header_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
+            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderLeftAlign||this.frm?.doc?.page_header_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
+            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderCenterAlign||this.frm?.doc?.page_header_center_align || 'Center').toLowerCase() + ';">' + (hc || '') + '</div>';
+            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderRightAlign||this.frm?.doc?.page_header_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
             html += '</div>';
         }
         // Footer area (left/center/right columns)
@@ -504,9 +504,9 @@ class SuperPrintDesigner {
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_footer_align||this.pageFooterAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;text-align:' + (this.pageFooterLeftAlign||this.frm?.doc?.page_footer_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center').toLowerCase() + ';">' + (fc || '') + '</div>';
-            html += '<div style="flex:1;text-align:' + (this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
+            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterLeftAlign||this.frm?.doc?.page_footer_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
+            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center').toLowerCase() + ';">' + (fc || '') + '</div>';
+            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
             html += '</div>';
         }
         // Left header area (竖排)
@@ -518,7 +518,7 @@ class SuperPrintDesigner {
             html += '<div class="spd-left-header-area" id="spd-left-header-area" style="' +
                 'position:absolute;left:0;top:' + mTop + 'px;bottom:' + mBottom + 'px;width:' + mLeft + 'px;' +
                 'overflow:hidden;display:flex;flex-direction:column;justify-content:' + lhVA + ';align-items:' + lhHA + ';">' +
-                '<div style="writing-mode:vertical-rl;font-size:12px;color:#666;">' + (lhContent || lhPlaceholder) + '</div>' +
+                '<div style="writing-mode:vertical-rl;white-space:pre-wrap;font-size:12px;color:#666;">' + (lhContent || lhPlaceholder) + '</div>' +
                 '</div>';
         }
         // Right footer area (竖排)
@@ -530,7 +530,7 @@ class SuperPrintDesigner {
             html += '<div class="spd-right-footer-area" id="spd-right-footer-area" style="' +
                 'position:absolute;right:0;top:' + + mTop + 'px;bottom:' + mBottom + 'px;width:' + mRight + 'px;' +
                 'overflow:hidden;display:flex;flex-direction:column;justify-content:' + rfVA + ';align-items:' + rfHA + ';">' +
-                '<div style="writing-mode:vertical-rl;font-size:12px;color:#666;">' + (rfContent || rfPlaceholder) + '</div>' +
+                '<div style="writing-mode:vertical-rl;white-space:pre-wrap;font-size:12px;color:#666;">' + (rfContent || rfPlaceholder) + '</div>' +
                 '</div>';
         }
         return html;
