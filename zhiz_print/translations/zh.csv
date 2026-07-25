@@ -372,3 +372,6 @@ Data Sort,数据排序
 row.N = display value of column N. Comma = multi-level. Empty = natural order.,row.N=第N列显示值。逗号分隔多级排序。留空=原顺序
 Line Spacing,行间距
 "Extra spacing between wrapped lines, 0-20px (0=default)",自动换行行间额外间距 0-20px(0=默认)
+Native Print Formats,原生打印模板
+Enable Native Print Formats,启用原生打印模板
+"Show a collapsible ""Native Print Formats"" section in the print preview sidebar. Users can preview/print with frappe built-in Print Formats (e.g. Standard); native prints are recorded in print history too.","在打印预览侧栏显示可折叠的""原生打印模板""区域。用户可用 frappe 内置打印格式(如 Standard)预览/打印；原生打印亦记入打印历史。"

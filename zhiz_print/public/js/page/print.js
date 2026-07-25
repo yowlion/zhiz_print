@@ -95,16 +95,26 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		this.setup_menu();
 
 		// Layout
+		const enableNative = !!(frappe.boot.zhiz_print?.print_designer?.enable_native_print_formats);
 		this.page.main.html(`
 			<div class="super-print-layout">
 				<div class="super-print-sidebar" id="super-print-sidebar">
 					<div class="sp-sidebar-top">
 						<div class="sp-sidebar-header">
-							<i class="fa fa-print"></i> ${__('Print Templates')}
+							<i class="fa fa-print"></i> 高级打印模板
 						</div>
 						<div class="sp-sidebar-body" id="sp-template-list">
 							<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__('Loading...')}</div>
 						</div>
+						${enableNative ? `
+						<div class="sp-native-section" id="sp-native-section">
+							<div class="sp-native-header" id="sp-native-header">
+								<i class="fa fa-caret-right sp-native-caret"></i> 原生打印模板
+							</div>
+							<div class="sp-native-body" id="sp-native-list" style="display:none">
+								<div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__('Loading...')}</div>
+							</div>
+						</div>` : ''}
 					</div>
 					<div class="sp-sidebar-bottom">
 						<div class="sp-sidebar-header" id="sp-log-header">
@@ -128,6 +138,8 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		// Load template list
 		await this.load_templates();
+		// Load native print formats (sidebar collapsible section, if enabled in settings)
+		this.load_native_formats();
 	}
 
 	// ==================== Toolbar Override ====================
@@ -168,11 +180,18 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		} else {
 			this.page.set_primary_action(__('Print'), () => this.printit(), 'printer');
 			const pd = frappe.boot.zhiz_print?.print_designer;
-			if (pd?.allow_export_pdf !== false) {
-				this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
-			}
-			if (pd?.allow_export_excel !== false) {
-				this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
+			// Native format selected: PDF via frappe download_pdf, hide Excel (native has no excel)
+			if (this.current_native_format) {
+				if (pd?.allow_export_pdf !== false) {
+					this.page.add_button(__('Export PDF'), () => this.native_download_pdf(), { icon: 'es-solid-pdf' });
+				}
+			} else {
+				if (pd?.allow_export_pdf !== false) {
+					this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
+				}
+				if (pd?.allow_export_excel !== false) {
+					this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
+				}
 			}
 		}
 
@@ -230,6 +249,10 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		// Paper Settings → Open the paper document linked to current template
 		this.page.add_menu_item(__('Paper Settings'), () => {
+			if (this.current_native_format) {
+				frappe.show_alert({ message: '原生打印模板无纸张设置', indicator: 'blue' });
+				return;
+			}
 			const paper = this.current_design_info?.print_paper;
 			if (paper) {
 				frappe.set_route('Form', 'Super Print Paper', paper);
@@ -240,6 +263,10 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		// Print Design → Open the currently selected print design document
 		this.page.add_menu_item(__('Print Design'), () => {
+			if (this.current_native_format) {
+				frappe.show_alert({ message: '原生打印模板无高级设计', indicator: 'blue' });
+				return;
+			}
 			if (this.current_design) {
 				frappe.set_route('Form', 'Super Print Design', this.current_design);
 			} else {
@@ -310,9 +337,12 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	}
 
 	async on_template_click(design, el) {
-		// Highlight selected
-		document.querySelectorAll('.sp-template-item').forEach(i => i.classList.remove('active'));
+		// Highlight selected (clear both super-design items and native-format items)
+		document.querySelectorAll('.sp-template-item.active, .sp-native-item.active').forEach(i => i.classList.remove('active'));
 		el.classList.add('active');
+		// Switching back to a super design: clear native selection
+		this.current_native_format = null;
+		this.current_native_html = '';
 
 		this.current_design = design.name;
 		this.current_design_info = design;
@@ -768,7 +798,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	printit() {
 		if (this.is_super_print_mode) {
-			this.super_printit();
+			if (this.current_native_format) {
+				this.native_printit();
+			} else {
+				this.super_printit();
+			}
 		} else {
 			super.printit();
 		}
@@ -830,6 +864,167 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		};
 
 		this.load_print_logs();
+	}
+
+	// ==================== Native Print Format ====================
+
+	toggle_native_section() {
+		const body = document.getElementById('sp-native-list');
+		const caret = document.querySelector('.sp-native-caret');
+		if (!body) return;
+		const open = body.style.display !== 'none';
+		body.style.display = open ? 'none' : 'block';
+		if (caret) {
+			caret.classList.toggle('fa-caret-right', open);
+			caret.classList.toggle('fa-caret-down', !open);
+		}
+	}
+
+	async load_native_formats() {
+		const section = document.getElementById('sp-native-section');
+		const header = document.getElementById('sp-native-header');
+		const listEl = document.getElementById('sp-native-list');
+		if (!section || !listEl) return;  // native disabled in Zprint Setting
+		if (header) header.addEventListener('click', () => this.toggle_native_section());
+		try {
+			const res = await frappe.call({
+				method: 'zhiz_print.api.print_designer.get_native_print_formats',
+				args: { doctype: this.frm.doctype }
+			});
+			const formats = res.message || [];
+			if (formats.length === 0) {
+				listEl.innerHTML = '<div class="sp-empty">' + __('No print templates available') + '</div>';
+				return;
+			}
+			this.available_native_formats = formats;
+			listEl.innerHTML = '';
+			formats.forEach(f => {
+				const item = document.createElement('div');
+				item.className = 'sp-native-item';
+				item.dataset.name = f.name;
+				item.innerHTML = '<i class="fa fa-file-o"></i><span>' + this.escapeHtml(f.label) + '</span>';
+				item.addEventListener('click', () => this.on_native_template_click(f, item));
+				listEl.appendChild(item);
+			});
+		} catch (e) {
+			console.error('Failed to load native formats:', e);
+			listEl.innerHTML = '<div class="sp-error"><i class="fa fa-exclamation-circle"></i> ' + __('Loading failed') + '</div>';
+		}
+	}
+
+	async on_native_template_click(format, el) {
+		// Highlight selected (clear both super-design items and native-format items)
+		document.querySelectorAll('.sp-template-item.active, .sp-native-item.active').forEach(i => i.classList.remove('active'));
+		el.classList.add('active');
+
+		this.current_native_format = format.name;
+		this.current_native_html = '';
+		this.current_design = null;
+		this.current_design_info = null;
+		this.current_params = {};
+		this.setup_toolbar();
+		this.setup_menu();
+
+		await this.render_native_preview();
+	}
+
+	async render_native_preview() {
+		if (!this.current_native_format) return;
+		const area = document.getElementById('sp-preview-area');
+		if (area) area.innerHTML = '<div class="sp-loading"><i class="fa fa-spinner fa-spin fa-2x" style="color:#2196f3"></i><p class="text-muted" style="margin-top:10px">' + __('Rendering preview...') + '</p></div>';
+		try {
+			const res = await frappe.call({
+				method: 'zhiz_print.api.print_designer.render_native_print_preview',
+				args: {
+					doctype: this.frm.doctype,
+					docname: this.frm.docname,
+					print_format: this.current_native_format
+				}
+			});
+			if (res.message && res.message.html) {
+				this.current_native_html = res.message.html;
+				// Native HTML is a full page (head+body); inject into a wrapper —
+				// browser keeps <style> active and renders body content.
+				if (area) area.innerHTML = '<div class="sp-native-preview-wrap">' + res.message.html + '</div>';
+			} else {
+				if (area) area.innerHTML = '<div class="alert alert-danger" style="margin:20px">' + __('Preview render failed') + '</div>';
+			}
+		} catch (e) {
+			console.error('Native preview render failed:', e);
+			if (area) area.innerHTML = '<div class="alert alert-danger" style="margin:20px"><i class="fa fa-exclamation-circle"></i> ' + this.escapeHtml(e.message || String(e)) + '</div>';
+		}
+	}
+
+	async native_printit() {
+		if (!this.current_native_html) {
+			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
+			return;
+		}
+		// Record print log (native format → print_design stored as "原生: <format>")
+		try {
+			await frappe.call({
+				method: 'zhiz_print.api.print_designer.record_print_log',
+				args: {
+					doctype: this.frm.doctype,
+					docname: this.frm.docname,
+					design_name: '原生: ' + this.current_native_format,
+					params: {},
+					preview_html: this.current_native_html,
+					export_type: 'Print'
+				}
+			});
+		} catch (e) {
+			console.error('Failed to record native print log:', e);
+		}
+
+		// Print via hidden iframe (no new window)
+		const printFrame = document.createElement('iframe');
+		printFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+		document.body.appendChild(printFrame);
+		const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
+		frameDoc.open();
+		frameDoc.write(this.current_native_html);
+		frameDoc.close();
+		printFrame.onload = () => {
+			setTimeout(() => {
+				printFrame.contentWindow.print();
+				setTimeout(() => { document.body.removeChild(printFrame); }, 1000);
+			}, 300);
+		};
+		this.load_print_logs();
+	}
+
+	async native_download_pdf() {
+		if (!this.current_native_format) {
+			frappe.show_alert({ message: __('Please select a print template first'), indicator: 'yellow' });
+			return;
+		}
+		// frappe built-in PDF download
+		const url = '/api/method/frappe.utils.print_format.download_pdf?doctype='
+			+ encodeURIComponent(this.frm.doctype) + '&name=' + encodeURIComponent(this.frm.docname)
+			+ '&format=' + encodeURIComponent(this.current_native_format) + '&no_letterhead=0';
+		const w = window.open(url, '_blank');
+		if (!w) {
+			frappe.msgprint(__('Please allow pop-up windows'));
+			return;
+		}
+		// Record PDF export log
+		try {
+			await frappe.call({
+				method: 'zhiz_print.api.print_designer.record_print_log',
+				args: {
+					doctype: this.frm.doctype,
+					docname: this.frm.docname,
+					design_name: '原生: ' + this.current_native_format,
+					params: {},
+					preview_html: this.current_native_html || '',
+					export_type: 'Export PDF'
+				}
+			});
+			this.load_print_logs();
+		} catch (e) {
+			console.error('Failed to record native PDF log:', e);
+		}
 	}
 
 	async generate_super_pdf() {

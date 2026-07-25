@@ -98,6 +98,9 @@ def _get_print_designer_boot_settings(setting):
             result["allow_export_pdf"] = bool(frappe.utils.cint(setting.get("allow_export_pdf")))
             result["allow_export_excel"] = bool(frappe.utils.cint(setting.get("allow_export_excel")))
 
+            # Native Print Formats toggle (sidebar collapsible section)
+            result["enable_native_print_formats"] = bool(frappe.utils.cint(setting.get("enable_native_print_formats")))
+
             # PDF engine mode (avoid frontend DB call)
             result["pdf_engine_mode"] = setting.get("pdf_engine_mode") or "wkhtmltopdf"
 

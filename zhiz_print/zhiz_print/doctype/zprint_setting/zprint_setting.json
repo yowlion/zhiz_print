@@ -18,6 +18,8 @@
     "allow_export_pdf",
     "column_break_export",
     "allow_export_excel",
+    "section_break_native",
+    "enable_native_print_formats",
     "section_break_license",
     "license_info",
     "license_key_input",
@@ -109,6 +111,20 @@
       "fieldname": "allow_export_excel",
       "fieldtype": "Check",
       "label": "Allow Export Excel"
+    },
+    {
+      "depends_on": "eval:doc.enable_super_print_page",
+      "fieldname": "section_break_native",
+      "fieldtype": "Section Break",
+      "label": "Native Print Formats"
+    },
+    {
+      "default": "0",
+      "depends_on": "eval:doc.enable_super_print_page",
+      "description": "Show a collapsible \"Native Print Formats\" section in the print preview sidebar. Users can preview/print with frappe built-in Print Formats (e.g. Standard); native prints are recorded in print history too.",
+      "fieldname": "enable_native_print_formats",
+      "fieldtype": "Check",
+      "label": "Enable Native Print Formats"
     },
     {
       "fieldname": "section_break_license",

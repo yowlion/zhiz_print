@@ -255,6 +255,46 @@ def record_print_log(doctype, docname, design_name, params=None, preview_html=No
     }
 
 
+@frappe.whitelist()
+def get_native_print_formats(doctype):
+    """Return frappe built-in Print Formats available for a doctype.
+
+    Includes the implicit 'Standard' format (not a DB row) plus all enabled
+    (disabled=0) custom Print Formats. Populates the collapsible 'Native Print
+    Formats' section in the print preview sidebar.
+    """
+    out = [{"name": "Standard", "label": "Standard"}]
+    try:
+        rows = frappe.get_all(
+            "Print Format",
+            filters={"doc_type": doctype, "disabled": 0},
+            fields=["name"],
+            order_by="name",
+        )
+        out += [{"name": r["name"], "label": r["name"]} for r in rows]
+    except Exception:
+        pass
+    return out
+
+
+@frappe.whitelist()
+def render_native_print_preview(doctype, docname, print_format, no_letterhead=0):
+    """Render a frappe built-in Print Format as preview HTML.
+
+    Mirrors render_print_preview's auth model (license check + print permission).
+    The frontend injects the returned HTML into the preview area and also feeds
+    it to the hidden print iframe and the print-log snapshot.
+    """
+    _check_license()
+    if not frappe.has_permission(doctype, "print", docname):
+        frappe.throw(_("No print permission"), frappe.PermissionError)
+    html = frappe.get_print(
+        doctype, docname, print_format,
+        no_letterhead=cint(no_letterhead),
+    )
+    return {"html": html, "print_format": print_format}
+
+
 def _fix_merged_cell_borders_for_pdf(html):
     """PDF-specific: fix ghost borders of merged cells.
     1. transparent borders -> remove property so CSS border:none takes effect

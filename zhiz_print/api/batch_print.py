@@ -561,8 +561,13 @@ def _write_doc_to_sheet(wb, html, docname, css_rules=None):
 
 
 @frappe.whitelist()
-def batch_record_print_log(doctype, docnames, design_name=None, params=None, export_type='Print', auto_match=False):
-    """Record individual print logs for each document in the batch."""
+def batch_record_print_log(doctype, docnames, design_name=None, params=None, export_type='Print', auto_match=False, native_format=None):
+    """Record individual print logs for each document in the batch.
+
+    native_format: when set, logs are recorded against a frappe built-in Print
+    Format — print_design is stored as "原生: <native_format>" and the preview
+    snapshot is rendered via frappe.get_print instead of Super Print Design.
+    """
     from zhiz_print.api.print_designer import _check_license
 
     _check_license()
@@ -575,6 +580,7 @@ def batch_record_print_log(doctype, docnames, design_name=None, params=None, exp
         except (json.JSONDecodeError, TypeError):
             params = {}
     auto_match = frappe.utils.cint(auto_match)
+    native_label = ("原生: " + native_format) if native_format else None
 
     # Resolve per-doc design_name for auto_match
     doc_design_map = {}
@@ -587,12 +593,13 @@ def batch_record_print_log(doctype, docnames, design_name=None, params=None, exp
     for docname in docnames:
         try:
             dname = doc_design_map.get(docname, design_name)
-            # Render preview snapshot (server-side estimation pagination) so the
-            # log can be previewed later. Client-measured pagination can't run
-            # server-side; estimation is good enough for a historical snapshot.
+            # Native format: snapshot via frappe.get_print; print_design stored as
+            # "原生: <format>". Otherwise render via Super Print Design (estimation).
             preview_html = ''
             try:
-                if dname:
+                if native_label:
+                    preview_html = frappe.get_print(doctype, docname, native_format) or ''
+                elif dname:
                     _design = frappe.get_doc("Super Print Design", dname)
                     preview_html = _design.get_preview_for_document(
                         doc_name=docname, params=params) or ''
@@ -607,7 +614,7 @@ def batch_record_print_log(doctype, docnames, design_name=None, params=None, exp
                 "doctype": "Super Print Log",
                 "reference_doctype": doctype,
                 "reference_name": docname,
-                "print_design": dname,
+                "print_design": native_label or dname,
                 "print_preview_html": preview_html,
                 "parameters_used": json.dumps(params, ensure_ascii=False) if params else "{}",
                 "export_type": export_type,
@@ -625,6 +632,107 @@ def batch_record_print_log(doctype, docnames, design_name=None, params=None, exp
 
     frappe.db.commit()
     return {"results": results}
+
+
+@frappe.whitelist()
+def batch_render_native_preview(doctype, docnames, print_format):
+    """Batch-render a frappe built-in Print Format per document.
+
+    Returns {results:[{docname,html}], errors:[{docname,error}]} — the frontend
+    concatenates body+style (same logic as batch print_all) for preview & print.
+    """
+    from zhiz_print.api.print_designer import _check_license
+
+    _check_license()
+    if isinstance(docnames, str):
+        docnames = json.loads(docnames)
+
+    results, errors = [], []
+    for docname in docnames:
+        try:
+            if not frappe.has_permission(doctype, "print", docname):
+                errors.append({"docname": docname, "error": "No print permission"})
+                continue
+            html = frappe.get_print(doctype, docname, print_format)
+            results.append({"docname": docname, "html": html})
+        except Exception as e:
+            frappe.log_error(f"Batch native preview failed for {doctype} {docname}: {e}")
+            errors.append({"docname": docname, "error": str(e)})
+
+    return {"results": results, "errors": errors, "print_format": print_format}
+
+
+@frappe.whitelist()
+def batch_generate_native_pdf(doctype, docnames, print_format):
+    """Generate merged PDF for multiple documents using a frappe built-in Print Format.
+
+    Reuses batch_generate_pdf's body+style concatenation + engine pipeline, but
+    sources each document's HTML from frappe.get_print (no Super Print Design).
+    Native has no Super Print Paper, so Chromium (which requires design.print_paper)
+    falls back to wkhtmltopdf.
+    """
+    from zhiz_print.api.print_designer import (
+        _check_license, _pdf_response,
+        _fix_merged_cell_borders_for_pdf, _prepare_html_for_wkhtmltopdf,
+    )
+
+    _check_license()
+    if isinstance(docnames, str):
+        docnames = json.loads(docnames)
+
+    engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
+    if engine_mode == "Chromium":
+        engine_mode = "wkhtmltopdf"
+
+    import re
+    html_parts, styles_collected, success_count = [], set(), 0
+
+    for idx, docname in enumerate(docnames):
+        try:
+            if not frappe.has_permission(doctype, "print", docname):
+                continue
+            html = frappe.get_print(doctype, docname, print_format)
+            body_match = re.search(r'<body[^>]*>([\s\S]*)</body>', html, re.IGNORECASE)
+            style_matches = re.findall(r'<style[^>]*>[\s\S]*?</style>', html, re.IGNORECASE)
+
+            body_content = body_match.group(1) if body_match else html
+            if idx < len(docnames) - 1:
+                body_content += '<div style="page-break-after:always"></div>'
+
+            for s in style_matches:
+                if s not in styles_collected:
+                    styles_collected.add(s)
+
+            html_parts.append(body_content)
+            success_count += 1
+        except Exception as e:
+            frappe.log_error(f"Batch native PDF render failed for {doctype} {docname}: {e}")
+
+    if success_count == 0:
+        frappe.throw(_("All documents failed to generate PDF"))
+
+    combined_html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n'
+    combined_html += "\n".join(styles_collected)
+    combined_html += '\n</head>\n<body>\n'
+    combined_html += "\n".join(html_parts)
+    combined_html += '\n</body>\n</html>'
+
+    if engine_mode == "WeasyPrint":
+        from weasyprint import HTML as WeasyHTML
+        combined_html = _fix_merged_cell_borders_for_pdf(combined_html)
+        pdf_bytes = WeasyHTML(string=combined_html).write_pdf()
+    else:
+        import pdfkit
+        combined_html = _prepare_html_for_wkhtmltopdf(combined_html)
+        options = {
+            "quiet": "", "encoding": "UTF-8", "print-media-type": "",
+            "background": "", "images": "", "disable-smart-shrinking": "",
+            "margin-top": "0", "margin-bottom": "0",
+            "margin-left": "0", "margin-right": "0",
+        }
+        pdf_bytes = pdfkit.from_string(combined_html, False, options=options)
+
+    _pdf_response(pdf_bytes, f"batch-native-{doctype}-{success_count}docs-{print_format}.pdf")
 
 
 @frappe.whitelist()
