@@ -1168,6 +1168,10 @@ def _parse_border_side(border_str):
         return Side(style=None)
 
     s = border_str.strip().lower()
+    # 设计器"边线不显示"存为 Npx solid transparent(applySingleBorder width=0),
+    # Excel 应不设边框,与设计器一致(否则会被当成默认黑色 thin 实线)
+    if 'transparent' in s:
+        return Side(style=None)
 
     m = re.search(r'([\d.]+)\s*px', s)
     width = float(m.group(1)) if m else 1
