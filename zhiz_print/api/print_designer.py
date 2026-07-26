@@ -1276,53 +1276,59 @@ def _apply_cell_format(cell, styles):
         cell.border = Border(**border_kw)
 
 
+def _resolve_image_url(url):
+    """Resolve an image URL (data:/relative/absolute) to {type, data} bytes.
+    Shared by explicit <img src> and CSS background-image. Returns None on failure.
+    Handles base64 data URIs, site-relative /files/.. and /private/files/.., and
+    http(s) URLs. SVG bytes are returned as-is; the Excel inserter converts them
+    to PNG via cairosvg.
+    """
+    import base64, os
+    url = (url or '').strip()
+    if not url:
+        return None
+
+    if url.startswith('data:'):
+        m = re.match(r'data:([\w/+.-]+);base64,(.*)', url, re.DOTALL)
+        if m:
+            try:
+                return {'type': m.group(1), 'data': base64.b64decode(m.group(2))}
+            except Exception:
+                return None
+        return None
+
+    try:
+        if url.startswith('/'):
+            site_path = frappe.get_site_path()
+            file_path = os.path.join(site_path, url.lstrip('/'))
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as f:
+                    img_bytes = f.read()
+                ext = os.path.splitext(url)[1].lower()
+                type_map = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                            '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml'}
+                return {'type': type_map.get(ext, 'image/png'), 'data': img_bytes}
+            return None
+        else:
+            import requests
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                return {'type': resp.headers.get('Content-Type', 'image/png'),
+                        'data': resp.content}
+    except Exception:
+        pass
+    return None
+
+
 def _extract_background_image(styles):
     """Extract background image data from CSS styles (base64 or URL)"""
-    import re
-    import base64
-
     bg = styles.get('background', '') or styles.get('background-image', '')
     if not bg:
         return None
-
     m = re.search(r"url\(['\"]?(.*?)['\"]?\)", bg)
     if not m:
         return None
-
-    url = m.group(1).strip()
-
-    if url.startswith('data:'):
-        m2 = re.match(r'data:(image/[\w+]+);base64,(.*)', url, re.DOTALL)
-        if m2:
-            img_type = m2.group(1)
-            try:
-                img_bytes = base64.b64decode(m2.group(2))
-                return {'type': img_type, 'data': img_bytes}
-            except Exception:
-                return None
-    else:
-        # Regular URL image
-        try:
-            if url.startswith('/'):
-                import os
-                site_path = frappe.get_site_path()
-                file_path = os.path.join(site_path, url.lstrip('/'))
-                if os.path.exists(file_path):
-                    with open(file_path, 'rb') as f:
-                        img_bytes = f.read()
-                    ext = os.path.splitext(url)[1].lower()
-                    type_map = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.bmp': 'image/bmp'}
-                    return {'type': type_map.get(ext, 'image/png'), 'data': img_bytes}
-            else:
-                import requests
-                resp = requests.get(url, timeout=10)
-                if resp.status_code == 200:
-                    ct = resp.headers.get('Content-Type', 'image/png')
-                    return {'type': ct, 'data': resp.content}
-        except Exception:
-            pass
-
-    return None
+    return _resolve_image_url(m.group(1).strip())
 
 
 def _svg_to_png_bytes(svg_bytes):
@@ -1485,14 +1491,22 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
                 if fs_pt and fs_pt > row_max_font_pt:
                     row_max_font_pt = fs_pt
 
-            # Check background image (QR/barcode/image cells)
-            bg_img = _extract_background_image(cell_styles)
-            if bg_img:
+            # Check image: explicit <img src> (barcode/qrcode/image cells) first,
+            # then implicit CSS background-image. Both → inserted as floating image.
+            img_info = None
+            img_elem = cell_elem.find('img')
+            if img_elem:
+                src = (img_elem.get('src') or '').strip()
+                if src:
+                    img_info = _resolve_image_url(src)
+            if not img_info:
+                img_info = _extract_background_image(cell_styles)
+            if img_info:
                 text = ''  # No text output for image cells
                 images_to_add.append({
                     'row': excel_row, 'col': col,
                     'rowspan': rowspan, 'colspan': colspan,
-                    'img_info': bg_img,
+                    'img_info': img_info,
                     'align': cell_styles.get('text-align', 'left'),
                 })
 
