@@ -23,6 +23,144 @@ def _desensitize_preview(html):
     return _COMPANY_RE.sub(SENSITIVE_COMPANY, html)
 
 
+# ==================== URL/二维码脱敏(返回客户端前;中心存原版) ====================
+# 二维码里的真实客户 URL(如 http://mes.gdscnj.com:8888/app/.../{doc.name})脱敏:
+# 域名(含端口) -> www.xxx.com,保留路径和 {doc.name}。preview 里已渲染成 base64 图片的
+# 二维码,文本替换改不动 —— 用 qrcode 库按相同尺寸重生成后 byte-match 精确定位替换。
+# base64 字母表不含 ':' 和 '.',故 http:// 与 www. 不可能出现在 data URI 内,文本替换安全。
+_URL_SCHEME_HOST_RE = re.compile(r'https?://[a-zA-Z0-9.\-]+(?::\d+)?')
+_WWW_HOST_RE = re.compile(r'www\.[a-zA-Z0-9.\-]+(?::\d+)?')
+_DOC_NAME_RE = re.compile(r'\{doc\.name\}')
+
+
+def _scrub_urls(text):
+    """URL 域名(含端口) -> www.xxx.com,保留路径和 {doc.name}。"""
+    if not text:
+        return text
+    text = _URL_SCHEME_HOST_RE.sub('http://www.xxx.com', text)
+    text = _WWW_HOST_RE.sub('www.xxx.com', text)
+    return text
+
+
+def _has_url(text):
+    return bool(_URL_SCHEME_HOST_RE.search(text) or _WWW_HOST_RE.search(text))
+
+
+def _iter_cells(node):
+    """递归产出所有含 cell_type 的单元格 dict(design_items 及任意嵌套结构)。"""
+    if isinstance(node, dict):
+        if "cell_type" in node:
+            yield node
+        for v in node.values():
+            yield from _iter_cells(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _iter_cells(v)
+
+
+def _regen_qr_images(html, qr_cells, sample_doc, is_design_preview):
+    """重生成 preview 里已渲染的二维码图片。
+
+    qr_cells: [(原始 cell_value, 脱敏后 cell_value)] —— 仅 qrcode/barcode 单元格。
+    用原始值复现渲染值 -> 按图片尺寸生成旧二维码 base64 -> 在 HTML 里 byte-match 定位
+    -> 替换为脱敏值的新二维码。匹配不上则跳过(绝不盲改、不破坏)。
+    设计预览(doc=None):{doc.name} 保持字面量;实际预览:代入 sample_doc 名。
+    """
+    try:
+        from zhiz_print.utils.query_executor import generate_qrcode_base64
+    except Exception:
+        return html  # 无 QR 生成库,放弃重生成(文本 URL 仍已替换)
+
+    imgs = []  # [(data_uri, size)] 去重
+    seen = set()
+    for tag in re.findall(r'<img\b[^>]*>', html or ''):
+        m = re.search(r'src="(data:image/png;base64,[A-Za-z0-9+/=]+)"', tag)
+        if not m:
+            continue
+        uri = m.group(1)
+        if uri in seen:
+            continue
+        seen.add(uri)
+        mw = re.search(r'max-width:(\d+)px', tag)
+        imgs.append((uri, int(mw.group(1)) if mw else None))
+    if not imgs:
+        return html
+
+    def _resolve(value):
+        if is_design_preview or not sample_doc:
+            return value or ''
+        return _DOC_NAME_RE.sub(str(sample_doc), value or '')
+
+    repl = []  # [(old_uri, new_uri)]
+    matched = 0
+    for orig_val, scrubbed_val in qr_cells:
+        resolved_orig = _resolve(orig_val)
+        if not resolved_orig:
+            continue
+        resolved_new = _resolve(scrubbed_val)
+        for uri, size in imgs:
+            if not size:
+                continue
+            try:
+                old_qr = generate_qrcode_base64(resolved_orig, size, size)
+            except Exception:
+                old_qr = None
+            if old_qr and old_qr == uri:
+                try:
+                    new_qr = generate_qrcode_base64(resolved_new, size, size)
+                except Exception:
+                    new_qr = None
+                if new_qr and new_qr != old_qr:
+                    repl.append((old_qr, new_qr))
+                matched += 1
+                break
+    for old_uri, new_uri in repl:
+        html = html.replace(old_uri, new_uri)
+    if qr_cells and matched < len(qr_cells):
+        frappe.logger("zhiz_print").warning(
+            "[模板脱敏] {0} 个二维码单元格未在 preview 定位到(渲染值可能含其他占位符/查询驱动),已跳过".format(
+                len(qr_cells) - matched))
+    return html
+
+
+def _desensitize_template_urls(tpl):
+    """对返回客户端的模板数据做 URL/二维码脱敏(中心服务器存原版,此处不改存储)。"""
+    if not isinstance(tpl, dict):
+        return tpl
+
+    dd_raw = tpl.get("design_data") or ""
+    design = None
+    if dd_raw:
+        try:
+            design = json.loads(dd_raw)
+        except Exception:
+            design = None
+
+    qr_cells = []  # [(原始 cell_value, 脱敏后 cell_value)]
+    if design is not None:
+        for cell in _iter_cells(design):
+            cv = cell.get("cell_value")
+            if isinstance(cv, str) and _has_url(cv):
+                scrubbed = _scrub_urls(cv)
+                if scrubbed != cv:
+                    cell["cell_value"] = scrubbed
+                    if str(cell.get("cell_type", "")).lower() in ("qrcode", "barcode"):
+                        qr_cells.append((cv, scrubbed))
+        tpl["design_data"] = json.dumps(design, ensure_ascii=False, default=str)
+
+    sample_doc = design.get("sample_doc") if isinstance(design, dict) else None
+
+    for k in ("preview_html", "preview_html_design"):
+        html = tpl.get(k)
+        if not html:
+            continue
+        html = _scrub_urls(html)  # 文本 URL 替换
+        if qr_cells:
+            html = _regen_qr_images(html, qr_cells, sample_doc, is_design_preview=(k == "preview_html_design"))
+        tpl[k] = html
+    return tpl
+
+
 # Frappe 内部字段(清洗时剔除)
 _INTERNAL_FIELDS = ["name", "owner", "creation", "modified", "modified_by",
     "docstatus", "idx", "parent", "parentfield", "parenttype", "doctype",
@@ -159,6 +297,8 @@ def get_template(template_id):
         for _k in ("preview_html", "preview_html_design"):
             if tpl.get(_k):
                 tpl[_k] = _desensitize_preview(tpl[_k])
+        # URL/二维码脱敏:install_template 也走 get_template,故安装下来的设计一并脱敏
+        tpl = _desensitize_template_urls(tpl)
     return tpl
 
 

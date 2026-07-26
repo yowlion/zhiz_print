@@ -25,6 +25,7 @@ PX_PER_MM = 4
 # =rowsum(R:C) — sum column C across all expanded items of Data-Driven Row R.
 # Tolerates half-width () and full-width （） parentheses and surrounding spaces.
 _ROWSUM_RE = re.compile(r'\s*=\s*rowsum\s*[（(]\s*(\d+)\s*:\s*(\d+)\s*[）)]')
+_PAGEROWSUM_RE = re.compile(r'\s*=\s*pagerowsum\s*[（(]\s*(\d+)\s*:\s*(\d+)\s*[）)]')
 
 
 class SuperPrintDesign(frappe.model.document.Document):
@@ -1063,7 +1064,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                     row_html = self._build_row_html(
                         row_data, cell_map, cell_grid, row_styles, col_styles,
                         query_results, doc, row_type_map, row_display_map, params=params,
-                        measure=True, tr_extra_attr=tr_attr, row_items_map=row_items_map)
+                        measure=True, tr_extra_attr=tr_attr, row_items_map=row_items_map,
+                        page_row_items_map=row_items_map)
                     rows_html += row_html
 
                 blocks_html.append(
@@ -1167,6 +1169,15 @@ class SuperPrintDesign(frappe.model.document.Document):
             page_num = page_idx + 1
             is_last = (page_idx == total_pages - 1)
 
+            # 当前物理页各 template_row 的 data_items(供 =pagerowsum 只合计当前打印页)
+            _page_row_items = {}
+            for _s, _rd in page_rows:
+                if isinstance(_rd, dict):
+                    _tr = _rd.get('template_row')
+                    _di = _rd.get('data_item')
+                    if _tr is not None and _di is not None:
+                        _page_row_items.setdefault(_tr, []).append(_di)
+
             cell_map = cell_maps_by_page.get(page_no, {})
             cell_grid = cell_grids_by_page.get(page_no)
 
@@ -1209,7 +1220,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                 page_html += self._build_row_html(
                     row_data, cell_map, cell_grid, row_styles, col_styles,
                     query_results, doc, row_type_map, row_display_map, params=params,
-                    locked_height=locked, row_items_map=_row_items, shrink_map=shrink_map
+                    locked_height=locked, row_items_map=_row_items, shrink_map=shrink_map,
+                    page_row_items_map=_page_row_items
                 )
             page_html += '</table></div>'
 
@@ -1266,7 +1278,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def _build_row_html(self, row_data, cell_map, cell_grid, row_styles, col_styles,
                         query_results, doc=None, row_type_map=None, row_display_map=None, params=None,
-                        locked_height=None, measure=False, tr_extra_attr='', row_items_map=None, shrink_map=None):
+                        locked_height=None, measure=False, tr_extra_attr='', row_items_map=None, shrink_map=None, page_row_items_map=None):
         """Build a single row HTML.
 
         v15.10.01 pagination rework:
@@ -1401,10 +1413,14 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # '=' cells: =rowsum(R:C) sum across a Data-Driven Row, or =expr arithmetic
                 # doc=None(纯模板结构预览)时原样显示 =rowsum()/=expr 文本,不计算(无 doc/items 无法求值)
                 if cell_value and cell_type != 'logic' and cell_value.lstrip().startswith('=') and doc is not None:
-                    rs = _ROWSUM_RE.match(cell_value)
-                    if rs:
-                        tr_i, tc_i = int(rs.group(1)), int(rs.group(2))
-                        items = (row_items_map or {}).get(tr_i, [])
+                    prs = _PAGEROWSUM_RE.match(cell_value)
+                    rs = _ROWSUM_RE.match(cell_value) if not prs else None
+                    if prs or rs:
+                        m = prs or rs
+                        tr_i, tc_i = int(m.group(1)), int(m.group(2))
+                        # pagerowsum 合计当前物理页的 items;rowsum 合计当前逻辑页全部 items
+                        items_map = page_row_items_map if prs else row_items_map
+                        items = (items_map or {}).get(tr_i, [])
                         cell_value = self._eval_rowsum(
                             tr_i, tc_i, items, cell_map, doc, query_results, params)
                     else:
