@@ -2128,6 +2128,7 @@ class SuperPrintDesigner {
 
         const EDGE = 6;
         let drag = null;
+        let tooltip = null;
 
         // hover: 列签右边界显示 col-resize cursor
         container.addEventListener('mousemove', (e) => {
@@ -2153,6 +2154,13 @@ class SuperPrintDesigner {
             e.stopPropagation();
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
+            // 鼠标旁动态显示列宽
+            tooltip = document.createElement('div');
+            tooltip.className = 'sp-col-resize-tooltip';
+            tooltip.textContent = drag.startWidth + 'px';
+            tooltip.style.left = (e.clientX + 14) + 'px';
+            tooltip.style.top = (e.clientY + 14) + 'px';
+            document.body.appendChild(tooltip);
         });
 
         // 拖动中:实时改列签 + 网格 col 宽(不 refreshGrid,避免逐帧闪烁)
@@ -2161,6 +2169,11 @@ class SuperPrintDesigner {
             const delta = e.clientX - drag.startX;
             const newWidth = Math.max(20, Math.min(800, drag.startWidth + delta));
             this._applyColWidthDom(drag.col, newWidth);
+            if (tooltip) {
+                tooltip.textContent = newWidth + 'px';
+                tooltip.style.left = (e.clientX + 14) + 'px';
+                tooltip.style.top = (e.clientY + 14) + 'px';
+            }
         };
         // 结束:commit colStyles + refreshGrid 一致化
         const onUp = () => {
@@ -2171,6 +2184,7 @@ class SuperPrintDesigner {
             if (!this.colStyles[col]) this.colStyles[col] = {};
             this.colStyles[col].width = finalWidth;
             drag = null;
+            if (tooltip) { tooltip.remove(); tooltip = null; }
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             setTimeout(() => { this._resizingCol = null; }, 60);  // 抑制 click 选列直到拖动结束
