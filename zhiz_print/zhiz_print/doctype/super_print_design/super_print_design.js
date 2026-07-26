@@ -800,6 +800,7 @@ class SuperPrintDesigner {
         container.querySelector('#spd-normal-row-btn')?.addEventListener('click', () => this.setRowType(''));
         container.querySelector('#btn-unmerge-left')?.addEventListener('click', () => this._doUnmerge(false));
         container.querySelector('#btn-unmerge-inherit')?.addEventListener('click', () => this._doUnmerge(true));
+        this._bindColumnResize();
 
         // Multi-page tab events
         container.querySelector('#spd-add-page-btn')?.addEventListener('click', () => this.addPage());
@@ -828,6 +829,7 @@ class SuperPrintDesigner {
         container.addEventListener('click', (e) => {
             const colHeader = e.target.closest('.super-zprint-col-header-cell');
             if (colHeader) {
+                if (this._resizingCol) return;  // 刚拖动完列宽,忽略本次 click 选列
                 const col = parseInt(colHeader.dataset.col);
                 if (this.formatPainterActive) {
                     this.paintFormatToCol(col);
@@ -2116,6 +2118,82 @@ class SuperPrintDesigner {
         pairs['border-left'] = (ci === 0) ? (left || HIDDEN) : HIDDEN;
         pairs['border-right'] = (ci === totalCols - 1) ? (right || HIDDEN) : HIDDEN;
         return Object.entries(pairs).map(([k, v]) => k + ':' + v).join('; ');
+    }
+
+    // 列宽自由拖动:鼠标移到列签右边界(6px 内)自动变 col-resize,按住左右拖动改该列宽
+    _bindColumnResize() {
+        const container = document.getElementById(this.designContainerId);
+        if (!container || container._colResizeBound) return;
+        container._colResizeBound = true;
+
+        const EDGE = 6;
+        let drag = null;
+
+        // hover: 列签右边界显示 col-resize cursor
+        container.addEventListener('mousemove', (e) => {
+            if (drag) return;
+            const cell = e.target.closest('#spd-col-headers .super-zprint-col-header-cell');
+            if (!cell) return;
+            const rect = cell.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            cell.style.cursor = (x >= rect.width - EDGE) ? 'col-resize' : '';
+        });
+
+        // mousedown: 在列签右边界开始拖动
+        container.addEventListener('mousedown', (e) => {
+            const cell = e.target.closest('#spd-col-headers .super-zprint-col-header-cell');
+            if (!cell) return;
+            const rect = cell.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x < rect.width - EDGE) return;  // 不在边界,留给 click 选列
+            const col = parseInt(cell.dataset.col);
+            this._resizingCol = col;  // 标记拖动中,抑制后续 click 选列
+            drag = { col, startX: e.clientX, startWidth: (this.colStyles[col]?.width || 60) };
+            e.preventDefault();
+            e.stopPropagation();
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        // 拖动中:实时改列签 + 网格 col 宽(不 refreshGrid,避免逐帧闪烁)
+        const onMove = (e) => {
+            if (!drag) return;
+            const delta = e.clientX - drag.startX;
+            const newWidth = Math.max(20, Math.min(800, drag.startWidth + delta));
+            this._applyColWidthDom(drag.col, newWidth);
+        };
+        // 结束:commit colStyles + refreshGrid 一致化
+        const onUp = () => {
+            if (!drag) return;
+            const col = drag.col;
+            const cell = container.querySelector('.super-zprint-col-header-cell[data-col="' + col + '"]');
+            const finalWidth = cell ? (parseInt(cell.style.width) || 60) : (this.colStyles[col]?.width || 60);
+            if (!this.colStyles[col]) this.colStyles[col] = {};
+            this.colStyles[col].width = finalWidth;
+            drag = null;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            setTimeout(() => { this._resizingCol = null; }, 60);  // 抑制 click 选列直到拖动结束
+            this.frm.dirty();
+            this.refreshGrid();
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }
+
+    // 实时改单列 DOM 宽度(列签 cell + 网格 colgroup col),拖动时逐帧调用
+    _applyColWidthDom(col, width) {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        const px = width + 'px';
+        const cell = container.querySelector('.super-zprint-col-header-cell[data-col="' + col + '"]');
+        if (cell) {
+            cell.style.width = px;
+            cell.style.minWidth = px;
+            cell.style.maxWidth = px;
+        }
+        const colEl = container.querySelector('#spd-grid colgroup col:nth-child(' + col + ')');
+        if (colEl) colEl.style.width = px;
     }
 
     toggleFormatPainter() {
