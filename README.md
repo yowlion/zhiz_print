@@ -289,6 +289,17 @@ fmt(row.qty * row.weight_per_unit, 3)
 
 > 💡 **关键**:rowsum 复用列值计算逻辑,所以合计对象即使是 `=` 表达式列、logic 列,都能算对。非数字单元格自动跳过。
 
+### ⑤ =pagerowsum(R:C) — 当前打印页合计函数 (新)
+
+与 `=rowsum(R:C)` 用法完全相同(R=数据驱动行号、C=列号),区别只在**合计范围**:当数据驱动行的数据多到**跨多张打印页**时,`=pagerowsum(R:C)` 只合计**当前这一张打印页**上显示的数据,而 `=rowsum(R:C)` 合计当前逻辑页的**全部**数据。兼容中英文括号。
+
+```
+=pagerowsum(5:7)   ← 第5行第7列,只合计本页显示的数据(本页小计)
+=rowsum(5:7)       ← 第5行第7列,合计全部数据(总计)
+```
+
+> 💡 **用法**:把 `=pagerowsum(R:C)` 单元格放在**每页都重复出现的行**(把该行的行类型设为 `Repeat Title Row` 重复标题行)里,这样每一张打印页渲染时它都会算一次,且用的是当前页的数据,正好得到「本页小计」;把 `=rowsum(R:C)` 放在数据行之后的**普通行**(只出现一次),用于「总计」。若 pagerowsum 放在普通行,它只在第一页出现、只算第一页的数据。
+
 ### 四种语义对照表
 
 | 写法 | 触发条件 | 示例 | 结果 |
@@ -297,6 +308,7 @@ fmt(row.qty * row.weight_per_unit, 3)
 | logic | cell_type = logic | `get_value("Item", row.item_code, "x")` | Python 表达式求值 |
 | =expression | `=` 开头(非 rowsum) | `={doc.items.qty}*{doc.items.rate}` | 替换后算术求值 |
 | =rowsum | `=rowsum(R:C)` | `=rowsum(5:7)` | 第R行第C列合计 |
+| =pagerowsum | `=pagerowsum(R:C)` | `=pagerowsum(5:7)` | 第R行第C列,只合计当前打印页 |
 
 ---
 
