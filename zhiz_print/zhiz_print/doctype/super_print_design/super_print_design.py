@@ -1211,10 +1211,12 @@ class SuperPrintDesign(frappe.model.document.Document):
             # Header area
             has_header = getattr(self, 'page_header_left', '') or getattr(
                 self, 'page_header_center', '') or getattr(self, 'page_header_right', '')
-            native_header_html = self._render_native_letterhead(doc, 'header') if cint(getattr(self, 'use_native_letterhead_header', 0)) else ''
-            if native_header_html:
-                # 原生 Letter Head 整段注入页眉带(替代左/中/右),保留垂直对齐
-                page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:{header_align};"><div style="flex:1">{native_header_html}</div></div>'
+            if cint(getattr(self, 'use_native_letterhead_header', 0)):
+                # 勾选原生:只用 Letter Head content;空(doc=None 或无 Letter Head)则页眉区不输出,
+                # 不回退到左/中/右(用户明确:没配原生抬头就该什么都没有)
+                native_header_html = self._render_native_letterhead(doc, 'header')
+                if native_header_html:
+                    page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:{header_align};"><div style="flex:1">{native_header_html}</div></div>'
             elif has_header:
                 header_left = self._replace_header_footer_placeholders(
                     getattr(self, 'page_header_left', '') or '', page_num, total_pages, raw=(doc is None)
@@ -1257,9 +1259,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             # Footer area
             has_footer = getattr(self, 'page_footer_left', '') or getattr(
                 self, 'page_footer_center', '') or getattr(self, 'page_footer_right', '')
-            native_footer_html = self._render_native_letterhead(doc, 'footer') if cint(getattr(self, 'use_native_letterhead_footer', 0)) else ''
-            if native_footer_html:
-                page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:{footer_align};"><div style="flex:1">{native_footer_html}</div></div>'
+            if cint(getattr(self, 'use_native_letterhead_footer', 0)):
+                # 勾选原生:只用 Letter Head footer;空则页脚区不输出,不回退到左/中/右
+                native_footer_html = self._render_native_letterhead(doc, 'footer')
+                if native_footer_html:
+                    page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:{footer_align};"><div style="flex:1">{native_footer_html}</div></div>'
             elif has_footer:
                 footer_left = self._replace_header_footer_placeholders(
                     getattr(self, 'page_footer_left', '') or '', page_num, total_pages, raw=(doc is None)
