@@ -1133,6 +1133,31 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Per-Page HTML Build (with Header/Footer Positioning) ====================
 
+    def _render_native_letterhead(self, doc, which):
+        """Render native Letter Head HTML for the header band ('header' → content) or
+        footer band ('footer' → footer). Returns '' when doc is None or no letter head
+        content is available, so callers fall back to the default Left/Center/Right.
+        Uses frappe.www.printview.get_letter_head so doc.letter_head > is_default priority
+        is honored. Jinja-renders the Letter Head content with {doc} context, and prepends
+        the Letter Head's header_script/footer_script as a <style> block.
+        """
+        if doc is None:
+            return ''
+        from frappe.www.printview import get_letter_head
+        lh = frappe._dict(get_letter_head(doc, False) or {})
+        field = 'content' if which == 'header' else 'footer'
+        html = (lh.get(field) or '').strip()
+        if not html:
+            return ''
+        try:
+            html = frappe.utils.jinja.render_template(html, {"doc": doc.as_dict()})
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), 'Letter Head jinja render failed')
+        script = (lh.get('header_script') if which == 'header' else lh.get('footer_script')) or ''
+        if script.strip():
+            html = '<style>' + script + '</style>' + html
+        return html
+
     def _build_pages_html(self, pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                           query_results, doc, row_type_map, row_display_map, paper, params=None,
                           row_heights_by_page=None, row_items_map_by_page=None, shrink_map=None):
@@ -1186,7 +1211,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             # Header area
             has_header = getattr(self, 'page_header_left', '') or getattr(
                 self, 'page_header_center', '') or getattr(self, 'page_header_right', '')
-            if has_header:
+            native_header_html = self._render_native_letterhead(doc, 'header') if cint(getattr(self, 'use_native_letterhead_header', 0)) else ''
+            if native_header_html:
+                # 原生 Letter Head 整段注入页眉带(替代左/中/右),保留垂直对齐
+                page_html += f'<div class="print-page-header" style="position:absolute;top:0;left:0;right:0;height:{header_area_h:.1f}px;overflow:hidden;display:flex;align-items:{header_align};"><div style="flex:1">{native_header_html}</div></div>'
+            elif has_header:
                 header_left = self._replace_header_footer_placeholders(
                     getattr(self, 'page_header_left', '') or '', page_num, total_pages, raw=(doc is None)
                 )
@@ -1228,7 +1257,10 @@ class SuperPrintDesign(frappe.model.document.Document):
             # Footer area
             has_footer = getattr(self, 'page_footer_left', '') or getattr(
                 self, 'page_footer_center', '') or getattr(self, 'page_footer_right', '')
-            if has_footer:
+            native_footer_html = self._render_native_letterhead(doc, 'footer') if cint(getattr(self, 'use_native_letterhead_footer', 0)) else ''
+            if native_footer_html:
+                page_html += f'<div class="print-page-footer" style="position:absolute;bottom:0;left:0;right:0;height:{footer_area_h:.1f}px;overflow:hidden;display:flex;align-items:{footer_align};"><div style="flex:1">{native_footer_html}</div></div>'
+            elif has_footer:
                 footer_left = self._replace_header_footer_placeholders(
                     getattr(self, 'page_footer_left', '') or '', page_num, total_pages, raw=(doc is None)
                 )

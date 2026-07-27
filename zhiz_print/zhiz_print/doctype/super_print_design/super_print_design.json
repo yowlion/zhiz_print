@@ -39,12 +39,14 @@
     "col_styles",
     "section_header_footer",
     "section_page_header",
+    "use_native_letterhead_header",
     "page_header_left",
     "column_break_header_center",
     "page_header_center",
     "column_break_header_right",
     "page_header_right",
     "section_page_footer",
+    "use_native_letterhead_footer",
     "page_footer_left",
     "column_break_footer_center",
     "page_footer_center",
@@ -255,6 +257,13 @@
       "hidden": 1
     },
     {
+      "fieldname": "use_native_letterhead_header",
+      "fieldtype": "Check",
+      "label": "Use Native Letter Head Header",
+      "default": "0",
+      "description": "Inject the document's native Letter Head content into the header band, replacing the Left/Center/Right fields below."
+    },
+    {
       "fieldname": "page_header_left",
       "fieldtype": "Code",
       "label": "Header - Left",
@@ -299,6 +308,13 @@
       "fieldtype": "Section Break",
       "label": "Page Footer",
       "hidden": 1
+    },
+    {
+      "fieldname": "use_native_letterhead_footer",
+      "fieldtype": "Check",
+      "label": "Use Native Letter Head Footer",
+      "default": "0",
+      "description": "Inject the document's native Letter Head footer into the footer band, replacing the Left/Center/Right fields below."
     },
     {
       "fieldname": "page_footer_left",

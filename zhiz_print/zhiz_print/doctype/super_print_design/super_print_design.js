@@ -477,36 +477,44 @@ class SuperPrintDesigner {
         let html = '';
         // Header area (left/center/right columns)
         if (mTop > 0) {
-            const hl = this.pageHeaderLeft || '';
-            const hc = this.pageHeaderCenter || '';
-            const hr = this.pageHeaderRight || '';
-            const hasContent = hl || hc || hr;
             const placeholder = '<span style="color:#ccc;font-size:10px;">' + __('Header Area') + '</span>';
             html += '<div class="spd-header-area" id="spd-header-area" style="' +
                 'position:absolute;top:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mTop + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_header_align||this.pageHeaderAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderLeftAlign||this.frm?.doc?.page_header_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderCenterAlign||this.frm?.doc?.page_header_center_align || 'Center').toLowerCase() + ';">' + (hc || '') + '</div>';
-            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderRightAlign||this.frm?.doc?.page_header_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
+            if (this.frm?.doc?.use_native_letterhead_header) {
+                html += '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#b8860b;font-size:10px;background:#fffbe6;border:1px dashed #ffe08a;border-radius:3px">原生 Letter Head 页眉(文档预览时显示真实抬头)</div>';
+            } else {
+                const hl = this.pageHeaderLeft || '';
+                const hc = this.pageHeaderCenter || '';
+                const hr = this.pageHeaderRight || '';
+                const hasContent = hl || hc || hr;
+                html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderLeftAlign||this.frm?.doc?.page_header_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (hl || (hasContent ? '' : placeholder)) + '</div>';
+                html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderCenterAlign||this.frm?.doc?.page_header_center_align || 'Center').toLowerCase() + ';">' + (hc || '') + '</div>';
+                html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageHeaderRightAlign||this.frm?.doc?.page_header_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (hr || '') + '</div>';
+            }
             html += '</div>';
         }
         // Footer area (left/center/right columns)
         if (mBottom > 0) {
-            const fl = this.pageFooterLeft || '';
-            const fc = this.pageFooterCenter || '';
-            const fr_ = this.pageFooterRight || '';
-            const hasContent = fl || fc || fr_;
             const placeholder = '<span style="color:#ccc;font-size:10px;">' + __('Footer Area') + '</span>';
             html += '<div class="spd-footer-area" id="spd-footer-area" style="' +
                 'position:absolute;bottom:0;left:' + mLeft + 'px;right:' + mRight + 'px;height:' + mBottom + 'px;' +
                 'overflow:hidden;padding:2px 4px;' +
                 'display:flex;align-items:' + ({'Top':'flex-start','Center':'center','Bottom':'flex-end'}[this.frm?.doc?.page_footer_align||this.pageFooterAlign||'Center']||'center') + ';' +
                 'font-size:12px;color:#666;">';
-            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterLeftAlign||this.frm?.doc?.page_footer_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
-            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center').toLowerCase() + ';">' + (fc || '') + '</div>';
-            html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
+            if (this.frm?.doc?.use_native_letterhead_footer) {
+                html += '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#b8860b;font-size:10px;background:#fffbe6;border:1px dashed #ffe08a;border-radius:3px">原生 Letter Head 页脚(文档预览时显示真实抬头)</div>';
+            } else {
+                const fl = this.pageFooterLeft || '';
+                const fc = this.pageFooterCenter || '';
+                const fr_ = this.pageFooterRight || '';
+                const hasContent = fl || fc || fr_;
+                html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterLeftAlign||this.frm?.doc?.page_footer_left_align || 'Left').toLowerCase() + ';padding-left:' + mLeft + 'px;">' + (fl || (hasContent ? '' : placeholder)) + '</div>';
+                html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center').toLowerCase() + ';">' + (fc || '') + '</div>';
+                html += '<div style="flex:1;white-space:pre-wrap;text-align:' + (this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right').toLowerCase() + ';padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
+            }
             html += '</div>';
         }
         // Left header area (竖排)
@@ -1219,6 +1227,10 @@ class SuperPrintDesigner {
             '<option value="Top"' + (cur==='Top'?' selected':'') + '>' + __('Top') + '</option>' +
             '<option value="Center"' + (cur==='Center'?' selected':'') + '>' + __('Center') + '</option>' +
             '<option value="Bottom"' + (cur==='Bottom'?' selected':'') + '>' + __('Bottom') + '</option></select>';
+        const nativeHChecked = this.frm?.doc?.use_native_letterhead_header ? ' checked' : '';
+        const nativeFChecked = this.frm?.doc?.use_native_letterhead_footer ? ' checked' : '';
+        const nativeCbH = '<div style="margin:6px 0;padding:4px 6px;background:#fff3cd;border:1px solid #ffe08a;border-radius:3px"><label style="font-size:10px;font-weight:normal;margin:0;cursor:pointer"><input type="checkbox" id="use-native-letterhead-header"' + nativeHChecked + ' style="margin-right:4px"> 使用 frappe 原生 letter_head 页眉(替代左/中/右)</label></div>';
+        const nativeCbF = '<div style="margin:6px 0;padding:4px 6px;background:#fff3cd;border:1px solid #ffe08a;border-radius:3px"><label style="font-size:10px;font-weight:normal;margin:0;cursor:pointer"><input type="checkbox" id="use-native-letterhead-footer"' + nativeFChecked + ' style="margin-right:4px"> 使用 frappe 原生 letter_head 页脚(替代左/中/右)</label></div>';
         const formHtml = '<form id="row-property-form" class="property-form">' +
             '<div style="display:flex;flex-wrap:wrap">' +
                 '<div class="super-zprint-prop-tab' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header"><i class="fa fa-arrow-up"></i> 页眉</div>' +
@@ -1230,7 +1242,8 @@ class SuperPrintDesigner {
                 '<div class="super-zprint-prop-tab-content' + (preferTab==='header'||!preferTab?' active':'') + '" data-tab="header">' +
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-header-align', hAlign) +
-                        '<div style="display:flex;flex-direction:column;gap:4px">' +
+                        nativeCbH +
+                        '<div id="header-lcr-box" style="display:flex;flex-direction:column;gap:4px">' +
                             _row('page-header-left', '左区', this.pageHeaderLeft, 'ph-la', this.pageHeaderLeftAlign||this.frm?.doc?.page_header_left_align || 'Left') +
                             _row('page-header-center', '中区', this.pageHeaderCenter, 'ph-ca', this.pageHeaderCenterAlign||this.frm?.doc?.page_header_center_align || 'Center') +
                             _row('page-header-right', '右区', this.pageHeaderRight, 'ph-ra', this.pageHeaderRightAlign||this.frm?.doc?.page_header_right_align || 'Right') +
@@ -1241,7 +1254,8 @@ class SuperPrintDesigner {
                 '<div class="super-zprint-prop-tab-content' + (preferTab==='footer'?' active':'') + '" data-tab="footer">' +
                     '<div class="property-section-body" style="padding:8px">' +
                         '<label style="font-size:9px">' + __('Vertical Align') + ':</label>' + _align('page-footer-align', fAlign) +
-                        '<div style="display:flex;flex-direction:column;gap:4px">' +
+                        nativeCbF +
+                        '<div id="footer-lcr-box" style="display:flex;flex-direction:column;gap:4px">' +
                             _row('page-footer-left', '左区', this.pageFooterLeft, 'pf-la', this.pageFooterLeftAlign||this.frm?.doc?.page_footer_left_align || 'Left') +
                             _row('page-footer-center', '中区', this.pageFooterCenter, 'pf-ca', this.pageFooterCenterAlign||this.frm?.doc?.page_footer_center_align || 'Center') +
                             _row('page-footer-right', '右区', this.pageFooterRight, 'pf-ra', this.pageFooterRightAlign||this.frm?.doc?.page_footer_right_align || 'Right') +
@@ -1323,6 +1337,29 @@ class SuperPrintDesigner {
                 this._highlightPageArea(tab, true);
             });
         });
+        // 原生 Letter Head 开关:勾选→保存+隐藏该区左/中/右+刷新画布预览
+        const nativeH = container.querySelector('#use-native-letterhead-header');
+        const nativeF = container.querySelector('#use-native-letterhead-footer');
+        const headerLcr = container.querySelector('#header-lcr-box');
+        const footerLcr = container.querySelector('#footer-lcr-box');
+        const syncHeaderLcr = () => { if (headerLcr) headerLcr.style.display = nativeH?.checked ? 'none' : ''; };
+        const syncFooterLcr = () => { if (footerLcr) footerLcr.style.display = nativeF?.checked ? 'none' : ''; };
+        if (nativeH) {
+            nativeH.addEventListener('change', () => {
+                if (this.frm) { this.frm.set_value('use_native_letterhead_header', nativeH.checked ? 1 : 0); this.frm.dirty(); }
+                syncHeaderLcr();
+                if (typeof this._renderHeaderFooterPreview === 'function') this._renderHeaderFooterPreview();
+            });
+            syncHeaderLcr();
+        }
+        if (nativeF) {
+            nativeF.addEventListener('change', () => {
+                if (this.frm) { this.frm.set_value('use_native_letterhead_footer', nativeF.checked ? 1 : 0); this.frm.dirty(); }
+                syncFooterLcr();
+                if (typeof this._renderHeaderFooterPreview === 'function') this._renderHeaderFooterPreview();
+            });
+            syncFooterLcr();
+        }
         const fields = [
             ['#page-header-left', 'page_header_left', 'pageHeaderLeft'],
             ['#page-header-center', 'page_header_center', 'pageHeaderCenter'],
