@@ -1386,7 +1386,13 @@ class SuperPrintDesign(frappe.model.document.Document):
             # precise row can never render shorter than what was configured in the designer
             # (measurement is already max(configured, content); this max() is a guarantee).
             configured = row_style.get("height", 0) or 0
-            row_h_value = max(locked_height, configured)
+            # 数据驱动行:内容多变,取 max(测量,配置) 适应内容;
+            # 静态行:尊重设计器配置高度,与设计器画布"所见即所得"(设计器用配置高度,预览也用配置高度;
+            # line_spacing 拉开后文本若超出配置高度会被 overflow:hidden 截断,需自行调大 height)。
+            if data_item:
+                row_h_value = max(locked_height, configured)
+            else:
+                row_h_value = configured or locked_height or 20
             row_style_attr = f'height:{row_h_value}px;max-height:{row_h_value}px;'
             cell_h_constraint = f'height:{row_h_value}px;max-height:{row_h_value}px;overflow:hidden;'
         else:
