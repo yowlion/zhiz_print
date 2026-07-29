@@ -292,10 +292,10 @@ def get_native_print_formats(doctype, docname=None):
         except Exception:
             pass
 
+    # 仅返回自定义 Print Format 记录(剔除 Standard):Standard 是 erpnext 隐含的空白通用格式,
+    # 不算"原生打印模板"。has_native_print_format() 同样不含 Standard,二者语义一致。
     items = [{'name': r['name'], 'label': r['name'], 'is_default': (r['name'] == default_name)}
              for r in rows]
-    if not any(it['name'] == 'Standard' for it in items):
-        items.append({'name': 'Standard', 'label': 'Standard', 'is_default': False})
     return items
 
 
