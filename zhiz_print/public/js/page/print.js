@@ -957,7 +957,16 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				this.current_native_html = res.message.html;
 				// Native HTML is a full page (head+body); inject into a wrapper —
 				// browser keeps <style> active and renders body content.
-				if (area) area.innerHTML = '<div class="sp-native-preview-wrap">' + res.message.html + '</div>';
+				if (area) {
+					// iframe 隔离:原生 print HTML 含全局 <style>,直接注入 innerHTML 会泄漏到
+					// 整个 desk(把顶部 navbar 挤到第二行)。用 srcdoc 让 <style> 仅在 iframe 内生效。
+					area.innerHTML = '';
+					const frame = document.createElement('iframe');
+					frame.className = 'sp-native-preview-frame';
+					frame.style.cssText = 'width:100%;min-height:600px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,.08);background:#fff;';
+					frame.srcdoc = res.message.html;
+					area.appendChild(frame);
+				}
 			} else {
 				if (area) area.innerHTML = '<div class="alert alert-danger" style="margin:20px">' + __('Preview render failed') + '</div>';
 			}
