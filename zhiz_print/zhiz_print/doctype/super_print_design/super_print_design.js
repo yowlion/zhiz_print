@@ -611,7 +611,7 @@ class SuperPrintDesigner {
                 rowVa = vaMatch[1];
                 rowCss = rowCss.replace(/vertical-align\s*:\s*\w+\s*;?/, '').trim();
             }
-            let rowStyleAttr = 'height:' + (rowStyle.height || 20) + 'px;';
+            let rowStyleAttr = 'height:' + (rowStyle.height || 20) + 'px;font-size:' + (rowStyle.font_size || this.fontSize) + 'px;';
             if (rowCss) rowStyleAttr += rowCss;
             // Row display effect — use getFirstNonMergedCell which prefers cells with
             // non-empty row_display, so auto-filled blank cells don't mask the row's actual setting

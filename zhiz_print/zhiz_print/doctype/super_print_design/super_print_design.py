@@ -1434,6 +1434,12 @@ class SuperPrintDesign(frappe.model.document.Document):
         else:
             row_style_attr += 'line-height:1;'
 
+        # 显式 tr font-size:line-height:calc(1em + Npx) 的 1em 相对 tr 自身 font-size 解析,
+        # tr 不显式设字号时走继承 → 设计器画布(继承 desk body)与演示预览 iframe(继承 iframe body)
+        # 字号不同 → 1em 解析值不同 → 行间距表现不一致。显式设 row font_size 统一两端。
+        _row_font_size = row_style.get('font_size') or (self.font_size or 12)
+        row_style_attr += f'font-size:{_row_font_size}px;'
+
         html = f'<tr{tr_extra_attr} style="{row_style_attr}">'
 
         for col in range(1, self.columns + 1):
