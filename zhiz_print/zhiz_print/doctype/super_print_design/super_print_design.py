@@ -1425,11 +1425,12 @@ class SuperPrintDesign(frappe.model.document.Document):
             row_style_attr += 'word-wrap:break-word;word-break:break-all;'
 
         # Auto Wrap 时按行间距设 line-height(行与行之间额外间距);其他模式 line-height:1
-        # 基数用 1.5em(舒适行距),line_spacing 作为额外 px 叠加其上。
-        # 旧基数 1em < 默认 normal(1.2em),line_spacing 小时 line-height 反而比默认小、看不出效果。
+        # 基数 1em,与设计器画布前端(super_print_design.js generateGridHtml)的
+        # calc(1em + Npx) 完全一致 → 所见即所得。字体已对齐(print-form-table 显式 font-family),
+        # 一致字体下 1em 基数表现与设计器画布相同。
         _line_spacing = int(row_style.get('line_spacing') or 0)
         if row_display == '' and _line_spacing > 0:
-            row_style_attr += f'line-height:calc(1.5em + {_line_spacing}px);'
+            row_style_attr += f'line-height:calc(1em + {_line_spacing}px);'
         else:
             row_style_attr += 'line-height:1;'
 
