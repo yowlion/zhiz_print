@@ -1088,7 +1088,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                     f'<div class="sp-measure-block" data-pg="{page_no}" '
                     f'style="width:{content_w_px}px;">'
                     f'<table class="print-form-table" style="width:{content_w_px}px;'
-                    f'border-collapse:collapse;table-layout:fixed;margin:0;">'
+                    f'border-collapse:collapse;table-layout:fixed;margin:0;'
+                    f"font-family:'{self.font_family}',sans-serif;\">"
                     f'{self._build_colgroup(col_styles)}{rows_html}</table></div>'
                 )
                 blocks_meta[page_no] = {'content_h_px': content_h_px}
@@ -1251,7 +1252,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
             # Content area
             page_html += f'<div class="print-page-content" style="position:absolute;top:{content_top:.1f}px;left:0;right:0;bottom:{footer_area_h:.1f}px;padding:0 {margin_right * PX_PER_MM:.1f}px 0 {margin_left * PX_PER_MM:.1f}px;overflow:hidden;">'
-            page_html += '<table class="print-form-table">'
+            page_html += '<table class="print-form-table" style="font-family:\'' + (self.font_family or 'Microsoft YaHei') + '\',sans-serif;">'
             page_html += self._build_colgroup(col_styles)
             for serial, row_data in page_rows:
                 locked = None
