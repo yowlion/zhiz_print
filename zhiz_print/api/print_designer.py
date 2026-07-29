@@ -256,25 +256,47 @@ def record_print_log(doctype, docname, design_name, params=None, preview_html=No
 
 
 @frappe.whitelist()
-def get_native_print_formats(doctype):
-    """Return frappe built-in Print Formats available for a doctype.
+def get_native_print_formats(doctype, docname=None):
+    """Return native Print Formats for a doctype, sorted by priority.
 
-    Includes the implicit 'Standard' format (not a DB row) plus all enabled
-    (disabled=0) custom Print Formats. Populates the collapsible 'Native Print
-    Formats' section in the print preview sidebar.
+    If docname is given, the first format whose `condition_for_default` expression
+    evaluates True for that doc is flagged is_default — reusing the erpnext-style
+    auto-select mechanism (same logic as zhiz_print.utils.get_print_format). The
+    implicit 'Standard' format is appended as fallback. Populates the collapsible
+    'Native Print Formats' section in the print preview sidebar.
     """
-    out = [{"name": "Standard", "label": "Standard"}]
+    has_cond = frappe.db.has_column('Print Format', 'condition_for_default')
+    fields = ['name', 'condition_for_default'] if has_cond else ['name']
     try:
-        rows = frappe.get_all(
-            "Print Format",
-            filters={"doc_type": doctype, "disabled": 0},
-            fields=["name"],
-            order_by="name",
-        )
-        out += [{"name": r["name"], "label": r["name"]} for r in rows]
+        rows = frappe.get_all('Print Format', filters={'doc_type': doctype, 'disabled': 0},
+            fields=fields, order_by='priority')
     except Exception:
-        pass
-    return out
+        rows = []
+
+    default_name = None
+    if docname and has_cond:
+        try:
+            from frappe.utils.safe_exec import get_safe_globals
+            _doc = frappe.get_doc(doctype, docname)
+            for r in rows:
+                cond = (r.get('condition_for_default') or '').strip()
+                if cond:
+                    try:
+                        if frappe.safe_eval(cond, get_safe_globals(),
+                                dict(doc=_doc, get_roles=frappe.get_roles)):
+                            default_name = r['name']
+                            break
+                    except Exception:
+                        frappe.log_error(frappe.get_traceback(),
+                            'condition_for_default eval failed: %s' % r.get('name'))
+        except Exception:
+            pass
+
+    items = [{'name': r['name'], 'label': r['name'], 'is_default': (r['name'] == default_name)}
+             for r in rows]
+    if not any(it['name'] == 'Standard' for it in items):
+        items.append({'name': 'Standard', 'label': 'Standard', 'is_default': False})
+    return items
 
 
 @frappe.whitelist()

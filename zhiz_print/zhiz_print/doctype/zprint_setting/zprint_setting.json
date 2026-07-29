@@ -124,7 +124,7 @@
       "description": "Show a collapsible \"Native Print Formats\" section in the print preview sidebar. Users can preview/print with frappe built-in Print Formats (e.g. Standard); native prints are recorded in print history too.",
       "fieldname": "enable_native_print_formats",
       "fieldtype": "Check",
-      "label": "Enable Native Print Formats"
+      "label": "Enable Supported Native Print Formats"
     },
     {
       "fieldname": "section_break_license",

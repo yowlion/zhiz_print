@@ -24,7 +24,7 @@
     "sample_doc",
     "column_break_basic",
     "print_paper",
-    "column_break_condition",
+    "section_enable_condition",
     "enable_condition",
     "section_grid",
     "rows",
@@ -160,14 +160,16 @@
       "reqd": 1
     },
     {
-      "fieldname": "column_break_condition",
-      "fieldtype": "Column Break"
+      "fieldname": "section_enable_condition",
+      "fieldtype": "Section Break",
+      "label": "Enable Condition"
     },
     {
       "fieldname": "enable_condition",
-      "fieldtype": "Data",
+      "fieldtype": "Code",
       "label": "Enable Condition",
-      "description": "eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). E.g.: doc.status=='Submitted'"
+      "options": "Python",
+      "description": "eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). Helpers: get_value(doctype,name,field), has_native_print_format(). E.g.: doc.status=='Submitted' and not has_native_print_format()"
     },
     {
       "fieldname": "section_grid",

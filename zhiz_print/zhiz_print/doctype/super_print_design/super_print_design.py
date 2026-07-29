@@ -289,6 +289,15 @@ class SuperPrintDesign(frappe.model.document.Document):
             except Exception:
                 return str(value) if value is not None else ''
 
+        def has_native_print_format(doctype=None):
+            # True if the (doc's) doctype has at least one enabled built-in Print Format
+            # besides the implicit 'Standard'. Lets enable_condition express
+            # "step aside when a native format exists", e.g.  not has_native_print_format()
+            dt = doctype or (doc.doctype if doc else None)
+            if not dt:
+                return False
+            return bool(frappe.db.exists('Print Format', {'doc_type': dt, 'disabled': 0}))
+
         return {
             'doc': doc,
             'row': row,
@@ -296,6 +305,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             'get_value': get_value,
             'fmt': fmt,
             'flt': frappe.utils.flt,
+            'has_native_print_format': has_native_print_format,
             'max': max,
             'min': min,
             'round': round,

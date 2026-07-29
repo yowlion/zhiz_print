@@ -878,6 +878,12 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			caret.classList.toggle('fa-caret-right', open);
 			caret.classList.toggle('fa-caret-down', !open);
 		}
+		// 展开且当前未选原生 → 自动选最高优先级原生(is_default 优先,否则第一个)
+		if (!open && !this.current_native_format && this.available_native_formats && this.available_native_formats.length) {
+			const def = this.available_native_formats.find(f => f.is_default) || this.available_native_formats[0];
+			const defItem = def && body.querySelector('.sp-native-item[data-name="' + def.name + '"]');
+			if (defItem) this.on_native_template_click(def, defItem);
+		}
 	}
 
 	async load_native_formats() {
@@ -889,7 +895,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		try {
 			const res = await frappe.call({
 				method: 'zhiz_print.api.print_designer.get_native_print_formats',
-				args: { doctype: this.frm.doctype }
+				args: { doctype: this.frm.doctype, docname: this.frm.docname }
 			});
 			const formats = res.message || [];
 			if (formats.length === 0) {
@@ -906,6 +912,12 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				item.addEventListener('click', () => this.on_native_template_click(f, item));
 				listEl.appendChild(item);
 			});
+			// 无高级设计时,自动选最高优先级原生(is_default 优先,否则第一个)
+			if ((!this.available_designs || this.available_designs.length === 0) && !this.current_native_format && !this.current_design) {
+				const def = formats.find(f => f.is_default) || formats[0];
+				const defItem = def && listEl.querySelector('.sp-native-item[data-name="' + def.name + '"]');
+				if (defItem) this.on_native_template_click(def, defItem);
+			}
 		} catch (e) {
 			console.error('Failed to load native formats:', e);
 			listEl.innerHTML = '<div class="sp-error"><i class="fa fa-exclamation-circle"></i> ' + __('Loading failed') + '</div>';
