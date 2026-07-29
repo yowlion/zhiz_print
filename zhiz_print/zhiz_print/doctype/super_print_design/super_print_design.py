@@ -365,6 +365,12 @@ class SuperPrintDesign(frappe.model.document.Document):
             field_name = match.group(1)
             if hasattr(doc, field_name):
                 v = getattr(doc, field_name)
+                # Text Editor(Quill 富文本)字段存 HTML(如 <div class="ql-editor"><p>..</p></div>),
+                # static 单元格会 escape_html → 原样显示标签。先 strip 成纯文本,
+                # 符合"打印显示文本"语义(要保留富文本格式需另行渲染,不走此路径)。
+                df = doc.meta.get_field(field_name) if hasattr(doc, 'meta') else None
+                if df and df.fieldtype == 'Text Editor' and v:
+                    v = frappe.utils.strip_html_tags(v)
                 return SuperPrintDesign._fmt_val(v)
             return match.group(0)
 
