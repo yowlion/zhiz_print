@@ -1827,18 +1827,28 @@ class SuperPrintDesigner {
         setValue('prop-barcode-width', cell.barcode_width || 100);
         setValue('prop-barcode-height', cell.barcode_height || 40);
         const _driverCb = container.querySelector('#prop-print-count-driver');
+        if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         const _driverLabel = _driverCb?.closest('label');
         if (_driverLabel) {
-            // 只在 cell_value 解析为数字时显示「设为打印次数驱动」(纯数字 或 数字字段占位符)
             const cv = (cell.cell_value || '').trim();
-            let isNumeric = /^\d+(\.\d+)?$/.test(cv);
-            if (!isNumeric) {
-                const m = cv.match(/^\{doc\.([\w.]+)\}$/);
-                if (m) isNumeric = this._isNumericPrintCountField(m[1]);
+            const _updateVisibility = () => {
+                let isNumeric = /^\d+(\.\d+)?$/.test(cv);
+                if (!isNumeric) {
+                    const mm = cv.match(/^\{doc\.([\w.]+)\}$/);
+                    if (mm) isNumeric = this._isNumericPrintCountField(mm[1]);
+                }
+                _driverLabel.style.display = isNumeric ? '' : 'none';
+            };
+            // 子表占位符 {doc.child.field}:设计器打开的是 Super Print Design(非目标 doctype),
+            // 子表 meta 可能未加载 → frappe.get_meta 返回空 → 误隐。with_doctype 确保 child meta 加载后再判。
+            const m = cv.match(/^\{doc\.([\w.]+)\}$/);
+            if (m && m[1].includes('.')) {
+                const parts = m[1].split('.');
+                const childDt = frappe.get_meta(this.frm?.doc?.target_doctype)?.get_field(parts[0])?.options;
+                if (childDt) frappe.model.with_doctype(childDt, _updateVisibility);
             }
-            _driverLabel.style.display = isNumeric ? '' : 'none';
+            _updateVisibility();
         }
-        if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         this.togglePropertyGroups(cell.cell_type);
         if ((cell.cell_type === 'data_query' || cell.cell_type === 'image') && cell.query_name) {
             this.loadDataKeyOptions(cell.query_name);
