@@ -47,16 +47,36 @@ class SuperPrintDesign(frappe.model.document.Document):
         self.validate_print_count_driver()
 
     def validate_print_count_driver(self):
-        """打印次数驱动单元格:全设计最多 1 个 + cell_value 必须是纯数字或字段占位符(保存时校验)"""
+        """打印次数驱动单元格:全设计最多 1 个 + cell_value 必须解析为数字(纯数字 或 数字类型字段占位符)"""
         drivers = [d for d in (self.design_items or []) if cint(d.get("is_print_count_driver"))]
         if len(drivers) > 1:
             frappe.throw(_("At most one cell can be marked as 'Print Count Driver' per design (found {0})").format(len(drivers)))
         for d in drivers:
             cv = (d.cell_value or '').strip()
-            is_num = re.match(r'^\d+(\.\d+)?$', cv)
-            is_placeholder = re.match(r'^\{doc\.[\w.]+\}$', cv)
-            if not is_num and not is_placeholder:
+            if re.match(r'^\d+(\.\d+)?$', cv):
+                continue
+            m = re.match(r'^\{doc\.([\w.]+)\}$', cv)
+            if not m:
                 frappe.throw(_("打印次数驱动单元格的值必须是纯数字(如 5)或字段占位符(如 {doc.items.qty})"))
+            if not self._is_numeric_print_count_field(m.group(1)):
+                frappe.throw(_("打印次数驱动单元格的字段必须是数字类型(Int/Float/Currency 等),{0} 不是数字字段").format(m.group(1)))
+
+    def _is_numeric_print_count_field(self, path):
+        """path 如 'items.qty' 或 'name';查 frappe meta 该字段是否数字类型"""
+        numeric_types = ('Int', 'Float', 'Decimal', 'Currency', 'Percent', 'Long Int', 'Rating')
+        parts = path.split('.')
+        try:
+            if len(parts) == 1:
+                df = frappe.get_meta(self.target_doctype).get_field(parts[0])
+                return bool(df and df.fieldtype in numeric_types)
+            table_field = frappe.get_meta(self.target_doctype).get_field(parts[0])
+            child_doctype = table_field and table_field.options
+            if not child_doctype:
+                return False
+            df = frappe.get_meta(child_doctype).get_field(parts[1])
+            return bool(df and df.fieldtype in numeric_types)
+        except Exception:
+            return False
 
     def check_license_on_save(self):
         """Check license before saving design (both new and existing)."""
