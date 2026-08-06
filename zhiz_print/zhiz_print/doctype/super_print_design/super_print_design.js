@@ -1828,36 +1828,6 @@ class SuperPrintDesigner {
         setValue('prop-barcode-height', cell.barcode_height || 40);
         const _driverCb = container.querySelector('#prop-print-count-driver');
         if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
-        const _driverLabel = _driverCb?.closest('label');
-        if (_driverLabel) {
-            const cv = (cell.cell_value || '').trim();
-            const _updateVisibility = () => {
-                let isNumeric = /^\d+(\.\d+)?$/.test(cv);
-                if (!isNumeric) {
-                    const mm = cv.match(/^\{doc\.([\w.]+)\}$/);
-                    if (mm) isNumeric = this._isNumericPrintCountField(mm[1]);
-                }
-                _driverLabel.style.display = isNumeric ? '' : 'none';
-            };
-            // 设计器打开的是 Super Print Design(非目标 doctype),目标 doctype + 子表 meta 都可能未加载
-            // → frappe.get_meta 返回空 → 误隐。先 with_doctype 目标 doctype,再 with_doctype 子表,然后判显隐。
-            const targetDt = this.frm?.doc?.target_doctype;
-            if (targetDt && cv.includes('{doc.')) {
-                frappe.model.with_doctype(targetDt, () => {
-                    const m = cv.match(/^\{doc\.([\w.]+)\}$/);
-                    if (m && m[1].includes('.')) {
-                        const parts = m[1].split('.');
-                        const childDt = frappe.get_meta(targetDt)?.get_field(parts[0])?.options;
-                        if (childDt) {
-                            frappe.model.with_doctype(childDt, _updateVisibility);
-                            return;
-                        }
-                    }
-                    _updateVisibility();
-                });
-            }
-            _updateVisibility();
-        }
         this.togglePropertyGroups(cell.cell_type);
         if ((cell.cell_type === 'data_query' || cell.cell_type === 'image') && cell.query_name) {
             this.loadDataKeyOptions(cell.query_name);
@@ -1975,20 +1945,7 @@ class SuperPrintDesigner {
         const cell = this.grid[row - 1]?.[col - 1];
         if (!cell || cell._merged) return;
         if (checked) {
-            // 校验:cell_value 解析后必须是数字(纯数字,或数字字段占位符如 {doc.items.qty})
-            const cv = (cell.cell_value || '').trim();
-            let isNumeric = /^\d+(\.\d+)?$/.test(cv);
-            if (!isNumeric) {
-                const m = cv.match(/^\{doc\.([\w.]+)\}$/);
-                if (m) isNumeric = this._isNumericPrintCountField(m[1]);
-            }
-            if (!isNumeric) {
-                frappe.show_alert({ message: __('驱动单元格需解析为数字(纯数字如 5,或数字字段占位符如 {doc.items.qty})'), indicator: 'red' });
-                const cb = document.getElementById(this.designContainerId)?.querySelector('#prop-print-count-driver');
-                if (cb) cb.checked = false;
-                return;
-            }
-            // 唯一:清除其他 cell 的驱动标记
+            // 唯一:清除其他 cell 的驱动标记(一个设计只能一个驱动单元格;勾选不校验值,保存时后端 validate 校验)
             for (const pn of Object.keys(this.pages || {})) {
                 const pg = this.pages[pn];
                 for (const cid in (pg.cellDataMap || {})) {
@@ -2000,32 +1957,6 @@ class SuperPrintDesigner {
             }
         }
         this.updateCellProperty('is_print_count_driver', checked ? 1 : 0);
-    }
-
-    _isNumericPrintCountField(path) {
-        // path 如 "items.qty" 或 "name";查 frappe meta 该字段是否数字类型(Int/Float/Decimal/Currency/Percent)
-        const numericTypes = ['Int', 'Float', 'Decimal', 'Currency', 'Percent'];
-        try {
-            const parts = path.split('.');
-            const dt = this.frm?.doc?.target_doctype;
-            if (!dt) return false;
-            const parentMeta = frappe.get_meta(dt);
-            if (!parentMeta) return false;
-            if (parts.length === 1) {
-                const df = parentMeta.get_field(parts[0]);
-                return !!(df && numericTypes.includes(df.fieldtype));
-            }
-            // 子表 doc.childtable.field → 查子表 doctype 的字段类型
-            const tableField = parentMeta.get_field(parts[0]);
-            const childDoctype = tableField && tableField.options;
-            if (!childDoctype) return false;
-            const childMeta = frappe.get_meta(childDoctype);
-            if (!childMeta) return false;
-            const df = childMeta.get_field(parts[1]);
-            return !!(df && numericTypes.includes(df.fieldtype));
-        } catch (e) {
-            return false;
-        }
     }
 
     updateCellProperty(property, value) {

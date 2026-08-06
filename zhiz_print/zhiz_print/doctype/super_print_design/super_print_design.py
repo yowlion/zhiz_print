@@ -47,10 +47,16 @@ class SuperPrintDesign(frappe.model.document.Document):
         self.validate_print_count_driver()
 
     def validate_print_count_driver(self):
-        """打印次数驱动单元格:全设计最多 1 个 is_print_count_driver=1"""
+        """打印次数驱动单元格:全设计最多 1 个 + cell_value 必须是纯数字或字段占位符(保存时校验)"""
         drivers = [d for d in (self.design_items or []) if cint(d.get("is_print_count_driver"))]
         if len(drivers) > 1:
             frappe.throw(_("At most one cell can be marked as 'Print Count Driver' per design (found {0})").format(len(drivers)))
+        for d in drivers:
+            cv = (d.cell_value or '').strip()
+            is_num = re.match(r'^\d+(\.\d+)?$', cv)
+            is_placeholder = re.match(r'^\{doc\.[\w.]+\}$', cv)
+            if not is_num and not is_placeholder:
+                frappe.throw(_("打印次数驱动单元格的值必须是纯数字(如 5)或字段占位符(如 {doc.items.qty})"))
 
     def check_license_on_save(self):
         """Check license before saving design (both new and existing)."""
