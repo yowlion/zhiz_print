@@ -1945,12 +1945,15 @@ class SuperPrintDesigner {
         const cell = this.grid[row - 1]?.[col - 1];
         if (!cell || cell._merged) return;
         if (checked) {
-            // 校验:cell_value 必须是纯数字或单个数字字段占位符(如 {doc.items.qty})
+            // 校验:cell_value 解析后必须是数字(纯数字,或数字字段占位符如 {doc.items.qty})
             const cv = (cell.cell_value || '').trim();
-            const isPureNumber = /^\d+(\.\d+)?$/.test(cv);
-            const isPurePlaceholder = /^\{doc\.[\w.]+\}$/.test(cv);
-            if (!isPureNumber && !isPurePlaceholder) {
-                frappe.show_alert({ message: __('驱动单元格需为纯数字(如 5)或单个数字字段占位符(如 {doc.items.qty})'), indicator: 'red' });
+            let isNumeric = /^\d+(\.\d+)?$/.test(cv);
+            if (!isNumeric) {
+                const m = cv.match(/^\{doc\.([\w.]+)\}$/);
+                if (m) isNumeric = this._isNumericPrintCountField(m[1]);
+            }
+            if (!isNumeric) {
+                frappe.show_alert({ message: __('驱动单元格需解析为数字(纯数字如 5,或数字字段占位符如 {doc.items.qty})'), indicator: 'red' });
                 const cb = document.getElementById(this.designContainerId)?.querySelector('#prop-print-count-driver');
                 if (cb) cb.checked = false;
                 return;
@@ -1967,6 +1970,32 @@ class SuperPrintDesigner {
             }
         }
         this.updateCellProperty('is_print_count_driver', checked ? 1 : 0);
+    }
+
+    _isNumericPrintCountField(path) {
+        // path 如 "items.qty" 或 "name";查 frappe meta 该字段是否数字类型(Int/Float/Decimal/Currency/Percent)
+        const numericTypes = ['Int', 'Float', 'Decimal', 'Currency', 'Percent'];
+        try {
+            const parts = path.split('.');
+            const dt = this.frm?.doc?.target_doctype;
+            if (!dt) return false;
+            const parentMeta = frappe.get_meta(dt);
+            if (!parentMeta) return false;
+            if (parts.length === 1) {
+                const df = parentMeta.get_field(parts[0]);
+                return !!(df && numericTypes.includes(df.fieldtype));
+            }
+            // 子表 doc.childtable.field → 查子表 doctype 的字段类型
+            const tableField = parentMeta.get_field(parts[0]);
+            const childDoctype = tableField && tableField.options;
+            if (!childDoctype) return false;
+            const childMeta = frappe.get_meta(childDoctype);
+            if (!childMeta) return false;
+            const df = childMeta.get_field(parts[1]);
+            return !!(df && numericTypes.includes(df.fieldtype));
+        } catch (e) {
+            return false;
+        }
     }
 
     updateCellProperty(property, value) {
