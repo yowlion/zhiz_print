@@ -30,7 +30,8 @@
     "css_style",
     "column_break_misc",
     "cell_options",
-    "required"
+    "required",
+    "is_print_count_driver"
   ],
   "fields": [
     {
@@ -193,6 +194,12 @@
       "fieldname": "required",
       "fieldtype": "Check",
       "label": "Required"
+    },
+    {
+      "default": "0",
+      "fieldname": "is_print_count_driver",
+      "fieldtype": "Check",
+      "label": "Is Print Count Driver"
     }
   ],
   "index_web_pages_for_search": 0,

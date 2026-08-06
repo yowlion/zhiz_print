@@ -376,6 +376,7 @@ Native Print Formats,原生打印模板
 Enable Supported Native Print Formats,启用支持原生打印模板
 Use Native Letter Head Header,使用原生 Letter Head 页眉
 Use Native Letter Head Footer,使用原生 Letter Head 页脚
+Is Print Count Driver,打印次数驱动
 "Inject the document's native Letter Head content into the header band, replacing the Left/Center/Right fields below.","将单据的原生 Letter Head 内容注入页眉带，替代下方的左/中/右字段。"
 "Inject the document's native Letter Head footer into the footer band, replacing the Left/Center/Right fields below.","将单据的原生 Letter Head 页脚注入页脚带，替代下方的左/中/右字段。"
 "Show a collapsible ""Native Print Formats"" section in the print preview sidebar. Users can preview/print with frappe built-in Print Formats (e.g. Standard); native prints are recorded in print history too.","在打印预览侧栏显示可折叠的""原生打印模板""区域。用户可用 frappe 内置打印格式(如 Standard)预览/打印；原生打印亦记入打印历史。"

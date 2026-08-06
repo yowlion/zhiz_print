@@ -845,7 +845,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		// v15.04.39: 浏览器打印直接使用 HTML 原始 @page(paper 原始宽高),
 		// 不再做 Force Landscape/Portrait 交换 — 多页打印方式已解决方向问题。
-		let printHtml = this.current_preview_html;
+		let printHtml = this._expand_print_count(this.current_preview_html);
 
 		const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
 		frameDoc.open();
@@ -864,6 +864,23 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		};
 
 		this.load_print_logs();
+	}
+
+	_expand_print_count(html) {
+		// 打印次数驱动:把每个 print-page 按 data-print-count 复制 N 份(预览不重复,仅打印时)
+		if (!html) return html;
+		let doc;
+		try { doc = new DOMParser().parseFromString(html, 'text/html'); }
+		catch (e) { return html; }
+		const pages = doc.querySelectorAll('.print-page');
+		if (!pages.length) return html;
+		const out = doc.createElement('div');
+		pages.forEach(page => {
+			let n = parseInt(page.dataset.printCount || '1', 10);
+			if (isNaN(n) || n < 1) n = 1;  // 非数字/0 → 1(兜底)
+			for (let i = 0; i < n; i++) out.appendChild(page.cloneNode(true));
+		});
+		return '<!DOCTYPE html>\n<html>\n<head>' + doc.head.innerHTML + '\n</head>\n<body>\n' + out.innerHTML + '\n</body>\n</html>';
 	}
 
 	// ==================== Native Print Format ====================

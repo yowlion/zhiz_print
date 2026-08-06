@@ -230,6 +230,7 @@ class SuperPrintDesigner {
                             barcode_height: parseInt(cell.barcode_height) || 40,
                             row_type: cell.row_type || '',
                             row_display: cell.row_display || '',
+                            is_print_count_driver: parseInt(cell.is_print_count_driver) || 0,
                         };
                         page.grid[rowIndex][colIndex] = cellData;
                         page.cellDataMap[cellData.cell_id] = cellData;
@@ -326,6 +327,7 @@ class SuperPrintDesigner {
                                 barcode_height: parseInt(item.barcode_height) || 40,
                                 row_type: item.row_type || '',
                                 row_display: item.row_display || '',
+                                is_print_count_driver: parseInt(item.is_print_count_driver) || 0,
                             };
                             page.grid[rowIndex][colIndex] = cellData;
                             page.cellDataMap[cellData.cell_id] = cellData;
@@ -1705,6 +1707,7 @@ class SuperPrintDesigner {
                 '<select id="prop-cell-type" class="form-control">' + typeOptions + '</select>' +
                 '<label>' + __('Value') + ':</label>' +
                 '<textarea id="prop-cell-value" class="form-control" rows="2"></textarea>' +
+                '<label style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="prop-print-count-driver"> ' + __('Set as Print Count Driver') + '</label>' +
                 '<div id="query-group" style="display:none">' +
                     '<label>' + __('Bound Query') + ':</label>' +
                     '<select id="prop-query-name" class="form-control"><option value="">--</option>' + queryOptions + '</select>' +
@@ -1823,6 +1826,8 @@ class SuperPrintDesigner {
         setValue('prop-barcode-format', cell.barcode_format || 'CODE128');
         setValue('prop-barcode-width', cell.barcode_width || 100);
         setValue('prop-barcode-height', cell.barcode_height || 40);
+        const _driverCb = container.querySelector('#prop-print-count-driver');
+        if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         this.togglePropertyGroups(cell.cell_type);
         if ((cell.cell_type === 'data_query' || cell.cell_type === 'image') && cell.query_name) {
             this.loadDataKeyOptions(cell.query_name);
@@ -1875,6 +1880,7 @@ class SuperPrintDesigner {
         container.querySelector('#prop-cell-value')?.addEventListener('change', (e) => {
             this.updateCellProperty('cell_value', e.target.value);
         });
+        container.querySelector('#prop-print-count-driver')?.addEventListener('change', (e) => this.onPrintCountDriverToggle(e.target.checked));
         container.querySelector('#prop-rowspan')?.addEventListener('change', (e) => {
             this.updateCellProperty('rowspan', parseInt(e.target.value) || 1);
         });
@@ -1931,6 +1937,36 @@ class SuperPrintDesigner {
                 this.lastActiveTab = tab.dataset.tab;
             });
         });
+    }
+
+    onPrintCountDriverToggle(checked) {
+        if (!this.currentCell) return;
+        const [row, col] = this.parseCellId(this.currentCell);
+        const cell = this.grid[row - 1]?.[col - 1];
+        if (!cell || cell._merged) return;
+        if (checked) {
+            // 校验:cell_value 必须是纯数字或单个数字字段占位符(如 {doc.items.qty})
+            const cv = (cell.cell_value || '').trim();
+            const isPureNumber = /^\d+(\.\d+)?$/.test(cv);
+            const isPurePlaceholder = /^\{doc\.[\w.]+\}$/.test(cv);
+            if (!isPureNumber && !isPurePlaceholder) {
+                frappe.show_alert({ message: __('驱动单元格需为纯数字(如 5)或单个数字字段占位符(如 {doc.items.qty})'), indicator: 'red' });
+                const cb = document.getElementById(this.designContainerId)?.querySelector('#prop-print-count-driver');
+                if (cb) cb.checked = false;
+                return;
+            }
+            // 唯一:清除其他 cell 的驱动标记
+            for (const pn of Object.keys(this.pages || {})) {
+                const pg = this.pages[pn];
+                for (const cid in (pg.cellDataMap || {})) {
+                    const c = pg.cellDataMap[cid];
+                    if (c && !c._merged && cid !== cell.cell_id && parseInt(c.is_print_count_driver)) {
+                        c.is_print_count_driver = 0;
+                    }
+                }
+            }
+        }
+        this.updateCellProperty('is_print_count_driver', checked ? 1 : 0);
     }
 
     updateCellProperty(property, value) {

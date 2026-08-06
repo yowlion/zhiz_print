@@ -744,7 +744,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
         const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
         frameDoc.open();
-        frameDoc.write(allHtml);
+        frameDoc.write(this._expand_print_count(allHtml));
         frameDoc.close();
 
         printFrame.onload = () => {
@@ -757,6 +757,23 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         };
 
         this.load_batch_logs();
+    }
+
+    _expand_print_count(html) {
+        // 打印次数驱动:把每个 print-page 按 data-print-count 复制 N 份(预览不重复,仅打印时)
+        if (!html) return html;
+        let doc;
+        try { doc = new DOMParser().parseFromString(html, 'text/html'); }
+        catch (e) { return html; }
+        const pages = doc.querySelectorAll('.print-page');
+        if (!pages.length) return html;
+        const out = doc.createElement('div');
+        pages.forEach((page) => {
+            let n = parseInt(page.dataset.printCount || '1', 10);
+            if (isNaN(n) || n < 1) n = 1;
+            for (let i = 0; i < n; i++) out.appendChild(page.cloneNode(true));
+        });
+        return '<!DOCTYPE html>\n<html>\n<head>' + doc.head.innerHTML + '\n</head>\n<body>\n' + out.innerHTML + '\n</body>\n</html>';
     }
 
     // ==================== Export All PDF ====================

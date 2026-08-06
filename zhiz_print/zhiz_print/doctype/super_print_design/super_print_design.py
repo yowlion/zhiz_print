@@ -44,6 +44,13 @@ class SuperPrintDesign(frappe.model.document.Document):
     def validate(self):
         self.check_license_on_save()
         self.ensure_full_coverage()
+        self.validate_print_count_driver()
+
+    def validate_print_count_driver(self):
+        """打印次数驱动单元格:全设计最多 1 个 is_print_count_driver=1"""
+        drivers = [d for d in (self.design_items or []) if cint(d.get("is_print_count_driver"))]
+        if len(drivers) > 1:
+            frappe.throw(_("At most one cell can be marked as 'Print Count Driver' per design (found {0})").format(len(drivers)))
 
     def check_license_on_save(self):
         """Check license before saving design (both new and existing)."""
@@ -1145,6 +1152,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                     'barcode_format': item.barcode_format or 'CODE128',
                     'barcode_width': item.barcode_width or 100,
                     'barcode_height': item.barcode_height or 40,
+                    'is_print_count_driver': cint(item.is_print_count_driver),
                 }
         return cell_map
 
@@ -1200,6 +1208,16 @@ class SuperPrintDesign(frappe.model.document.Document):
         header_align = _align_map.get((getattr(self, 'page_header_align', '') or 'Center'), 'center')
         footer_align = _align_map.get((getattr(self, 'page_footer_align', '') or 'Center'), 'center')
 
+        # 扫描打印次数驱动单元格(is_print_count_driver=1) — 全设计最多 1 个(validate 保证)
+        _driver_cell = None
+        for _pm in (cell_maps_by_page or {}).values():
+            for _cv in (_pm or {}).values():
+                if cint(_cv.get('is_print_count_driver')):
+                    _driver_cell = _cv
+                    break
+            if _driver_cell:
+                break
+
         total_pages = len(pages)
         pages_html = []
 
@@ -1223,7 +1241,16 @@ class SuperPrintDesign(frappe.model.document.Document):
             cell_map = cell_maps_by_page.get(page_no, {})
             cell_grid = cell_grids_by_page.get(page_no)
 
-            page_html = f'<div class="print-page" data-page-no="{page_no}" style="width:{paper_w_px:.1f}px;height:{paper_h_px:.1f}px;position:relative;overflow:hidden;{"page-break-after:always;" if not is_last else ""}box-sizing:border-box;">'
+            # 该页打印次数:驱动单元格渲染值(子表字段替换后 cint,max(1,N) 兜底;非数字/0→1)
+            _driver_count = 1
+            if _driver_cell:
+                _dr_row = _driver_cell.get('row')
+                _dr_items = _page_row_items.get(_dr_row) or []
+                if _dr_items:
+                    _dr_val = self._replace_child_table_placeholders(_driver_cell.get('cell_value') or '', _dr_items[0])
+                    _driver_count = max(1, cint(_dr_val))
+
+            page_html = f'<div class="print-page" data-page-no="{page_no}" data-print-count="{_driver_count}" style="width:{paper_w_px:.1f}px;height:{paper_h_px:.1f}px;position:relative;overflow:hidden;{"page-break-after:always;" if not is_last else ""}box-sizing:border-box;">'
 
             # Header area
             has_header = getattr(self, 'page_header_left', '') or getattr(
