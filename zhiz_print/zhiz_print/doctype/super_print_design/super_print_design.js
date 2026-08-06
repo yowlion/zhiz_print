@@ -1827,6 +1827,17 @@ class SuperPrintDesigner {
         setValue('prop-barcode-width', cell.barcode_width || 100);
         setValue('prop-barcode-height', cell.barcode_height || 40);
         const _driverCb = container.querySelector('#prop-print-count-driver');
+        const _driverLabel = _driverCb?.closest('label');
+        if (_driverLabel) {
+            // 只在 cell_value 解析为数字时显示「设为打印次数驱动」(纯数字 或 数字字段占位符)
+            const cv = (cell.cell_value || '').trim();
+            let isNumeric = /^\d+(\.\d+)?$/.test(cv);
+            if (!isNumeric) {
+                const m = cv.match(/^\{doc\.([\w.]+)\}$/);
+                if (m) isNumeric = this._isNumericPrintCountField(m[1]);
+            }
+            _driverLabel.style.display = isNumeric ? '' : 'none';
+        }
         if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         this.togglePropertyGroups(cell.cell_type);
         if ((cell.cell_type === 'data_query' || cell.cell_type === 'image') && cell.query_name) {
