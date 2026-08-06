@@ -1839,13 +1839,22 @@ class SuperPrintDesigner {
                 }
                 _driverLabel.style.display = isNumeric ? '' : 'none';
             };
-            // 子表占位符 {doc.child.field}:设计器打开的是 Super Print Design(非目标 doctype),
-            // 子表 meta 可能未加载 → frappe.get_meta 返回空 → 误隐。with_doctype 确保 child meta 加载后再判。
-            const m = cv.match(/^\{doc\.([\w.]+)\}$/);
-            if (m && m[1].includes('.')) {
-                const parts = m[1].split('.');
-                const childDt = frappe.get_meta(this.frm?.doc?.target_doctype)?.get_field(parts[0])?.options;
-                if (childDt) frappe.model.with_doctype(childDt, _updateVisibility);
+            // 设计器打开的是 Super Print Design(非目标 doctype),目标 doctype + 子表 meta 都可能未加载
+            // → frappe.get_meta 返回空 → 误隐。先 with_doctype 目标 doctype,再 with_doctype 子表,然后判显隐。
+            const targetDt = this.frm?.doc?.target_doctype;
+            if (targetDt && cv.includes('{doc.')) {
+                frappe.model.with_doctype(targetDt, () => {
+                    const m = cv.match(/^\{doc\.([\w.]+)\}$/);
+                    if (m && m[1].includes('.')) {
+                        const parts = m[1].split('.');
+                        const childDt = frappe.get_meta(targetDt)?.get_field(parts[0])?.options;
+                        if (childDt) {
+                            frappe.model.with_doctype(childDt, _updateVisibility);
+                            return;
+                        }
+                    }
+                    _updateVisibility();
+                });
             }
             _updateVisibility();
         }
