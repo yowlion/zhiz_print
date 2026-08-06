@@ -2690,6 +2690,7 @@ class SuperPrintDesigner {
                             data_key: cell.data_key || '', barcode_format: cell.barcode_format || 'CODE128',
                             barcode_width: cell.barcode_width || 100, barcode_height: cell.barcode_height || 40,
                             row_type: cell.row_type || '', row_display: cell.row_display || '',
+                            is_print_count_driver: parseInt(cell.is_print_count_driver) || 0,
                         });
                     }
                 }
