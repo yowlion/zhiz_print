@@ -982,6 +982,7 @@ def load_design_data(design_name):
                 "barcode_height": item.barcode_height or 40,
                 "row_type": item.row_type or "",
                 "row_display": item.row_display or "",
+                "is_print_count_driver": cint(item.is_print_count_driver),
                 "is_merged": is_merged,
             }
             if is_merged:
