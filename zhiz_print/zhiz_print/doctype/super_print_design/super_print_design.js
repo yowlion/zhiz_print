@@ -3931,10 +3931,15 @@ frappe.ui.form.on('Super Print Design', {
 
     before_save(frm) {
         // 原生保存(右上角)前同步设计器状态到 frm.doc(去掉自定义保存按钮后由原生接管)
+        // 标记:保存后 frappe 触发的 refresh 跳过 grid 重载(防快速多次保存时 refresh 的 loadExistingDesign
+        // 重置 grid 与 syncToForm 竞态导致 design_items 被空 grid 覆盖清空)
+        frm._spd_in_save = true;
         if (spd_designer) spd_designer.syncToForm();
     },
 
     async refresh(frm) {
+        // 保存触发的 refresh 跳过 loadDesignFromServer/loadExistingDesign(避免重载 grid 与下次 syncToForm 竞态致清空)
+        if (frm._spd_in_save) { frm._spd_in_save = false; return; }
         // 分享到模板平台(form 头部 .custom-actions 按钮,弹窗确认 + 推送)
         if (!frm.is_new() && frm.doc.design_name) {
             frm.add_custom_button(__('分享到模板平台'), () => {
