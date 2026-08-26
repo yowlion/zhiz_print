@@ -814,6 +814,15 @@ class SuperPrintDesign(frappe.model.document.Document):
                 'seq': pos + 1,
                 'cells': cells,
             })
+
+        # Drop columns empty across ALL items (auto-fill spacer cells) so the
+        # dialog only shows meaningful columns
+        if out_items:
+            keep = [j for j in range(len(out_items[0]['cells']))
+                    if any(it['cells'][j] for it in out_items)]
+            if len(keep) < len(out_items[0]['cells']):
+                for it in out_items:
+                    it['cells'] = [it['cells'][j] for j in keep]
         return {'row': row, 'items': out_items}
 
     def _sort_data_items_by_row_cols(self, items, sorts_str, template_row,
