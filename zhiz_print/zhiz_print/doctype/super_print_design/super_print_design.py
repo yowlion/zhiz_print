@@ -519,12 +519,14 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     # ==================== Row Expansion (Data-Driven Rows) ====================
 
-    def _build_expanded_rows_v2(self, cell_map, row_styles, doc, query_results, page_no=None, params=None):
-        """Build expanded row list based on row_type and child table/query data"""
-        all_rows = list(range(1, self.rows + 1))
+    def _detect_data_driven_rows(self, row_styles, page_no=None):
+        """Detect data-driven rows on a logical page from design_items.
 
-        # Detect data-driven rows
-        data_driven_rows = {}  # {row_num: {'child_tables': set(), 'query_names': set()}}
+        Returns {row_num: {'child_tables': set(), 'query_names': set(),
+        'sorts': str, 'data_mode': str}}. data_mode comes from row_styles JSON
+        (same place as 'sorts'): '' = auto render (default), 'select' =
+        checkbox-picked rows at print time (勾选呈现)."""
+        data_driven_rows = {}
 
         if self.design_items:
             for item in self.design_items:
@@ -542,36 +544,115 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if child_patterns:
                     is_data_driven = True
 
-                # query 绑定(qn/dk 供下方 data-driven 行收集 query_names 用)。
+                # query 绑定(qn 供 data-driven 行收集 query_names 用)。
                 # 注意:不再仅凭 data_query cell 就把整行判为 data-driven —— 非数据驱动行
                 # 的 data_query cell 只取 query 首条值(_build_row_html 第1426行 fallback),
                 # 只有 row_type=Data-Driven Row 或子表 {doc.child.field} 模式才按多值展开。
                 # 否则:当 query 未被 parameters 过滤到单条时(如模板平台预览 ds01 返回全表),
                 # 普通标题行会被按结果条数展开成 N 行,出现大量重复行。
                 qn = (item.query_name or '').strip()
-                dk = (item.data_key or '').strip()
 
                 if is_data_driven:
                     if row_num not in data_driven_rows:
                         row_sorts = ''
+                        row_data_mode = ''
                         if row_styles and isinstance(row_styles, dict):
-                            row_sorts = (row_styles.get(str(row_num), {}) or {}).get('sorts', '') or ''
+                            row_cfg = row_styles.get(str(row_num), {}) or {}
+                            row_sorts = row_cfg.get('sorts', '') or ''
+                            row_data_mode = row_cfg.get('data_mode', '') or ''
                         data_driven_rows[row_num] = {
                             'child_tables': set(), 'query_names': set(),
-                            'sorts': row_sorts}
+                            'sorts': row_sorts, 'data_mode': row_data_mode}
                     for (table_name, _) in child_patterns:
                         data_driven_rows[row_num]['child_tables'].add(
                             table_name)
                     if qn:
                         data_driven_rows[row_num]['query_names'].add(qn)
+        return data_driven_rows
+
+    # Reserved param key carrying the pre-print checkbox selection.
+    # Shape: {'5': [item key, ...]} keyed by template row number.
+    ROW_SELECTION_KEY = '__row_selection'
+
+    @classmethod
+    def _get_row_selection_map(cls, params):
+        """Extract the checkbox-selection map from print params. Returns None
+        when no selection was made (auto render, batch print, designer
+        structure preview)."""
+        if not isinstance(params, dict):
+            return None
+        sel = params.get(cls.ROW_SELECTION_KEY)
+        if not isinstance(sel, dict) or not sel:
+            return None
+        return sel
+
+    @staticmethod
+    def _data_item_key(item, position):
+        """Stable key identifying a data item for selection. Child-table rows
+        use their idx; query rows (plain dicts, no idx) use 1-based natural
+        position."""
+        idx = getattr(item, 'idx', None)
+        idx = cint(idx)
+        return idx if idx > 0 else position + 1
+
+    @classmethod
+    def _filter_items_by_selection(cls, items, keys):
+        """Keep only items whose key is in keys. keys=None means no selection
+        made -> keep everything (auto render)."""
+        if keys is None:
+            return items
+        try:
+            key_set = set(cint(k) for k in keys)
+        except (TypeError, ValueError):
+            return items
+        return [it for pos, it in enumerate(items)
+                if cls._data_item_key(it, pos) in key_set]
+
+    @staticmethod
+    def _get_select_group_heads(data_driven_rows):
+        """Rows whose expansion is governed by a checkbox selection.
+
+        Adjacent data-driven rows sharing a data source expand in lockstep as
+        a group driven by the group head's item list (see the grouping logic
+        below), so a select-mode member redirects its selection to the head.
+        Returns the set of head rows carrying a selection."""
+        heads = set()
+        row_to_head = {}
+        prev_r = None
+        for r in sorted(data_driven_rows.keys()):
+            h = r
+            if prev_r is not None and r == prev_r + 1:
+                cand = row_to_head.get(prev_r, prev_r)
+                head_info = data_driven_rows[cand]
+                cur_info = data_driven_rows[r]
+                if ((head_info.get('query_names') & cur_info.get('query_names')) or
+                        (head_info.get('child_tables') & cur_info.get('child_tables'))):
+                    h = cand
+            row_to_head[r] = h
+            prev_r = r
+            if (data_driven_rows[r].get('data_mode') or '') == 'select':
+                heads.add(h)
+        return heads
+
+    def _build_expanded_rows_v2(self, cell_map, row_styles, doc, query_results, page_no=None, params=None):
+        """Build expanded row list based on row_type and child table/query data"""
+        all_rows = list(range(1, self.rows + 1))
+
+        # Detect data-driven rows
+        data_driven_rows = self._detect_data_driven_rows(row_styles, page_no=page_no)
 
         if not data_driven_rows:
             return all_rows, {}
 
         # Get actual data for each data-driven row
+        sel_map = self._get_row_selection_map(params)
+        select_heads = self._get_select_group_heads(data_driven_rows) if sel_map is not None else set()
         row_data_map = {}  # {row_num: [data_items]}
         for row_num, info in data_driven_rows.items():
             items = self._get_row_data_items(info, doc, query_results)
+            # 勾选呈现: 只展开打印前勾选的数据行(组首行的勾选治理整组)
+            if row_num in select_heads:
+                items = self._filter_items_by_selection(items, sel_map.get(str(row_num)))
             sorts = info.get('sorts', '')
             if sorts and items:
                 items = self._sort_data_items_by_row_cols(
@@ -655,6 +736,85 @@ class SuperPrintDesign(frappe.model.document.Document):
                     return data
 
         return []
+
+    def get_data_row_options(self, doc_name, row, params=None):
+        """Candidate data rows for the pre-print selection dialog of a
+        checkbox-render (data_mode='select') Data-Driven Row.
+
+        Returns {'row': row, 'items': [{'key', 'seq', 'cells': [...]}]} where
+        cells are the rendered display values of the template row's columns
+        for each data item (same value resolution as sorting / final print),
+        so the dialog shows exactly what would print. Empty items when the
+        row has no data or is not data-driven."""
+        if isinstance(params, str):
+            try:
+                params = json.loads(params)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                params = {}
+
+        row = cint(row)
+
+        doc = None
+        if doc_name and self.target_doctype:
+            try:
+                doc = frappe.get_doc(self.target_doctype, doc_name)
+            except Exception:
+                doc = None
+
+        # Run the design's queries (same setup as get_preview_for_document —
+        # the candidate rows of a query-driven data row need query_results)
+        query_results = {}
+        if doc_name:
+            for q in self.design_queries:
+                if not q.query_code:
+                    continue
+                try:
+                    result = self.execute_query(
+                        q.query_code, q.parameters,
+                        doc_name, self.target_doctype, params)
+                    query_results[q.query_name] = {'data': result}
+                except Exception:
+                    frappe.log_error(frappe.get_traceback(),
+                                     'Super Print Design: selection dialog query failed: {0}'.format(q.query_name))
+                    query_results[q.query_name] = {'data': []}
+
+        # Locate the logical page owning this data-driven row + its cell map
+        row_styles = json.loads(self.row_styles) if self.row_styles else {}
+        page_count = cint(getattr(self, 'page_count', 1)) or 1
+        cell_map = None
+        info = None
+        for page_no in range(1, page_count + 1):
+            dd = self._detect_data_driven_rows(row_styles, page_no=page_no)
+            if row in dd:
+                info = dd[row]
+                cell_map = self._build_cell_map_for_page(page_no)
+                break
+        if info is None or cell_map is None:
+            return {'row': row, 'items': []}
+
+        items = self._get_row_data_items(info, doc, query_results)
+
+        # Visible columns of the template row: cell origins in col order
+        cols = sorted(
+            [c for c in cell_map.values() if c.get('row') == row],
+            key=lambda c: c.get('col') or 1)
+
+        out_items = []
+        for pos, it in enumerate(items):
+            cells = []
+            for c in cols[:12]:
+                v = self._compute_cell_sort_value(
+                    row, c.get('col') or 1, it, cell_map, doc, query_results, params)
+                v = (v or '').replace('\n', ' ').strip()
+                if len(v) > 60:
+                    v = v[:60] + '…'
+                cells.append(v)
+            out_items.append({
+                'key': self._data_item_key(it, pos),
+                'seq': pos + 1,
+                'cells': cells,
+            })
+        return {'row': row, 'items': out_items}
 
     def _sort_data_items_by_row_cols(self, items, sorts_str, template_row,
                                      cell_map, doc, query_results, params):

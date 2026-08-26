@@ -357,6 +357,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			this.current_params = {};
 		}
 
+		// 勾选呈现的数据驱动行: 打印前逐个弹窗勾选(确认一个再弹下一个)
+		if (design.select_data_rows && design.select_data_rows.length) {
+			const selection = await this.collect_data_row_selection(design);
+			if (selection === null) return;
+			this.current_params.__row_selection = selection;
+		}
+
 		// Render preview
 		await this.render_preview();
 	}
@@ -395,6 +402,116 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			};
 			dialog.show();
 		});
+	}
+
+	// ==================== Data Row Selection (勾选呈现) ====================
+
+	async collect_data_row_selection(design) {
+		// Sequentially prompt a checkbox-selection dialog for every select-mode
+		// Data-Driven Row (confirm one → next pops). Returns {row: [key...]}
+		// or null when cancelled. Default: all unchecked; at least one row
+		// must be picked.
+		const rows = design.select_data_rows || [];
+		const selection = {};
+		for (let i = 0; i < rows.length; i++) {
+			const row = rows[i];
+			let opts;
+			try {
+				const r = await frappe.call({
+					method: 'zhiz_print.api.print_designer.get_data_row_options',
+					args: {
+						doctype: this.frm.doctype,
+						docname: this.frm.docname,
+						design_name: this.current_design,
+						row: row,
+						params: this.current_params || {}
+					}
+				});
+				opts = r.message;
+			} catch (e) {
+				console.error('get_data_row_options failed:', e);
+				frappe.msgprint(__('Failed to load data rows'));
+				return null;
+			}
+			// No candidate data → nothing to pick, row renders empty anyway
+			if (!opts || !opts.items || !opts.items.length) {
+				selection[String(row)] = [];
+				continue;
+			}
+			const keys = await this.show_data_selection_dialog(design, row, opts, i + 1, rows.length);
+			if (keys === null) return null;
+			selection[String(row)] = keys;
+		}
+		return selection;
+	}
+
+	show_data_selection_dialog(design, row, opts, seq, total) {
+		return new Promise((resolve) => {
+			let resolved = false;
+
+			// Candidate rows shown with their rendered values — mirrors what
+			// would print for that data item.
+			const rowsHtml = opts.items.map(it => {
+				const cells = (it.cells || []).map(c => '<td>' + this.escapeHtml(c) + '</td>').join('');
+				return '<tr data-key="' + it.key + '">' +
+					'<td style="text-align:center;width:34px"><input type="checkbox" class="sp-datarow-check"></td>' +
+					'<td style="text-align:center;width:40px;color:#6c757d">' + it.seq + '</td>' + cells + '</tr>';
+			}).join('');
+
+			const dialog = new frappe.ui.Dialog({
+				title: __('Select Rows to Print') + ' - ' + this.escapeHtml(design.design_name) +
+					' <small class="text-muted">(' + __('Row') + ' ' + row + ', ' + seq + '/' + total + ')</small>',
+				primary_action_label: __('Print Selected'),
+				primary_action: () => {
+					const keys = this._checked_data_keys(dialog);
+					if (!keys.length) {
+						frappe.show_alert({ message: __('Select at least one row'), indicator: 'yellow' });
+						return;
+					}
+					resolved = true;
+					dialog.hide();
+					resolve(keys);
+				}
+			});
+
+			dialog.$body.append(
+				'<div style="margin-bottom:8px">' +
+					'<label style="font-weight:normal;margin:0;cursor:pointer"><input type="checkbox" id="sp-datarow-checkall"> ' + __('Select All') + '</label>' +
+					'<span id="sp-datarow-count" class="text-muted" style="margin-left:12px;font-size:12px"></span>' +
+				'</div>' +
+				'<div style="max-height:50vh;overflow:auto;border:1px solid #d1d8dd">' +
+					'<table class="table table-condensed" style="margin:0;font-size:12px;table-layout:fixed">' +
+						'<tbody>' + rowsHtml + '</tbody>' +
+					'</table>' +
+				'</div>');
+
+			const updateCount = () => {
+				const n = dialog.$body.find('.sp-datarow-check:checked').length;
+				dialog.$body.find('#sp-datarow-count').text(__('Selected') + ': ' + n + '/' + opts.items.length);
+				dialog.get_primary_btn().prop('disabled', n === 0);
+			};
+			dialog.$body.on('change', '.sp-datarow-check', updateCount);
+			dialog.$body.find('#sp-datarow-checkall').on('change', function () {
+				dialog.$body.find('.sp-datarow-check').prop('checked', this.checked);
+				updateCount();
+			});
+
+			dialog.get_secondary_btn().show();
+			dialog.set_secondary_action_label(__('Cancel'));
+			dialog.set_secondary_action(() => dialog.hide());
+			dialog.onhide = () => {
+				if (!resolved) resolve(null);
+			};
+
+			dialog.show();
+			updateCount(); // default: all unchecked → confirm disabled
+		});
+	}
+
+	_checked_data_keys(dialog) {
+		return dialog.$body.find('.sp-datarow-check:checked').map(function () {
+			return Number($(this).closest('tr').data('key'));
+		}).get();
 	}
 
 	// ==================== Preview Rendering ====================

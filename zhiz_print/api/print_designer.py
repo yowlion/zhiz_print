@@ -86,7 +86,8 @@ def get_available_designs(doctype, docname=None):
     result = []
     for d in designs:
         # Check enable conditions
-        if not frappe.get_cached_doc("Super Print Design", d.name).check_enable_conditions(d.name, doc=doc):
+        ddoc = frappe.get_cached_doc("Super Print Design", d.name)
+        if not ddoc.check_enable_conditions(d.name, doc=doc):
             continue
 
         # Get paper info (with margins)
@@ -101,6 +102,16 @@ def get_available_designs(doctype, docname=None):
         has_params = frappe.db.count("Super Print Design Parameter",
                                       filters={"parent": d.name, "parenttype": "Super Print Design"})
 
+        # 勾选呈现(data_mode='select')的数据驱动行号 — 打印前需弹窗勾选
+        select_data_rows = []
+        try:
+            row_styles = json.loads(ddoc.row_styles) if ddoc.row_styles else {}
+            dd = ddoc._detect_data_driven_rows(row_styles)
+            select_data_rows = sorted(
+                r for r, ri in dd.items() if (ri.get('data_mode') or '') == 'select')
+        except Exception:
+            select_data_rows = []
+
         result.append({
             "name": d.name,
             "design_name": d.design_name,
@@ -111,6 +122,7 @@ def get_available_designs(doctype, docname=None):
             "parameters": get_design_parameters(d.name),
             "draft_no_print": cint(d.draft_no_print),
             "page_count": cint(d.page_count) if hasattr(d, "page_count") and d.page_count else 1,
+            "select_data_rows": select_data_rows,
         })
 
     return result
@@ -125,6 +137,28 @@ def get_design_parameters(design_name):
         order_by="idx"
     )
     return params
+
+
+@frappe.whitelist()
+def get_data_row_options(doctype, docname, design_name, row, params=None):
+    """Candidate rows for the pre-print checkbox selection dialog of a
+    data_mode='select' Data-Driven Row (勾选呈现). Returns the rendered
+    display values of every candidate data item so the dialog mirrors what
+    would print."""
+    _check_license()
+
+    if isinstance(params, str):
+        try:
+            params = json.loads(params)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            params = {}
+
+    # Permission check
+    if not frappe.has_permission(doctype, "print", docname):
+        frappe.throw(_("No print permission"), frappe.PermissionError)
+
+    design = frappe.get_doc("Super Print Design", design_name)
+    return design.get_data_row_options(docname, row, params=params)
 
 
 @frappe.whitelist()

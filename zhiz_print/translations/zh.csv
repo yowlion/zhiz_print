@@ -381,3 +381,13 @@ Set as Print Count Driver,设为打印次数驱动
 "Inject the document's native Letter Head content into the header band, replacing the Left/Center/Right fields below.","将单据的原生 Letter Head 内容注入页眉带，替代下方的左/中/右字段。"
 "Inject the document's native Letter Head footer into the footer band, replacing the Left/Center/Right fields below.","将单据的原生 Letter Head 页脚注入页脚带，替代下方的左/中/右字段。"
 "Show a collapsible ""Native Print Formats"" section in the print preview sidebar. Users can preview/print with frappe built-in Print Formats (e.g. Standard); native prints are recorded in print history too.","在打印预览侧栏显示可折叠的""原生打印模板""区域。用户可用 frappe 内置打印格式(如 Standard)预览/打印；原生打印亦记入打印历史。"
+Data Presentation Mode,数据呈现方式
+Auto Render,自动呈现
+Select to Render,勾选呈现
+"Auto Render = print all data rows; Select to Render = pick rows in a dialog before printing",自动呈现=打印全部数据行；勾选呈现=打印前弹窗勾选要打印的数据行
+Select Rows to Print,选择打印数据
+Print Selected,打印所选
+Select at least one row,至少勾选一行
+Select All,全选
+Selected,已选
+Failed to load data rows,加载数据行失败

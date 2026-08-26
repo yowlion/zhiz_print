@@ -1078,6 +1078,16 @@ class SuperPrintDesigner {
                     '</select>' +
                 '</div>' +
             '</div>' +
+            '<div class="super-zprint-property-section" id="spd-row-datamode-section" style="display:' + (rowType === 'Data-Driven Row' ? '' : 'none') + '">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-check-square-o"></i> ' + __('Data Presentation Mode') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Data-Driven Row') + ')</small></div>' +
+                '<div class="property-section-body" style="padding:8px">' +
+                    '<select id="row-data-mode-select" class="form-control">' +
+                        '<option value="">' + __('Auto Render') + '</option>' +
+                        '<option value="select">' + __('Select to Render') + '</option>' +
+                    '</select>' +
+                    '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('Auto Render = print all data rows; Select to Render = pick rows in a dialog before printing') + '</div>' +
+                '</div>' +
+            '</div>' +
             '<div class="super-zprint-property-section" id="spd-row-sort-section" style="display:' + (rowType === 'Data-Driven Row' ? '' : 'none') + '">' +
                 '<div class="super-zprint-property-section-header"><i class="fa fa-sort"></i> ' + __('Data Sort') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Data-Driven Row') + ')</small></div>' +
                 '<div class="property-section-body" style="padding:8px">' +
@@ -1151,6 +1161,15 @@ class SuperPrintDesigner {
             });
         }
 
+        // Row data presentation mode (per Data-Driven Row template)
+        const dataModeSelect = container.querySelector('#row-data-mode-select');
+        if (dataModeSelect) {
+            dataModeSelect.value = this.rowStyles[row]?.data_mode || '';
+            dataModeSelect.addEventListener('change', (e) => {
+                this.updateRowStyle(row, 'data_mode', e.target.value || undefined);
+            });
+        }
+
         // Row type selection
         const rowTypeSelect = container.querySelector('#row-type-select');
         if (rowTypeSelect) {
@@ -1158,8 +1177,12 @@ class SuperPrintDesigner {
             rowTypeSelect.value = firstNonMerged?.row_type || '';
             rowTypeSelect.addEventListener('change', (e) => {
                 this.setRowTypeForRow(row, e.target.value);
+                const isDataDriven = e.target.value === 'Data-Driven Row';
                 const sortSection = container.querySelector('#spd-row-sort-section');
-                if (sortSection) sortSection.style.display = (e.target.value === 'Data-Driven Row') ? '' : 'none';
+                if (sortSection) sortSection.style.display = isDataDriven ? '' : 'none';
+                const dataModeSection = container.querySelector('#spd-row-datamode-section');
+                if (dataModeSection) dataModeSection.style.display = isDataDriven ? '' : 'none';
+                if (dataModeSelect && !isDataDriven) dataModeSelect.value = '';
             });
         }
         // Row display effect selection
@@ -1505,6 +1528,10 @@ class SuperPrintDesigner {
             if (cell && !cell._merged) {
                 cell.row_type = rowType || '';
             }
+        }
+        // 数据呈现方式只在数据驱动行下有意义 — 切走行类型时清空
+        if (rowType !== 'Data-Driven Row' && this.rowStyles[row]?.data_mode) {
+            this.updateRowStyle(row, 'data_mode', undefined);
         }
         this.refreshGrid();
         this.frm.dirty();
