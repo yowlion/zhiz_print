@@ -95,6 +95,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-badge { display:inline-block; padding:0 5px; margin-left:4px; border-radius:4px; font-size:10px; vertical-align:1px; }
         .pts-badge-mine { background:#007AFF; color:#fff; }
         .pts-badge-specific { background:#ff9500; color:#fff; }
+        .pts-badge-private { background:#8e8e93; color:#fff; }
         .pts-filters { display:flex; gap:6px; flex-wrap:wrap; }
         .pts-chip { padding:4px 12px; border-radius:14px; font-size:12px; cursor:pointer; background:#f0f0f2; color:#6e6e73; border:1px solid transparent; }
         .pts-chip:hover { background:#e8e8ea; }
@@ -199,11 +200,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         ).join(''));
     }
 
-    // 视角过滤计数:我的(is_mine)/分享给我的(指定可见且非我)/公开共享(全体且非我)
+    // 视角过滤计数:我的(is_mine)/指定分享的(指定可见且非我)/公开分享(全体且非我;仅自己不算公开)
     function renderFilterCounts() {
         const mine = allTemplates.filter(t => t.is_mine).length;
         const shared = allTemplates.filter(t => !t.is_mine && (t.visible_mode || '') === 'Specific').length;
-        const pub = allTemplates.filter(t => !t.is_mine && (t.visible_mode || '') !== 'Specific').length;
+        const pub = allTemplates.filter(t => !t.is_mine && (t.visible_mode || 'Everyone') === 'Everyone').length;
         $('#pts-fc-all').text(allTemplates.length);
         $('#pts-fc-mine').text(mine);
         $('#pts-fc-shared').text(shared);
@@ -214,7 +215,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         let list = allTemplates;
         if (activeFilter === 'mine') list = list.filter(t => t.is_mine);
         else if (activeFilter === 'shared') list = list.filter(t => !t.is_mine && (t.visible_mode || '') === 'Specific');
-        else if (activeFilter === 'public') list = list.filter(t => !t.is_mine && (t.visible_mode || '') !== 'Specific');
+        else if (activeFilter === 'public') list = list.filter(t => !t.is_mine && (t.visible_mode || 'Everyone') === 'Everyone');
         if (activeCategory !== 'all') list = list.filter(t => (t.target_doctype || __('其他')) === activeCategory);
         if (keyword) list = list.filter(t => (t.template_name || '').toLowerCase().includes(keyword));
 
@@ -225,7 +226,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 <div class="pts-card-thumb"><iframe></iframe></div>
                 <div class="pts-card-body">
                     <div class="pts-card-name">${frappe.utils.escape_html(t.template_name || '')}</div>
-                    <div class="pts-card-meta">${__(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0} <span style="color:#aeaeb2;">${frappe.utils.escape_html(t.name || '')}</span>${t.is_mine ? `<span class="pts-badge pts-badge-mine">${__('我的')}</span>` : ''}${(t.visible_mode || '') === 'Specific' ? `<span class="pts-badge pts-badge-specific">${__('指定可见')}</span>` : ''}</div>
+                    <div class="pts-card-meta">${__(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0} <span style="color:#aeaeb2;">${frappe.utils.escape_html(t.name || '')}</span>${t.is_mine ? `<span class="pts-badge pts-badge-mine">${__('我的')}</span>` : ''}${(t.visible_mode || '') === 'Specific' ? `<span class="pts-badge pts-badge-specific">${__('指定可见')}</span>` : ''}${(t.visible_mode || '') === 'Private' ? `<span class="pts-badge pts-badge-private">${__('仅自己')}</span>` : ''}</div>
                     <div class="pts-card-co">广德智兆科技有限公司</div>
                 </div>
             </div>`).join(''));
@@ -393,10 +394,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     }
 
     function renderVisibleInfo(tpl, $ctx) {
-        // 详情弹窗可见对象:全体(蓝)/指定公司(橙);作者(is_mine)额外显示公司名单(一行一个公司)
+        // 详情弹窗可见对象:全体(蓝)/指定公司(橙,作者附名单)/仅自己(灰)
         const $v = $ctx.find('#pts-visible-info');
         if (!$v.length) return;
-        if ((tpl.visible_mode || 'Everyone') === 'Specific') {
+        const mode = tpl.visible_mode || 'Everyone';
+        if (mode === 'Specific') {
             let names = [];
             try { names = (tpl.visible_companies || '').split('\n').map(s => s.trim()).filter(Boolean); } catch (e) {}
             let html = `<b>${__('可见')}</b>: <b style="color:#ff9500;">${__('指定公司')}</b>`;
@@ -404,6 +406,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 html += ` <span style="color:#86868b;">(${names.map(frappe.utils.escape_html).join('、')})</span>`;
             }
             $v.html(html);
+        } else if (mode === 'Private') {
+            $v.html(`<b>${__('可见')}</b>: <b style="color:#8e8e93;">${__('仅自己')}</b>`);
         } else {
             $v.html(`<b>${__('可见')}</b>: <b style="color:#007AFF;">${__('全体')}</b>`);
         }
@@ -420,10 +424,13 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 { fieldtype: 'HTML', fieldname: 'share_form',
                   options: `<div style="font-size:12px;color:#6e6e73;margin-bottom:8px;">${__('设置此模板在模板平台上对哪些公司可见')}。</div>
                       <label style="font-weight:600;font-size:12px;margin-right:16px;cursor:pointer;">
-                          <input type="radio" name="pts-vis-mode" value="Everyone" ${mode !== 'Specific' ? 'checked' : ''}> ${__('全体可见')}
+                          <input type="radio" name="pts-vis-mode" value="Everyone" ${mode !== 'Specific' && mode !== 'Private' ? 'checked' : ''}> ${__('全体可见')}
+                      </label>
+                      <label style="font-weight:600;font-size:12px;margin-right:16px;cursor:pointer;">
+                          <input type="radio" name="pts-vis-mode" value="Specific" ${mode === 'Specific' ? 'checked' : ''}> ${__('指定公司可见')}
                       </label>
                       <label style="font-weight:600;font-size:12px;cursor:pointer;">
-                          <input type="radio" name="pts-vis-mode" value="Specific" ${mode === 'Specific' ? 'checked' : ''}> ${__('指定公司可见')}
+                          <input type="radio" name="pts-vis-mode" value="Private" ${mode === 'Private' ? 'checked' : ''}> ${__('仅自己可见')}
                       </label>
                       <div id="pts-vis-companies-wrap" style="margin-top:8px;${mode === 'Specific' ? '' : 'display:none;'}">
                           <div style="font-size:12px;color:#6e6e73;margin-bottom:4px;">${__('可见公司(一行一个公司全称,须与对方激活许可证时填写的公司名完全一致)')}:</div>
@@ -440,7 +447,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 }
                 frappe.call({
                     method: 'zhiz_print.api.template_store.set_template_visibility',
-                    args: { template_id: tpl.name, visible_mode: m, visible_companies: cs },
+                    args: { template_id: tpl.name, visible_mode: m, visible_companies: m === 'Specific' ? cs : '' },
                     callback: (r) => {
                         const res = r.message || {};
                         if (res.success) {
