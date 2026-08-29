@@ -401,8 +401,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             try { names = (tpl.visible_companies || '').split('\n').map(s => s.trim()).filter(Boolean); } catch (e) {}
             let html = `<b>${__('可见')}</b>: <b style="color:#ff9500;">${__('指定公司')}</b>`;
             if (tpl.is_mine && names.length) {
-                html += names.map(n =>
-                    `<div style="color:#86868b;padding-left:14px;">· ${frappe.utils.escape_html(n)}</div>`).join('');
+                html += ` <span style="color:#86868b;">(${names.map(frappe.utils.escape_html).join('、')})</span>`;
             }
             $v.html(html);
         } else {
@@ -428,7 +427,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                       </label>
                       <div id="pts-vis-companies-wrap" style="margin-top:8px;${mode === 'Specific' ? '' : 'display:none;'}">
                           <div style="font-size:12px;color:#6e6e73;margin-bottom:4px;">${__('可见公司(一行一个公司全称,须与对方激活许可证时填写的公司名完全一致)')}:</div>
-                          <textarea id="pts-vis-companies" class="form-control input-sm" style="resize:vertical;height:96px;min-height:60px;">${frappe.utils.escape_html(companies)}</textarea>
+                          <textarea id="pts-vis-companies" class="form-control input-sm" style="resize:vertical;height:96px;min-height:60px;"></textarea>
                       </div>` },
             ],
             primary_action_label: __('保存'),
@@ -456,6 +455,9 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             },
         });
         dlg.show();
+        // 预填用 .val() 在 show 后设置:值经 Dialog HTML options 内嵌解析会丢换行(A\nB → "A B"),
+        // .val() 直接赋值不经 HTML 解析,一行一个公司的换行完整保留
+        dlg.$wrapper.find('#pts-vis-companies').val(companies);
         dlg.$wrapper.on('change', 'input[name="pts-vis-mode"]', function () {
             dlg.$wrapper.find('#pts-vis-companies-wrap').toggle($(this).val() === 'Specific');
         });
