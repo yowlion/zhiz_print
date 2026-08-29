@@ -124,7 +124,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             <div id="pts-filters" class="pts-filters">
                 <span class="pts-chip active" data-filter="all">${__('所有可见')} <span class="pts-chip-count" id="pts-fc-all">0</span></span>
                 <span class="pts-chip pts-chip-mine" data-filter="mine">${__('我的模板')} <span class="pts-chip-count" id="pts-fc-mine">0</span></span>
-                <span class="pts-chip pts-chip-shared" data-filter="shared">${__('分享给我的')} <span class="pts-chip-count" id="pts-fc-shared">0</span></span>
+                <span class="pts-chip pts-chip-shared" data-filter="shared">${__('指定分享的')} <span class="pts-chip-count" id="pts-fc-shared">0</span></span>
                 <span class="pts-chip pts-chip-public" data-filter="public">${__('公开共享')} <span class="pts-chip-count" id="pts-fc-public">0</span></span>
             </div>
         </div>
