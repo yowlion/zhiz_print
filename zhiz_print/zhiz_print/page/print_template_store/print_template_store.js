@@ -393,23 +393,28 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     }
 
     function renderVisibleInfo(tpl, $ctx) {
-        // 详情弹窗可见对象:全体(绿)/指定公司(橙);作者(is_mine)额外显示公司名单
+        // 详情弹窗可见对象:全体(蓝)/指定公司(橙);作者(is_mine)额外显示公司名单(一行一个公司)
         const $v = $ctx.find('#pts-visible-info');
         if (!$v.length) return;
         if ((tpl.visible_mode || 'Everyone') === 'Specific') {
             let names = [];
             try { names = (tpl.visible_companies || '').split('\n').map(s => s.trim()).filter(Boolean); } catch (e) {}
-            $v.html(`${__('可见')}: <b style="color:#ff9500;">${__('指定公司')}</b>` +
-                (tpl.is_mine && names.length ? ` <span style="color:#86868b;">(${names.map(frappe.utils.escape_html).join('、')})</span>` : ''));
+            let html = `<b>${__('可见')}</b>: <b style="color:#ff9500;">${__('指定公司')}</b>`;
+            if (tpl.is_mine && names.length) {
+                html += names.map(n =>
+                    `<div style="color:#86868b;padding-left:14px;">· ${frappe.utils.escape_html(n)}</div>`).join('');
+            }
+            $v.html(html);
         } else {
-            $v.html(`${__('可见')}: <b style="color:#007AFF;">${__('全体')}</b>`);
+            $v.html(`<b>${__('可见')}</b>: <b style="color:#007AFF;">${__('全体')}</b>`);
         }
     }
 
     function openShareDialog(tpl) {
         // 分享设置(仅上传方 is_mine):全体 / 指定公司(一行一个公司全称,须与对方激活许可证的公司名一致)
         const mode = (tpl.visible_mode || 'Everyone');
-        const companies = tpl.visible_companies || '';
+        // 预填规范化:按行去空白/剔空行,一行一个公司全称(与服务端存储格式一致)
+        const companies = (tpl.visible_companies || '').split('\n').map(s => s.trim()).filter(Boolean).join('\n');
         const dlg = new frappe.ui.Dialog({
             title: `${__('分享设置')} - ${__(tpl.template_name || '')}`,
             fields: [
