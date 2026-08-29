@@ -211,32 +211,6 @@ def _my_company():
     return (((lic[0]["company_name"] if lic else "") or _get_company_name() or "")).strip()
 
 
-def _is_license_server():
-    """本机即 zhiz_licser 服务端 — 模板平台进入调试视角:
-    list/get 直查本地 DB 返回全部模板(含指定可见),不受可见性过滤。"""
-    try:
-        return "zhiz_licser" in frappe.get_installed_apps()
-    except Exception:
-        return False
-
-
-def _local_list_templates(target_doctype=None):
-    """服务端调试视角模板列表:直查本地 Zlic Print Template 全部记录。"""
-    filters = {}
-    if target_doctype:
-        filters["target_doctype"] = target_doctype
-    rows = frappe.get_all("Zlic Print Template", filters=filters,
-        fields=["name", "template_name", "target_doctype", "print_paper_name",
-                "preview_html", "preview_html_design", "author_company", "uploaded_at",
-                "version", "download_count", "visible_mode", "visible_companies"],
-        order_by="uploaded_at desc", limit=200)
-    my = _my_company()
-    for r in rows:
-        r["is_mine"] = bool(my) and bool(r.author_company) and r.author_company.strip() == my
-        del r["visible_companies"]  # 与服务端 list 一致:名单仅作者在 get_template 可见
-    return rows
-
-
 def _clean_doc(d):
     """剔除 Frappe 内部字段(递归子表)。"""
     for f in _INTERNAL_FIELDS:
@@ -338,14 +312,7 @@ def share_template(design_name):
 
 @frappe.whitelist()
 def list_templates(target_doctype=None):
-    """从模板平台拉模板列表(带本机公司名,服务端按可见性过滤+标记 is_mine)。
-    本机即 zhiz_licser 服务端时走调试视角:直查本地全部模板(含指定可见)。"""
-    if _is_license_server():
-        templates = _local_list_templates(target_doctype)
-        for tpl in templates:
-            tpl.pop("preview_html", None)
-            tpl.pop("preview_html_design", None)
-        return {"templates": templates, "count": len(templates)}
+    """从模板平台拉模板列表(带本机公司名,服务端按可见性过滤+标记 is_mine)。"""
     body = {"company_name": _my_company()}
     if target_doctype:
         body["target_doctype"] = target_doctype
@@ -364,33 +331,17 @@ def list_templates(target_doctype=None):
 
 @frappe.whitelist()
 def get_template(template_id):
-    """从模板平台拉单个模板完整数据(带本机公司名,服务端校验可见性)。
-    本机即 zhiz_licser 服务端时走调试视角:直查本地(不受可见性过滤)。"""
-    if _is_license_server():
-        # 调试视角:直查本地,不受可见性过滤;名单仅作者可见(与正常路径一致)
-        tpl = frappe.db.get_value("Zlic Print Template", template_id, [
-            "name", "template_name", "target_doctype", "print_paper_name",
-            "print_paper_config", "design_data", "preview_html", "preview_html_design",
-            "zhiz_print_version", "author_company", "version", "download_count",
-            "uploaded_at", "visible_mode", "visible_companies",
-        ], as_dict=True)
-        if not tpl:
-            return {"error": "Template not found"}
-        my = _my_company()
-        tpl["is_mine"] = bool(my) and bool(tpl.author_company) and tpl.author_company.strip() == my
-        if not tpl.is_mine:
-            tpl.pop("visible_companies", None)
-    else:
-        try:
-            result = _call_license_api("get_template", {
-                "template_id": template_id,
-                "company_name": _my_company(),
-            }, module="template_api", timeout=30)
-        except Exception:
-            return {"error": "拉取模板预览超时,请稍后重试"}
-        if not result or "template" not in result:
-            return {"error": (result or {}).get("error", "Template not found")}
-        tpl = result.get("template")
+    """从模板平台拉单个模板完整数据(带本机公司名,服务端校验可见性)。"""
+    try:
+        result = _call_license_api("get_template", {
+            "template_id": template_id,
+            "company_name": _my_company(),
+        }, module="template_api", timeout=30)
+    except Exception:
+        return {"error": "拉取模板预览超时,请稍后重试"}
+    if not result or "template" not in result:
+        return {"error": (result or {}).get("error", "Template not found")}
+    tpl = result.get("template")
     # 返回客户端前脱敏(中心存原版,只在返回客户端模板平台时脱敏)
     if isinstance(tpl, dict):
         for _k in ("preview_html", "preview_html_design"):
