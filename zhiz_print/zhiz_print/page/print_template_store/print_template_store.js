@@ -92,8 +92,13 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-card-meta { color:#86868b; margin-top:2px; }
         .pts-card-co { color:var(--zhiz-super-accent,#007AFF); margin-top:2px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .pts-badge { display:inline-block; padding:0 5px; margin-left:4px; border-radius:4px; font-size:10px; vertical-align:1px; }
-        .pts-badge-mine { background:#e8f5e9; color:#2e7d32; }
-        .pts-badge-specific { background:#fff3e0; color:#ef6c00; }
+        .pts-badge-mine { background:#007AFF; color:#fff; }
+        .pts-badge-specific { background:#ff9500; color:#fff; }
+        .pts-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+        .pts-chip { padding:4px 12px; border-radius:14px; font-size:12px; cursor:pointer; background:#f0f0f2; color:#6e6e73; border:1px solid transparent; }
+        .pts-chip:hover { background:#e8e8ea; }
+        .pts-chip.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
+        .pts-chip .pts-chip-count { opacity:.75; margin-left:2px; }
         .pts-empty { padding:40px; text-align:center; color:#aeaeb2; font-size:13px; }
         .pts-preview-tabs { display:flex; gap:4px; margin-bottom:6px; }
         .pts-preview-tabs .pts-tab { padding:5px 16px; border-radius:6px 6px 0 0; font-size:12px; cursor:pointer; background:#e0e0e0; color:#666; }
@@ -114,15 +119,28 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
     </div>`);
     $main.html(`<div class="pts-main">
         <div class="pts-search"><input type="text" id="pts-search" class="form-control input-sm" placeholder="${__('搜索模板名...')}"></div>
+        <div id="pts-filters" class="pts-filters">
+            <span class="pts-chip active" data-filter="all">${__('所有可见')} <span class="pts-chip-count" id="pts-fc-all">0</span></span>
+            <span class="pts-chip pts-chip-mine" data-filter="mine">${__('我的模板')} <span class="pts-chip-count" id="pts-fc-mine">0</span></span>
+            <span class="pts-chip pts-chip-shared" data-filter="shared">${__('分享给我的')} <span class="pts-chip-count" id="pts-fc-shared">0</span></span>
+            <span class="pts-chip pts-chip-public" data-filter="public">${__('公开共享')} <span class="pts-chip-count" id="pts-fc-public">0</span></span>
+        </div>
         <div id="pts-grid" class="pts-grid"><div class="pts-empty">${__('加载中...')}</div></div>
     </div>`);
 
     let allTemplates = [];
     let activeCategory = 'all';
+    let activeFilter = 'all';   // 视角过滤: all 所有可见 / mine 我的 / shared 分享给我的 / public 公开共享
     let keyword = '';
 
     $('#pts-reload-btn').on('click', () => { try { localStorage.removeItem(PTS_LIST_CACHE); } catch (e) {} loadTemplates(true); });
     $('#pts-search').on('input', function () { keyword = $(this).val().toLowerCase().trim(); renderCards(); });
+    $('#pts-filters').on('click', '.pts-chip', function () {
+        $('#pts-filters .pts-chip').removeClass('active');
+        $(this).addClass('active');
+        activeFilter = $(this).data('filter');
+        renderCards();
+    });
     $sidebar.on('click', '.pts-cat', function () {
         $sidebar.find('.pts-cat').removeClass('active');
         $(this).addClass('active');
@@ -142,6 +160,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 if (cached && cached.ts && (Date.now() - cached.ts < PTS_LIST_TTL) && cached.templates) {
                     allTemplates = cached.templates;
                     renderCategories();
+                    renderFilterCounts();
                     renderCards();
                     _fetchTemplates();  // 后台静默刷新
                     return;
@@ -161,6 +180,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 allTemplates = res.templates || [];
                 try { localStorage.setItem(PTS_LIST_CACHE, JSON.stringify({ ts: Date.now(), templates: allTemplates })); } catch (e) {}
                 renderCategories();
+                renderFilterCounts();
                 renderCards();
             }
         });
@@ -176,8 +196,22 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         ).join(''));
     }
 
+    // 视角过滤计数:我的(is_mine)/分享给我的(指定可见且非我)/公开共享(全体且非我)
+    function renderFilterCounts() {
+        const mine = allTemplates.filter(t => t.is_mine).length;
+        const shared = allTemplates.filter(t => !t.is_mine && (t.visible_mode || '') === 'Specific').length;
+        const pub = allTemplates.filter(t => !t.is_mine && (t.visible_mode || '') !== 'Specific').length;
+        $('#pts-fc-all').text(allTemplates.length);
+        $('#pts-fc-mine').text(mine);
+        $('#pts-fc-shared').text(shared);
+        $('#pts-fc-public').text(pub);
+    }
+
     function renderCards() {
         let list = allTemplates;
+        if (activeFilter === 'mine') list = list.filter(t => t.is_mine);
+        else if (activeFilter === 'shared') list = list.filter(t => !t.is_mine && (t.visible_mode || '') === 'Specific');
+        else if (activeFilter === 'public') list = list.filter(t => !t.is_mine && (t.visible_mode || '') !== 'Specific');
         if (activeCategory !== 'all') list = list.filter(t => (t.target_doctype || __('其他')) === activeCategory);
         if (keyword) list = list.filter(t => (t.template_name || '').toLowerCase().includes(keyword));
 
@@ -362,10 +396,10 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         if ((tpl.visible_mode || 'Everyone') === 'Specific') {
             let names = [];
             try { names = (tpl.visible_companies || '').split('\n').map(s => s.trim()).filter(Boolean); } catch (e) {}
-            $v.html(`${__('可见')}: <b style="color:#ef6c00;">${__('指定公司')}</b>` +
+            $v.html(`${__('可见')}: <b style="color:#ff9500;">${__('指定公司')}</b>` +
                 (tpl.is_mine && names.length ? ` <span style="color:#86868b;">(${names.map(frappe.utils.escape_html).join('、')})</span>` : ''));
         } else {
-            $v.html(`${__('可见')}: <b style="color:#2e7d32;">${__('全体')}</b>`);
+            $v.html(`${__('可见')}: <b style="color:#007AFF;">${__('全体')}</b>`);
         }
     }
 
