@@ -78,7 +78,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-sidebar .pts-cat.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
         .pts-sidebar .pts-cat .pts-cat-count { float:right; opacity:.65; }
         .pts-main { padding:0 8px 16px; }
-        .pts-search { margin-bottom:10px; }
+        .pts-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+        .pts-toolbar .pts-search { margin-bottom:0; flex:0 0 230px; }
         .pts-grid { display:grid; grid-template-columns:repeat(6, 1fr); gap:12px; }
         @media(max-width:1700px){ .pts-grid{ grid-template-columns:repeat(5,1fr);} }
         @media(max-width:1450px){ .pts-grid{ grid-template-columns:repeat(4,1fr);} }
@@ -94,7 +95,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-badge { display:inline-block; padding:0 5px; margin-left:4px; border-radius:4px; font-size:10px; vertical-align:1px; }
         .pts-badge-mine { background:#007AFF; color:#fff; }
         .pts-badge-specific { background:#ff9500; color:#fff; }
-        .pts-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+        .pts-filters { display:flex; gap:6px; flex-wrap:wrap; }
         .pts-chip { padding:4px 12px; border-radius:14px; font-size:12px; cursor:pointer; background:#f0f0f2; color:#6e6e73; border:1px solid transparent; }
         .pts-chip:hover { background:#e8e8ea; }
         .pts-chip.active { background:var(--zhiz-super-accent,#007AFF); color:#fff; }
@@ -118,12 +119,14 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         <div id="pts-cat-list"></div>
     </div>`);
     $main.html(`<div class="pts-main">
-        <div class="pts-search"><input type="text" id="pts-search" class="form-control input-sm" placeholder="${__('搜索模板名...')}"></div>
-        <div id="pts-filters" class="pts-filters">
-            <span class="pts-chip active" data-filter="all">${__('所有可见')} <span class="pts-chip-count" id="pts-fc-all">0</span></span>
-            <span class="pts-chip pts-chip-mine" data-filter="mine">${__('我的模板')} <span class="pts-chip-count" id="pts-fc-mine">0</span></span>
-            <span class="pts-chip pts-chip-shared" data-filter="shared">${__('分享给我的')} <span class="pts-chip-count" id="pts-fc-shared">0</span></span>
-            <span class="pts-chip pts-chip-public" data-filter="public">${__('公开共享')} <span class="pts-chip-count" id="pts-fc-public">0</span></span>
+        <div class="pts-toolbar">
+            <div class="pts-search"><input type="text" id="pts-search" class="form-control input-sm" placeholder="${__('搜索模板名...')}"></div>
+            <div id="pts-filters" class="pts-filters">
+                <span class="pts-chip active" data-filter="all">${__('所有可见')} <span class="pts-chip-count" id="pts-fc-all">0</span></span>
+                <span class="pts-chip pts-chip-mine" data-filter="mine">${__('我的模板')} <span class="pts-chip-count" id="pts-fc-mine">0</span></span>
+                <span class="pts-chip pts-chip-shared" data-filter="shared">${__('分享给我的')} <span class="pts-chip-count" id="pts-fc-shared">0</span></span>
+                <span class="pts-chip pts-chip-public" data-filter="public">${__('公开共享')} <span class="pts-chip-count" id="pts-fc-public">0</span></span>
+            </div>
         </div>
         <div id="pts-grid" class="pts-grid"><div class="pts-empty">${__('加载中...')}</div></div>
     </div>`);
