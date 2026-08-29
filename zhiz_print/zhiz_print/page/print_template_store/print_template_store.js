@@ -91,6 +91,9 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         .pts-card-name { font-weight:600; color:#1d1d1f; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .pts-card-meta { color:#86868b; margin-top:2px; }
         .pts-card-co { color:var(--zhiz-super-accent,#007AFF); margin-top:2px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .pts-badge { display:inline-block; padding:0 5px; margin-left:4px; border-radius:4px; font-size:10px; vertical-align:1px; }
+        .pts-badge-mine { background:#e8f5e9; color:#2e7d32; }
+        .pts-badge-specific { background:#fff3e0; color:#ef6c00; }
         .pts-empty { padding:40px; text-align:center; color:#aeaeb2; font-size:13px; }
         .pts-preview-tabs { display:flex; gap:4px; margin-bottom:6px; }
         .pts-preview-tabs .pts-tab { padding:5px 16px; border-radius:6px 6px 0 0; font-size:12px; cursor:pointer; background:#e0e0e0; color:#666; }
@@ -185,7 +188,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 <div class="pts-card-thumb"><iframe></iframe></div>
                 <div class="pts-card-body">
                     <div class="pts-card-name">${frappe.utils.escape_html(t.template_name || '')}</div>
-                    <div class="pts-card-meta">${__(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0}</div>
+                    <div class="pts-card-meta">${__(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0}${t.is_mine ? `<span class="pts-badge pts-badge-mine">${__('我的')}</span>` : ''}${(t.visible_mode || '') === 'Specific' ? `<span class="pts-badge pts-badge-specific">${__('指定可见')}</span>` : ''}</div>
                     <div class="pts-card-co">广德智兆科技有限公司</div>
                 </div>
             </div>`).join(''));
@@ -276,9 +279,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 { fieldtype: 'HTML', fieldname: 'paper',
                   options: `<div class="pts-paper-info" id="pts-paper-info">${__('加载中...')}</div>` },
                 { fieldtype: 'HTML', fieldname: 'actions_comments',
-                  options: `<div style="display:flex;align-items:center;gap:12px;margin:4px 0;">
+                  options: `<div style="display:flex;align-items:center;gap:12px;margin:4px 0;flex-wrap:wrap;">
                               <button class="btn btn-success btn-sm" id="pts-install-btn"><i class="fa fa-download"></i> ${__('下载安装')}</button>
+                              ${tpl.is_mine ? `<button class="btn btn-default btn-sm" id="pts-share-btn"><i class="fa fa-share-alt"></i> ${__('分享设置')}</button>` : ''}
                               <span style="color:#86868b;font-size:12px;">${__('下载次数')}: <b style="color:#1d1d1f;">${tpl.download_count || 0}</b></span>
+                              <span id="pts-visible-info" style="color:#86868b;font-size:12px;"></span>
                             </div>
                             <hr style="margin:8px 0;">
                             <div style="font-weight:600;">${__('评论')}</div>
@@ -317,9 +322,11 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
 
         loadPaperInfo(tpl, dlg.$wrapper);
         loadComments(tpl.name, dlg.$wrapper);
+        renderVisibleInfo(tpl, dlg.$wrapper);
 
         // 事件绑定限定本 dialog(事件委托,避免全局 id 冲突)
         dlg.$wrapper.on('click', '#pts-install-btn', () => openInstallDialog(tpl));
+        dlg.$wrapper.on('click', '#pts-share-btn', () => openShareDialog(tpl));
         const submitComment = () => {
             const $ta = dlg.$wrapper.find('#pts-new-comment');
             const content = $ta.val().trim();
@@ -344,6 +351,71 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); submitComment(); }
         });
         // dialog 关闭后销毁 DOM(bootstrap modal hide 不 remove,残留 #pts-* id 致下次 open 全局 selector 命中旧 dialog)
+        dlg.$wrapper.on('hidden.bs.modal', () => { dlg.$wrapper.remove(); });
+    }
+
+    function renderVisibleInfo(tpl, $ctx) {
+        // 详情弹窗可见对象:全体(绿)/指定公司(橙);作者(is_mine)额外显示公司名单
+        const $v = $ctx.find('#pts-visible-info');
+        if (!$v.length) return;
+        if ((tpl.visible_mode || 'Everyone') === 'Specific') {
+            let names = [];
+            try { names = (tpl.visible_companies || '').split('\n').map(s => s.trim()).filter(Boolean); } catch (e) {}
+            $v.html(`${__('可见')}: <b style="color:#ef6c00;">${__('指定公司')}</b>` +
+                (tpl.is_mine && names.length ? ` <span style="color:#86868b;">(${names.map(frappe.utils.escape_html).join('、')})</span>` : ''));
+        } else {
+            $v.html(`${__('可见')}: <b style="color:#2e7d32;">${__('全体')}</b>`);
+        }
+    }
+
+    function openShareDialog(tpl) {
+        // 分享设置(仅上传方 is_mine):全体 / 指定公司(一行一个公司全称,须与对方激活许可证的公司名一致)
+        const mode = (tpl.visible_mode || 'Everyone');
+        const companies = tpl.visible_companies || '';
+        const dlg = new frappe.ui.Dialog({
+            title: `${__('分享设置')} - ${__(tpl.template_name || '')}`,
+            fields: [
+                { fieldtype: 'HTML', fieldname: 'share_form',
+                  options: `<div style="font-size:12px;color:#6e6e73;margin-bottom:8px;">${__('设置此模板在模板平台上对哪些公司可见')}。</div>
+                      <label style="font-weight:600;font-size:12px;margin-right:16px;cursor:pointer;">
+                          <input type="radio" name="pts-vis-mode" value="Everyone" ${mode !== 'Specific' ? 'checked' : ''}> ${__('全体可见')}
+                      </label>
+                      <label style="font-weight:600;font-size:12px;cursor:pointer;">
+                          <input type="radio" name="pts-vis-mode" value="Specific" ${mode === 'Specific' ? 'checked' : ''}> ${__('指定公司可见')}
+                      </label>
+                      <div id="pts-vis-companies-wrap" style="margin-top:8px;${mode === 'Specific' ? '' : 'display:none;'}">
+                          <div style="font-size:12px;color:#6e6e73;margin-bottom:4px;">${__('可见公司(一行一个公司全称,须与对方激活许可证时填写的公司名完全一致)')}:</div>
+                          <textarea id="pts-vis-companies" class="form-control input-sm" style="resize:vertical;height:96px;min-height:60px;">${frappe.utils.escape_html(companies)}</textarea>
+                      </div>` },
+            ],
+            primary_action_label: __('保存'),
+            primary_action: () => {
+                const m = dlg.$wrapper.find('input[name="pts-vis-mode"]:checked').val() || 'Everyone';
+                const cs = (dlg.$wrapper.find('#pts-vis-companies').val() || '').trim();
+                if (m === 'Specific' && !cs.split('\n').map(s => s.trim()).filter(Boolean).length) {
+                    frappe.show_alert({ message: __('指定公司可见时须至少填写一个公司全称'), indicator: 'red' });
+                    return;
+                }
+                frappe.call({
+                    method: 'zhiz_print.api.template_store.set_template_visibility',
+                    args: { template_id: tpl.name, visible_mode: m, visible_companies: cs },
+                    callback: (r) => {
+                        const res = r.message || {};
+                        if (res.success) {
+                            dlg.hide();
+                            frappe.show_alert({ message: __('分享设置已保存'), indicator: 'green' });
+                            loadTemplates(true);  // 强刷列表(缓存 10min,force 跳过并覆盖)
+                        } else {
+                            frappe.show_alert({ message: res.error || __('保存失败'), indicator: 'red' });
+                        }
+                    }
+                });
+            },
+        });
+        dlg.show();
+        dlg.$wrapper.on('change', 'input[name="pts-vis-mode"]', function () {
+            dlg.$wrapper.find('#pts-vis-companies-wrap').toggle($(this).val() === 'Specific');
+        });
         dlg.$wrapper.on('hidden.bs.modal', () => { dlg.$wrapper.remove(); });
     }
 

@@ -203,6 +203,13 @@ _INTERNAL_FIELDS = ["name", "owner", "creation", "modified", "modified_by",
     "_liked_by", "lft", "rgt"]
 
 
+def _my_company():
+    """本机激活公司名 — 模板平台的请求方身份(可见性过滤/作者判定都按它)。"""
+    lic = frappe.get_all("Zprint License", limit=1, order_by="activated_at desc",
+        fields=["company_name"])
+    return (lic[0]["company_name"] if lic else "") or ""
+
+
 def _clean_doc(d):
     """剔除 Frappe 内部字段(递归子表)。"""
     for f in _INTERNAL_FIELDS:
@@ -300,8 +307,8 @@ def share_template(design_name):
 
 @frappe.whitelist()
 def list_templates(target_doctype=None):
-    """从模板平台拉模板列表。"""
-    body = {}
+    """从模板平台拉模板列表(带本机公司名,服务端按可见性过滤+标记 is_mine)。"""
+    body = {"company_name": _my_company()}
     if target_doctype:
         body["target_doctype"] = target_doctype
     result = _call_license_api("list_templates", body, module="template_api")
@@ -319,9 +326,12 @@ def list_templates(target_doctype=None):
 
 @frappe.whitelist()
 def get_template(template_id):
-    """从模板平台拉单个模板完整数据。"""
+    """从模板平台拉单个模板完整数据(带本机公司名,服务端校验可见性)。"""
     try:
-        result = _call_license_api("get_template", {"template_id": template_id}, module="template_api", timeout=30)
+        result = _call_license_api("get_template", {
+            "template_id": template_id,
+            "company_name": _my_company(),
+        }, module="template_api", timeout=30)
     except Exception:
         return {"error": "拉取模板预览超时,请稍后重试"}
     if not result or "template" not in result:
@@ -335,6 +345,23 @@ def get_template(template_id):
         # URL/二维码脱敏:install_template 也走 get_template,故安装下来的设计一并脱敏
         tpl = _desensitize_template_urls(tpl)
     return tpl
+
+
+@frappe.whitelist()
+def set_template_visibility(template_id, visible_mode, visible_companies=None):
+    """设置自己上传模板的分享对象(服务端校验:仅作者=company_name 匹配可改)。
+
+    visible_mode: Everyone(全体) / Specific(指定公司,visible_companies 一行一个公司全称)
+    """
+    result = _call_license_api("set_visibility", {
+        "template_id": template_id,
+        "company_name": _my_company(),
+        "visible_mode": visible_mode,
+        "visible_companies": visible_companies or "",
+    }, module="template_api")
+    if not result or not result.get("success"):
+        return {"success": False, "error": (result or {}).get("error", "Save failed")}
+    return {"success": True, "visible_mode": result.get("visible_mode")}
 
 
 @frappe.whitelist()
