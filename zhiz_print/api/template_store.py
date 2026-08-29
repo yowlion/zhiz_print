@@ -8,7 +8,7 @@ from __future__ import unicode_literals
 import json
 import re
 import frappe
-from zhiz_print.api.license import _call_license_api, get_machine_id
+from zhiz_print.api.license import _call_license_api, _get_company_name, get_machine_id
 
 # 脱敏:模板平台公开(装 app 都能看),返回客户端前把公司名替换为固定占位,保密真实客户。
 # 注意:脱敏只在 get_template/list_templates 返回客户端模板平台时做;share_template 推送原版,
@@ -204,10 +204,11 @@ _INTERNAL_FIELDS = ["name", "owner", "creation", "modified", "modified_by",
 
 
 def _my_company():
-    """本机激活公司名 — 模板平台的请求方身份(可见性过滤/作者判定都按它)。"""
+    """本机激活公司名 — 模板平台的请求方身份(可见性过滤/作者判定都按它)。
+    与 share_template 同兜底:本地 license 缺公司名时回退 ERPNext 主数据公司名。"""
     lic = frappe.get_all("Zprint License", limit=1, order_by="activated_at desc",
         fields=["company_name"])
-    return (lic[0]["company_name"] if lic else "") or ""
+    return (((lic[0]["company_name"] if lic else "") or _get_company_name() or "")).strip()
 
 
 def _clean_doc(d):
@@ -255,10 +256,14 @@ def share_template(design_name):
         pass
 
     # 授权信息(author identity)
+    # company_name 兜底:本地 license 记录可能缺公司名(旧版本激活未落该字段),
+    # 回退取 ERPNext 主数据公司名;仍为空则拒绝分享 — 无主模板无法设置分享对象。
     lic = frappe.get_all("Zprint License", limit=1, order_by="activated_at desc",
         fields=["license_key", "company_name"])
     license_key = lic[0]["license_key"] if lic else ""
-    company = lic[0]["company_name"] if lic else ""
+    company = ((lic[0]["company_name"] if lic else "") or _get_company_name() or "").strip()
+    if not company:
+        frappe.throw("无法确定公司名称,无法分享模板。请先在系统中维护公司(Company)或重新激活许可证时填写公司名。")
 
     # 图片转 base64 嵌入(跨服务器自包含,解决推送后图片 URL 指向客户服务器不可达)
     import re
