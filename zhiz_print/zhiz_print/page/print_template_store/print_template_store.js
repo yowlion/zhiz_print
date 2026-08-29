@@ -188,7 +188,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                 <div class="pts-card-thumb"><iframe></iframe></div>
                 <div class="pts-card-body">
                     <div class="pts-card-name">${frappe.utils.escape_html(t.template_name || '')}</div>
-                    <div class="pts-card-meta">${__(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0}${t.is_mine ? `<span class="pts-badge pts-badge-mine">${__('我的')}</span>` : ''}${(t.visible_mode || '') === 'Specific' ? `<span class="pts-badge pts-badge-specific">${__('指定可见')}</span>` : ''}</div>
+                    <div class="pts-card-meta">${__(t.target_doctype || '')} · v${t.version || 1} · ↓${t.download_count || 0} <span style="color:#aeaeb2;">${frappe.utils.escape_html(t.name || '')}</span>${t.is_mine ? `<span class="pts-badge pts-badge-mine">${__('我的')}</span>` : ''}${(t.visible_mode || '') === 'Specific' ? `<span class="pts-badge pts-badge-specific">${__('指定可见')}</span>` : ''}</div>
                     <div class="pts-card-co">广德智兆科技有限公司</div>
                 </div>
             </div>`).join(''));
@@ -283,6 +283,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                               <button class="btn btn-success btn-sm" id="pts-install-btn"><i class="fa fa-download"></i> ${__('下载安装')}</button>
                               ${tpl.is_mine ? `<button class="btn btn-default btn-sm" id="pts-share-btn"><i class="fa fa-share-alt"></i> ${__('分享设置')}</button>` : ''}
                               <span style="color:#86868b;font-size:12px;">${__('下载次数')}: <b style="color:#1d1d1f;">${tpl.download_count || 0}</b></span>
+                              <span style="color:#86868b;font-size:12px;">${__('编号')}: <b style="color:#1d1d1f;">${frappe.utils.escape_html(tpl.name || '')}</b></span>
                               <span id="pts-visible-info" style="color:#86868b;font-size:12px;"></span>
                             </div>
                             <hr style="margin:8px 0;">
