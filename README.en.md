@@ -4,14 +4,18 @@ A custom print template designer built on the Frappe/ERPNext framework, providin
 
 ## Features
 
-- **Visual Print Designer** — Table-based drag-and-drop design with cell merging, style editing, and data binding
+- **Visual Print Designer** — Table-based drag-and-drop design with cell merging, style editing, data binding, and free column-resize by dragging
 - **Multiple Data Sources** — Static text, data queries, barcodes (CODE128/CODE39), QR codes, images
-- **Auto Pagination** — Automatic pagination based on paper size and row height, with title row repeat
-- **Header & Footer** — Placeholders for page numbers, date/time, etc.
+- **Cell Value Semantics** — Four semantics: static replacement, Python logic expressions, `=` arithmetic expressions, `=rowsum(R:C)` / `=pagerowsum(R:C)` totals (page-scope subtotal supported)
+- **Auto Pagination** — Client-measured pagination (browser measures real row heights; preview/print/PDF always consistent), with title row repeat
+- **Header & Footer** — Header/footer with per-column alignment, vertical left-header / right-footer strips, preserved spaces
+- **Row Controls** — Line spacing (0-20px), row sorting by rendered value, check-pick data presentation (choose rows before printing), print-count driver cell
+- **Native Reuse** — Optional sidebar section to use native Print Formats; reuse native Letter Head header/footer per design
 - **PDF Export** — Three conversion engines: WeasyPrint / wkhtmltopdf / Chromium
 - **Excel Export** — CSS styles converted to Excel formats, including barcode/QR code images
 - **Print Log** — Records every print/export operation for preview追溯
 - **Parameterized Templates** — Custom print parameters with pre-print dialog
+- **Template Platform** — Share designs to a central platform; per-template visibility (Everyone / Specific Companies / Private), quick view filters, one-click install; company names & QR/URL desensitized
 
 ## DocType List
 
