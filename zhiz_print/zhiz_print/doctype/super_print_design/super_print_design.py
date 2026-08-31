@@ -898,6 +898,11 @@ class SuperPrintDesign(frappe.model.document.Document):
         if not cell:
             return ''
         cv = cell.get('cell_value', '') or ''
+        # barcode/qrcode '=' 前缀与 _build_row_html 取值同步:剥离 '=' 走 logic 求值,
+        # 避免 rowsum/排序引用该列时与渲染路径取值分叉(取到表达式原文)
+        if cv and cv.lstrip().startswith('=') and cell.get('cell_type') in ('barcode', 'qrcode'):
+            cv = self._eval_logic_code(cv.lstrip()[1:], doc, data_item) if doc is not None else ''
+            return cv
         if cv and cv.lstrip().startswith('=') and cell.get('cell_type') != 'logic':
             return self._eval_expression_cell(cv, doc, data_item, query_results, params)
         if cell.get('cell_type') == 'logic' and cv:
@@ -1702,7 +1707,9 @@ class SuperPrintDesign(frappe.model.document.Document):
 
                 # '=' cells: =rowsum(R:C) sum across a Data-Driven Row, or =expr arithmetic
                 # doc=None(纯模板结构预览)时原样显示 =rowsum()/=expr 文本,不计算(无 doc/items 无法求值)
-                if cell_value and cell_type != 'logic' and cell_value.lstrip().startswith('=') and doc is not None:
+                # barcode/qrcode 除外:走下方专门的 '=' logic 求值分支,不进 _eval_expression_cell
+                # (弱上下文无 get_value/doc/row,求值失败返回原文会把表达式文本编进条码)
+                if cell_value and cell_type not in ('logic', 'barcode', 'qrcode') and cell_value.lstrip().startswith('=') and doc is not None:
                     prs = _PAGEROWSUM_RE.match(cell_value)
                     rs = _ROWSUM_RE.match(cell_value) if not prs else None
                     if prs or rs:
@@ -1716,6 +1723,16 @@ class SuperPrintDesign(frappe.model.document.Document):
                     else:
                         cell_value = self._eval_expression_cell(
                             cell_value, doc, data_item, query_results, params)
+
+                # barcode/qrcode '=' 前缀:剥离 '=' 后走 logic 求值(get_value/doc/row 强上下文),
+                # 求值结果再编码为条码/二维码,而不是把表达式文本编进条码。
+                # 不加 '=' 保持现有行为:占位符替换({doc.name} 等)后直接编码。
+                # doc=None(纯模板结构预览)不求值,置空让条码渲染显示 '--'
+                if cell_type in ('barcode', 'qrcode') and cell_value and cell_value.lstrip().startswith('='):
+                    if doc is not None:
+                        cell_value = self._eval_logic_code(cell_value.lstrip()[1:], doc, data_item)
+                    else:
+                        cell_value = ''
 
                 # Logic code: evaluate Python expression
                 # doc=None(纯模板结构预览)时 logic 原样显示表达式文本,不计算(无 doc/row 无法求值)
