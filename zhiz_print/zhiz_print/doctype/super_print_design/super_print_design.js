@@ -909,6 +909,8 @@ class SuperPrintDesigner {
             const cell = e.target.closest('.spd-cell');
             if (cell) this.paintFormatToCell(cell.dataset.cellId);
         });
+        // document 级监听先移除旧引用再赋新值挂载,防 bindEvents 重复调用(保存后重绑/换纸张重绑)时叠加泄漏
+        if (this._fpMouseUp) document.removeEventListener('mouseup', this._fpMouseUp);
         this._fpMouseUp = () => {
             if (!this.formatPainterActive || !this.formatPainterPainting) return;
             this.formatPainterPainting = false;
@@ -923,6 +925,7 @@ class SuperPrintDesigner {
             this.refreshGrid();
         };
         document.addEventListener('mouseup', this._fpMouseUp);
+        if (this._fpEsc) document.removeEventListener('keydown', this._fpEsc);
         this._fpEsc = (e) => {
             if (e.key === 'Escape' && this.formatPainterActive) this.deactivateFormatPainter();
         };
@@ -3966,7 +3969,21 @@ frappe.ui.form.on('Super Print Design', {
 
     async refresh(frm) {
         // 保存触发的 refresh 跳过 loadDesignFromServer/loadExistingDesign(避免重载 grid 与下次 syncToForm 竞态致清空)
-        if (frm._spd_in_save) { frm._spd_in_save = false; return; }
+        if (frm._spd_in_save) {
+            frm._spd_in_save = false;
+            // 但 refresh_fields()(render_form 串行链中先于 refresh 事件)已用 df.options 初次快照
+            // 整个替换了 design_html 的 innerHTML,旧 DOM 上委托的事件监听全部销毁(保存后点单元格
+            // 无反应的根因),且快照是旧内容。这里仅从内存态重绘+重绑,不跑 loadDesignFromServer(保留竞态防护)
+            if (spd_designer) {
+                setTimeout(() => {
+                    if (!spd_designer) return;
+                    spd_designer.refreshGrid();        // 网格/行列表头/页眉脚从内存 pages 重绘
+                    spd_designer.showPageProperties(); // 右侧属性栏复位(旧快照内容已随 DOM 替换失效)
+                    spd_designer.bindEvents();         // 重新挂全部事件
+                }, 0);
+            }
+            return;
+        }
         // 分享到模板平台(form 头部 .custom-actions 按钮,弹窗确认 + 推送)
         if (!frm.is_new() && frm.doc.design_name) {
             frm.add_custom_button(__('分享到模板平台'), () => {
