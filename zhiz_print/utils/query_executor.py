@@ -199,25 +199,21 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 			import barcode as _barcode
 			from barcode.writer import ImageWriter
 			bcode = _barcode.get(provider, str(value), writer=ImageWriter())
-			# 正常比例渲染 + CSS 限制(v15.22.31 修正文本单位):
-			# PNG 按标准可扫比例出图(模块0.26mm/300dpi 高清),<img> 以
-			# max-width/max-height 等比限制进设置的宽高框。
-			# ⚠️ python-barcode 0.16 实测语义:font_size/text_distance 近像素级
-			# (fs=10 → 文本高约30px@300dpi,td=5 → 间隙约19px),此前按 pt/mm 传参
-			# 导致文本被渲染成 ~9px 且间距 1px —— "文字一半被条码压住"的根因。
-			# 现按像素语义配比:字号=设计字号,间距=字号*0.5,文本区占总高约30%。
-			fs_px = max(6, int(text_size or 10)) if show_text else 0
+			# 两段式渲染(v15.22.33):
+			# ① 库出纯条码(write_text=False,模块0.26mm 标准比例,300dpi 高清);
+			# ② show_text 时用 Pillow 在图底部合成白底文本块 —— 底对齐覆盖在
+			#    条纹下沿之上:文字可读、整图高度不变、零间距(不追加高度)。
 			fp = BytesIO()
 			bcode.write(fp, options={
-				'write_text': bool(show_text),
-				'font_size': fs_px,
-				'text_distance': 0,    # 条码与文字零间距(用户要求,无任何间隙)
-				'module_height': 10.0,  # 条纹高10mm
-				'module_width': 0.26,   # 模块宽0.26mm(GS1 标准 X 维)
-				'quiet_zone': 2.5,      # 左右静区
-				'center_text': True,
+				'write_text': False,
+				'module_height': 12.0,   # 条纹高12mm
+				'module_width': 0.26,    # 模块宽0.26mm(GS1 标准 X 维)
+				'quiet_zone': 2.5,       # 左右静区
 			})
-			return 'data:image/png;base64,' + base64.b64encode(fp.getvalue()).decode('ascii')
+			png = fp.getvalue()
+			if show_text:
+				png = _overlay_text_on_barcode(png, str(value), text_size)
+			return 'data:image/png;base64,' + base64.b64encode(png).decode('ascii')
 	except Exception as e:
 		# 码制约束不满足等业务性失败:记录后返回 None(调用方显示原文),
 		# 不再走 fallback(用户明确选了该码制,静默换码制更危险)
@@ -265,6 +261,38 @@ BARCODE_FORMATS = {
 	# 兼容别名
 	'EAN': 'ean13', 'EAN13': 'ean13', 'UPC': 'upca',
 }
+
+
+def _overlay_text_on_barcode(png_bytes, text, text_size):
+	"""在条码 PNG 底部合成白底文本块:文本底对齐、覆盖在条纹下沿上。
+
+	整图高度不变(覆盖而非追加),无条码-文字间距;
+	字号按 300dpi 放大 3 倍渲染(设计器 px 为屏幕语义),打印缩放后依然清晰。"""
+	try:
+		from io import BytesIO
+		from PIL import Image, ImageDraw, ImageFont
+		import barcode as _barcode
+		im = Image.open(BytesIO(png_bytes)).convert('RGB')
+		W, H = im.size
+		draw = ImageDraw.Draw(im)
+		fs = max(8, int(text_size or 10) * 3)
+		font_path = os.path.join(os.path.dirname(_barcode.__file__), 'fonts', 'DejaVuSansMono.ttf')
+		font = ImageFont.truetype(font_path, fs)
+		tw = draw.textlength(text, font=font)
+		pad = max(2, fs // 8)
+		th = fs + pad * 2
+		top = H - th
+		# 白底块略宽于文字,覆盖条纹底部;左右不越图
+		x0 = max(0, (W - tw) // 2 - fs // 3)
+		x1 = min(W, (W + tw) // 2 + fs // 3)
+		draw.rectangle([(x0, top), (x1, H)], fill='white')
+		draw.text(((W - tw) / 2, H - pad), text, font=font, fill='black', anchor='ls')
+		out = BytesIO()
+		im.save(out, 'PNG')
+		return out.getvalue()
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), 'Barcode text overlay failed')
+		return png_bytes
 
 
 def _is_barcode_input_error(exc):
