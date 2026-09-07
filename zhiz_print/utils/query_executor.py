@@ -211,10 +211,10 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 			bcode.write(fp, options={
 				'write_text': bool(show_text),
 				'font_size': fs_px,
-				'text_distance': max(3, fs_px * 0.5),  # 文本-条纹间距(px语义)
-				'module_height': 10.0,                 # 条纹高10mm
-				'module_width': 0.26,                  # 模块宽0.26mm(GS1 标准 X 维)
-				'quiet_zone': 2.5,                     # 左右静区
+				'text_distance': 0,    # 条码与文字零间距(用户要求,无任何间隙)
+				'module_height': 10.0,  # 条纹高10mm
+				'module_width': 0.26,   # 模块宽0.26mm(GS1 标准 X 维)
+				'quiet_zone': 2.5,      # 左右静区
 				'center_text': True,
 			})
 			return 'data:image/png;base64,' + base64.b64encode(fp.getvalue()).decode('ascii')

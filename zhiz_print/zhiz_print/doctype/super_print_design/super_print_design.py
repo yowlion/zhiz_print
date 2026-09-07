@@ -2078,25 +2078,20 @@ class SuperPrintDesign(frappe.model.document.Document):
             return re.sub(r'\r\n|\r|\n', '<br>', escaped)
 
     def _render_barcode_content(self, value, cell_data, cell_w=100, cell_h=40):
-        """Render barcode"""
+        """Render barcode — v15.22.32 起条码尺寸跟随单元格,不再使用宽高设置项"""
         if not value:
             return '<span style="color:#999">--</span>'
-        # Limit to cell dimensions, maintain aspect ratio
-        bw = min(cell_data.get('barcode_width') or cell_w, cell_w)
-        bh = min(cell_data.get('barcode_height') or cell_h, cell_h)
         img_src = generate_barcode_base64(
             value,
             barcode_format=cell_data.get('barcode_format', 'CODE128'),
-            width=bw,
-            height=bh,
             show_text=cint(cell_data.get('barcode_show_text', 1)),
             text_size=cint(cell_data.get('barcode_text_size', 10)) or 10,
         )
         if img_src:
-            # 正常渲染的标准比例图片,等比限制进设置的宽高框(v15.22.31):
-            # 只用 max-width/max-height(浏览器对 base64 img 的原生等比缩放),
-            # 不设 width/height 拉伸 —— 整图(条码+文本)按比例完整收进框内
-            return f'<img src="{img_src}" style="max-width:{bw}px;max-height:{bh}px;">'
+            # 条码标准比例出图,等比收进单元格实际尺寸(单元格多大条码区就多大):
+            # 外层 span 占满单元格,img max-width/max-height:100% 等比缩放
+            return (f'<span style="display:block;width:100%;height:100%;">'
+                    f'<img src="{img_src}" style="max-width:100%;max-height:100%;object-fit:contain;"></span>')
         return frappe.utils.escape_html(value)
 
     def _render_qrcode_content(self, value, cell_data, cell_w=100, cell_h=40):

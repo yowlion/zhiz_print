@@ -246,6 +246,8 @@ class SuperPrintDesigner {
                             barcode_format: cell.barcode_format || 'CODE128',
                             barcode_width: parseInt(cell.barcode_width) || 100,
                             barcode_height: parseInt(cell.barcode_height) || 40,
+                            barcode_show_text: (cell.barcode_show_text === undefined || cell.barcode_show_text === null) ? 1 : (parseInt(cell.barcode_show_text) || 0),
+                            barcode_text_size: parseInt(cell.barcode_text_size) || 10,
                             row_type: cell.row_type || '',
                             row_display: cell.row_display || '',
                             is_print_count_driver: parseInt(cell.is_print_count_driver) || 0,
@@ -1779,10 +1781,6 @@ class SuperPrintDesigner {
                 '<div id="barcode-group" style="display:none">' +
                     '<label>' + __('Barcode Format') + ':</label>' +
                     '<select id="prop-barcode-format" class="form-control">' + barcodeFormatOptions + '</select>' +
-                    '<label>' + __('Width (px)') + ':</label>' +
-                    '<input type="number" id="prop-barcode-width" class="form-control" value="100">' +
-                    '<label>' + __('Height (px)') + ':</label>' +
-                    '<input type="number" id="prop-barcode-height" class="form-control" value="40">' +
                     '<label style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="prop-barcode-show-text" checked> ' + __('Show Text Below Barcode') + '</label>' +
                     '<label>' + __('Text Size (px)') + ':</label>' +
                     '<input type="number" id="prop-barcode-text-size" class="form-control" value="10">' +
@@ -1889,8 +1887,6 @@ class SuperPrintDesigner {
         setValue('prop-query-name', cell.query_name);
         setValue('prop-data-key', cell.data_key);
         setValue('prop-barcode-format', cell.barcode_format || 'CODE128');
-        setValue('prop-barcode-width', cell.barcode_width || 100);
-        setValue('prop-barcode-height', cell.barcode_height || 40);
         const showTextCb = container.querySelector('#prop-barcode-show-text');
         if (showTextCb) showTextCb.checked = (cell.barcode_show_text === undefined) ? true : !!parseInt(cell.barcode_show_text);
         setValue('prop-barcode-text-size', cell.barcode_text_size || 10);
@@ -2034,12 +2030,6 @@ class SuperPrintDesigner {
         });
         container.querySelector('#prop-barcode-format')?.addEventListener('change', (e) => {
             this.updateCellProperty('barcode_format', e.target.value);
-        });
-        container.querySelector('#prop-barcode-width')?.addEventListener('change', (e) => {
-            this.updateCellProperty('barcode_width', parseInt(e.target.value) || 100);
-        });
-        container.querySelector('#prop-barcode-height')?.addEventListener('change', (e) => {
-            this.updateCellProperty('barcode_height', parseInt(e.target.value) || 40);
         });
         container.querySelector('#prop-font-size')?.addEventListener('change', (e) => {
             this.applyFontSize(parseInt(e.target.value) || 12);
