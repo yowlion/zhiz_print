@@ -225,16 +225,24 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 				fmt, str(value)[:50], str(e)), 'Barcode input validation failed')
 			return None
 		frappe.log_error(frappe.get_traceback(), 'Barcode generation failed')
-	# fallback: 无库环境用内置纯 Python 实现(CODE128/39,SVG,无文本)
+	# fallback 仅适用两种情形:
+	# 1) 无 python-barcode/Pillow 环境 → 内置纯 Python 实现兜底出 CODE128/39 SVG
+	# 2) 码制本身是 CODE128/CODE39 但库渲染失败(环境性) → 同样可兜底
+	# 用户明确选择其他码制(如 EAN)而输入不满足约束时上面已返回 None(显示原文),
+	# 不静默降级成别的码制 —— 出一张能扫但编码不对的条码比显示原文更危险
 	try:
 		u = (fmt or '').upper()
-		if u == 'CODE39':
-			svg = _generate_code39_svg(str(value), width, height)
+		if u in ('CODE128', 'CODE39', ''):
+			if u == 'CODE39':
+				svg = _generate_code39_svg(str(value), width, height)
+			else:
+				svg = _generate_code128_svg(str(value), width, height)
+			if svg:
+				import base64
+				return 'data:image/svg+xml;base64,' + base64.b64encode(svg.encode('utf-8')).decode('ascii')
 		else:
-			svg = _generate_code128_svg(str(value), width, height)
-		if svg:
-			import base64
-			return 'data:image/svg+xml;base64,' + base64.b64encode(svg.encode('utf-8')).decode('ascii')
+			frappe.log_error("barcode={0} value={1!r}: python-barcode 不可用,该码制无内置兜底".format(
+				fmt, str(value)[:50]), 'Barcode generation fell back to raw text')
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), 'Barcode generation failed')
 	return None
