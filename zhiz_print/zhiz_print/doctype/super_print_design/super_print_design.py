@@ -2093,7 +2093,9 @@ class SuperPrintDesign(frappe.model.document.Document):
             text_size=cint(cell_data.get('barcode_text_size', 10)) or 10,
         )
         if img_src:
-            return f'<img src="{img_src}" style="max-width:{bw}px;max-height:{bh}px;object-fit:contain;">'
+            # 正常渲染的标准比例图片,等比限制进设置的宽高框(v15.22.29):
+            # 显式 width/height 既是缩放目标也是宽高比锚点,object-fit:contain 保证不变形
+            return f'<img src="{img_src}" width="{bw}" height="{bh}" style="max-width:{bw}px;max-height:{bh}px;object-fit:contain;">'
         return frappe.utils.escape_html(value)
 
     def _render_qrcode_content(self, value, cell_data, cell_w=100, cell_h=40):
