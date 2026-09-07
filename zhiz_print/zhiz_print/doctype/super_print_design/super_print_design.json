@@ -179,8 +179,9 @@
    "fieldtype": "Dynamic Link",
    "label": "Sample Document",
    "options": "target_doctype",
-   "reqd": 1,
-   "description": "Used for query preview to resolve doc.field parameters and demo preview."
+   "description": "Used for query preview to resolve doc.field parameters and demo preview.",
+   "depends_on": "eval:doc.design_target !== 'Report'",
+   "mandatory_depends_on": "eval:doc.design_target !== 'Report'"
   },
   {
    "default": "20",
