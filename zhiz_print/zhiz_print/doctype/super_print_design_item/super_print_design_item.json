@@ -126,7 +126,7 @@
    "fieldname": "barcode_format",
    "fieldtype": "Select",
    "label": "Barcode Format",
-   "options": "CODE128\nCODE39",
+   "options": "CODE128\nCODE39\nCODABAR\nNW-7\nEAN-13\nEAN-13-GUARD\nEAN-8\nEAN-8-GUARD\nUPC-A\nJAN\nEAN-14\nITF\nGS1-128\nISBN-13\nISBN-10\nISSN\nPZN\nGS1\nGTIN",
    "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
   },
   {
