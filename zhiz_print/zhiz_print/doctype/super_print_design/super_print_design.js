@@ -668,7 +668,10 @@ class SuperPrintDesigner {
 
                     let content = '';
                     if ((cell_type === 'data_query' || cell_type === 'image') && cell.query_name && cell.data_key) {
-                        content = '<div class="super-zprint-cell-content" style="color:#6a5acd;font-style:italic;">{' + this.escapeHtml(cell.query_name) + '.' + this.escapeHtml(cell.data_key) + '}</div>';
+                        // __report_main__ 为报表数据伪查询,网格显示用 rep 命名空间
+                        // ({rep.items.字段} / {rep.filters.字段} / {rep.报表字段})
+                        const phNs = cell.query_name === '__report_main__' ? 'rep' : cell.query_name;
+                        content = '<div class="super-zprint-cell-content" style="color:#6a5acd;font-style:italic;">{' + this.escapeHtml(phNs) + '.' + this.escapeHtml(cell.data_key) + '}</div>';
                     } else if (cell_type === 'barcode' || cell_type === 'qrcode') {
                         content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + typeInfo.label + '</span></div>';
                     } else if (!hasValue) {
