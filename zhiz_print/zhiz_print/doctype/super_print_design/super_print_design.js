@@ -1882,12 +1882,13 @@ class SuperPrintDesigner {
         select.innerHTML = '<option value="">--</option>';
         if (!queryName) return;
 
-        // 报表伪查询:Data Key 列表 = 报表列(get_report_sample_data 前 N 行推导)
+        // 报表伪查询:Data Key 三类分组(rep 命名空间)
+        // 1类 报表本身字段(rep.name 等) / 2类 filters.字段名 / 3类 items.字段名(报表行)
         // 筛选优先取报表页透传的 sessionStorage(从报表页进设计流程时),
         // 否则空筛选由服务端逐级补默认筛选(公司/日期)重试
         if (queryName === '__report_main__') {
             let reportFilters = {};
-            try { reportFilters = JSON.parse(sessionStorage.getItem('spd_report_filters') || '{}'); } catch (e) { /* ignore */ }
+            try { reportFilters = JSON.parse(sessionStorage.getItem('spd_report_filters:' + (this.frm.doc.report_name || '')) || '{}'); } catch (e) { /* ignore */ }
             frappe.call({
                 method: 'zhiz_print.api.report_print.get_report_sample_data',
                 args: {
@@ -1897,12 +1898,28 @@ class SuperPrintDesigner {
                 },
                 callback: (r) => {
                     const m = r.message || {};
-                    (m.columns || []).forEach(c => {
-                        const opt = document.createElement('option');
-                        opt.value = c.fieldname;
-                        opt.textContent = c.label || c.fieldname;
-                        select.appendChild(opt);
-                    });
+                    const addGroup = (label, items) => {
+                        if (!items || !items.length) return;
+                        const og = document.createElement('optgroup');
+                        og.label = label;
+                        items.forEach(it => {
+                            const opt = document.createElement('option');
+                            opt.value = it.value;
+                            opt.textContent = it.label;
+                            og.appendChild(opt);
+                        });
+                        select.appendChild(og);
+                    };
+                    // 1类 报表本身字段(单级 rep.字段)
+                    addGroup(__('Report Fields'), (m.report_fields || []).map(f => ({
+                        value: f.key, label: f.label || f.key })));
+                    // 2类 筛选字段(rep.filters.字段名)
+                    addGroup(__('Report Filters'), (m.filter_fields || []).map(k => ({
+                        value: 'filters.' + k, label: 'filters.' + k })));
+                    // 3类 报表数据列(rep.items.字段名)
+                    addGroup(__('Report Columns'), (m.columns || []).map(c => ({
+                        value: 'items.' + (c.fieldname || c.label),
+                        label: (c.label || c.fieldname) + ' (items.' + (c.fieldname || c.label) + ')' })));
                     const cell = this.cellDataMap[this.currentCell];
                     if (cell && cell.data_key) select.value = cell.data_key;
                     if (m.error) {
@@ -1957,6 +1974,15 @@ class SuperPrintDesigner {
         });
         container.querySelector('#prop-data-key')?.addEventListener('change', (e) => {
             this.updateCellProperty('data_key', e.target.value);
+            // 报表数据键(v15.22.18):选中即生成 {rep.键位} 占位符写入单元格值,
+            // 网格即时预览显示(如选 物料 → 单元格显示 {rep.items.item_code})
+            const cell = this.cellDataMap[this.currentCell];
+            if (e.target.value && cell && (cell.query_name || '') === '__report_main__') {
+                const ph = '{rep.' + e.target.value + '}';
+                this.updateCellProperty('cell_value', ph);
+                const ta = container.querySelector('#prop-cell-value');
+                if (ta) ta.value = ph;
+            }
         });
         container.querySelector('#prop-query-name')?.addEventListener('change', (e) => {
             this.updateCellProperty('query_name', e.target.value);

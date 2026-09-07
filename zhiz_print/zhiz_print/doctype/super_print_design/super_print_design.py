@@ -468,24 +468,51 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         return re.sub(r'\{doc\.(\w+)\.(\w+)\}', replacer, value)
 
-    @staticmethod
-    def _replace_rep_placeholders(value, data_item):
-        """Replace {rep.field_name} with report row values(报表数据驱动行当前行字段).
+    def _replace_rep_placeholders(self, value, data_item=None):
+        """{rep.xxx} 报表命名空间(v15.22.18 三段语义):
 
-        rep 为保留占位符前缀,与 doc/param 同级:{rep.qty} = 报表当前行的 qty 列。
-        仅在报表数据行展开上下文(data_item 非空)生效,其余场景占位符原样保留。"""
-        if not value or not data_item:
+        {rep.name}          报表本身字段(Report 文档字段,如 name/ref_doctype/module)
+        {rep.filters.字段}   当前报表筛选值
+        {rep.items.字段}     数据驱动行上下文的当前报表行字段
+        仅报表设计(design_target=Report)生效;其余场景占位符原样保留。
+        单级 {rep.字段} 的正则不含点号,天然不会误吞 items/filters 两段。"""
+        if not value or '{rep.' not in value:
             return value or ''
+        if (self.design_target or 'DocType') != 'Report' or not self.report_name:
+            return value
 
-        def replacer(match):
-            field_name = match.group(1)
-            if hasattr(data_item, field_name):
-                return SuperPrintDesign._fmt_val(getattr(data_item, field_name))
-            if isinstance(data_item, dict) and field_name in data_item:
-                return SuperPrintDesign._fmt_val(data_item.get(field_name))
-            return match.group(0)
+        # 1) {rep.items.field} — 当前报表行(仅数据驱动行上下文)
+        if data_item:
+            def item_repl(m):
+                f = m.group(1)
+                if hasattr(data_item, f):
+                    return self._fmt_val(getattr(data_item, f))
+                if isinstance(data_item, dict) and f in data_item:
+                    return self._fmt_val(data_item.get(f))
+                return m.group(0)
+            value = re.sub(r'\{rep\.items\.(\w+)\}', item_repl, value)
 
-        return re.sub(r'\{rep\.(\w+)\}', replacer, value)
+        # 2) {rep.filters.field} — 当前筛选值
+        filters = getattr(self, '_active_filters', None) or {}
+
+        def filter_repl(m):
+            f = m.group(1)
+            if f in filters:
+                return self._fmt_val(filters[f])
+            return m.group(0)
+
+        value = re.sub(r'\{rep\.filters\.(\w+)\}', filter_repl, value)
+
+        # 3) {rep.field} 单级 — 报表本身字段(Report 文档)
+        def meta_repl(m):
+            f = m.group(1)
+            try:
+                v = frappe.db.get_value("Report", self.report_name, f)
+            except Exception:
+                v = None
+            return self._fmt_val(v) if v is not None else m.group(0)
+
+        return re.sub(r'\{rep\.(\w+)\}', meta_repl, value)
 
     @staticmethod
     def _replace_param_placeholders(value, params):
@@ -565,7 +592,9 @@ class SuperPrintDesign(frappe.model.document.Document):
         }
         for placeholder, val in replacements.items():
             html = html.replace(placeholder, val)
-        return self._replace_filter_placeholders(html)
+        html = self._replace_filter_placeholders(html)
+        # {rep.xxx} 报表命名空间(页眉页脚支持 rep.filters.x / rep.name)
+        return self._replace_rep_placeholders(html)
 
     # ==================== Row Metadata ====================
 
@@ -622,9 +651,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if child_patterns:
                     is_data_driven = True
 
-                # {rep.field} 模式:自动识别为报表数据行(与子表 {doc.child.field} 同款机制),
-                # 绑定伪查询 __report_main__(报表行由 render_report_preview 注入)
-                rep_patterns = re.findall(r'\{rep\.(\w+)\}', cv)
+                # {rep.items.field} 模式:自动识别为报表数据行(与子表 {doc.child.field} 同款机制),
+                # 绑定伪查询 __report_main__(报表行由 render_report_preview 注入);
+                # 注意 {rep.filters.x}/{rep.field} 不触发行展开(非行级数据)
+                rep_patterns = re.findall(r'\{rep\.items\.(\w+)\}', cv)
                 if rep_patterns:
                     is_data_driven = True
 
@@ -1843,12 +1873,13 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if data_item:
                     cell_value = self._replace_child_table_placeholders(
                         cell_value, data_item)
-                    # {rep.field} 报表当前行字段(与 {doc.child.field} 同一替换时机)
-                    cell_value = self._replace_rep_placeholders(
-                        cell_value, data_item)
                     # data_key method: first try data_item, then fallback to query_results
                     if cell_data.get('data_key'):
+                        # v15.22.18:报表数据键为三段式命名空间值(items.x);
+                        # 行数据解析剥掉 items. 前缀(filters.x/单级不走行数据路径)
                         dk = cell_data['data_key']
+                        if dk.startswith('items.'):
+                            dk = dk[len('items.'):]
                         found_in_data_item = False
                         if isinstance(data_item, dict):
                             if dk in data_item:
@@ -1870,6 +1901,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                                     row_result = qr_data[0]
                                 if isinstance(row_result, dict) and dk in row_result:
                                     cell_value = str(row_result[dk] if row_result[dk] is not None else '')
+
+                # {rep.xxx} 报表命名空间(items=当前行,仅数据行上下文;filters/单级任意单元格)
+                cell_value = self._replace_rep_placeholders(
+                    cell_value, data_item)
 
                 # Query data replacement (for non-expanded rows, take first query result row)
                 if not data_item and cell_data.get('query_name') and cell_data.get('data_key'):

@@ -153,8 +153,41 @@ def get_report_sample_data(report_name, filters=None, sample_rows=20):
         hint = last_err or _("Report returned no columns. Run the report once in the report view with filters, then open the designer from the report page.")
         return {"columns": [], "rows": [], "error": str(hint)}
 
+    # v15.22.18 三类数据键(rep 命名空间):
+    # 1类 报表本身字段(rep.name 等,Report 文档字段)
+    report_fields = []
+    try:
+        rf = frappe.db.get_value("Report", report_name,
+            ["name", "report_name", "ref_doctype", "module", "is_standard"], as_dict=True)
+        if rf:
+            rf_fields = [("name", rf.name), ("report_name", rf.report_name),
+                         ("ref_doctype", rf.ref_doctype), ("module", rf.module),
+                         ("is_standard", rf.is_standard)]
+            report_fields = [{"key": k, "label": "{0} ({1})".format(k, v or k)}
+                             for k, v in rf_fields]
+    except Exception:
+        report_fields = []
+
+    # 2类 筛选字段(rep.filters.字段名):传入 filters 的键 + Query Report 型 Report doc 定义
+    filter_fields = []
+    try:
+        for k in (given or {}).keys():
+            if k and not str(k).startswith('__') and k != 'prepared_report_name':
+                filter_fields.append(str(k))
+        rep_filters_json = frappe.db.get_value("Report", report_name, "filters") or ""
+        if rep_filters_json:
+            for fd in json.loads(rep_filters_json):
+                fn = (fd or {}).get("fieldname")
+                if fn and fn not in filter_fields:
+                    filter_fields.append(fn)
+    except Exception:
+        pass
+
     n = max(1, min(cint(sample_rows) or 20, 200))
-    return {"columns": cols, "rows": rows[:n], "total_rows": len(rows)}
+    return {
+        "columns": cols, "rows": rows[:n], "total_rows": len(rows),
+        "report_fields": report_fields, "filter_fields": filter_fields,
+    }
 
 
 @frappe.whitelist()

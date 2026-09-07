@@ -422,3 +422,6 @@ PDF export failed,PDF 导出失败
 Enable Document Print,启用单据打印
 Document Enable Mode,单据启用方式
 Print Engine,打印引擎
+Report Fields,报表字段
+Report Filters,报表筛选
+Report Columns,报表数据列
