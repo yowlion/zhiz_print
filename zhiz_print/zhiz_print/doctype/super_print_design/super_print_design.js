@@ -894,11 +894,15 @@ class SuperPrintDesigner {
                 this.handleCellClick(cell.dataset.cellId);
             } else if (!e.target.closest('.spd-props,.spd-toolbar,.spd-page-bar,button,input,select,textarea')) {
                 const paper = container.querySelector('#spd-paper');
-                let preferTab = 'header';
                 if (paper) {
                     const rect = paper.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
+                    // v15.22.35: 点击必须落在纸张范围内才进入页面设置;
+                    // 纸张外(画布空白)不切换,保留右侧面板原有选择
+                    const inside = x >= 0 && x <= rect.width && y >= 0 && y <= rect.height;
+                    if (!inside) return;
+                    let preferTab = 'header';
                     // 判断左眉/右脚/页眉/页脚区域
                     const mLeftPx = parseInt(container.querySelector('.spd-table-area')?.style.left) || 0;
                     const mRightPx = parseInt(container.querySelector('.spd-table-area')?.style.right) || 0;
@@ -916,8 +920,8 @@ class SuperPrintDesigner {
                     } else {
                         preferTab = 'footer';
                     }
+                    this.showPageProperties(preferTab);
                 }
-                this.showPageProperties(preferTab);
             }
         });
 
