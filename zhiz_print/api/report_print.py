@@ -45,8 +45,14 @@ def _run_report(report_name, filters):
 
     rows: list[dict](generate_report_result 内部 normalize_result 已转 dict);
     columns: list[dict](fieldname/label/fieldtype)。
-    prepared report 通过 filters.prepared_report_name 由 run 原生支持。"""
-    res = run_query_report(report_name=report_name, filters=filters or {})
+    prepared report 处理:显式带了 prepared_report_name 的筛选走预生成数据;
+    否则强制同步执行(ignore_prepared_report=True)——GL/Stock Balance 等预生成型
+    报表在无已完成预生成时 run() 返回空列零异常,打印场景必须同步真跑。"""
+    filters = dict(filters or {})
+    has_prepared_name = bool(filters.get("prepared_report_name"))
+    res = run_query_report(
+        report_name=report_name, filters=filters,
+        ignore_prepared_report=not has_prepared_name)
     columns = res.get("columns") or []
     rows = res.get("result") or []
     # Query Report(SQL型)兜底:极旧写法 result 为 list[list] 时按列转 dict
