@@ -9,6 +9,8 @@
 """
 
 import json
+import os
+import re
 
 import frappe
 from frappe import _
@@ -60,6 +62,54 @@ def _run_report(report_name, filters):
         keys = [c.get("fieldname") or str(i) for i, c in enumerate(columns)]
         rows = [dict(zip(keys, r)) for r in rows if isinstance(r, (list, tuple))]
     return rows, columns
+
+
+def _get_report_filter_fields(report_name):
+    """报表筛选字段名清单,双通道:
+
+    1) Report doc 的 filters 字段(Query Report 型报表的定义存放处);
+    2) 报表目录 <name>.js 中 filters 数组的 fieldname(标准/自定义 Script Report
+       的筛选定义在 JS 里,服务端只能从文件正则抽取,覆盖 frappe 标准 erpnext 报表)。"""
+    fields = []
+    # 1) Query Report 型
+    try:
+        fj = frappe.db.get_value("Report", report_name, "filters") or ""
+        if fj:
+            for fd in json.loads(fj):
+                fn = (fd or {}).get("fieldname")
+                if fn:
+                    fields.append(str(fn))
+    except Exception:
+        pass
+
+    # 2) Script Report 型:解析报表 JS 文件的 filters 数组
+    try:
+        rep = frappe.get_doc("Report", report_name)
+        module = rep.module or frappe.db.get_value("DocType", rep.ref_doctype, "module")
+        if module and not frappe.get_cached_value("Module Def", module, "custom"):
+            from frappe.modules import get_module_path, scrub
+            js_path = os.path.join(get_module_path(module), "report",
+                                   scrub(report_name), scrub(report_name) + ".js")
+            if os.path.exists(js_path):
+                with open(js_path, encoding="utf-8") as f:
+                    js = f.read()
+                m = re.search(r'filters\s*:\s*\[', js)
+                if m:
+                    seg = js[m.end():m.end() + 30000]
+                    end = seg.find(']')
+                    if end > 0:
+                        seg = seg[:end]
+                    fields += re.findall(r'fieldname\s*[:=]\s*[\'"](\w+)[\'"]', seg)
+    except Exception:
+        pass
+
+    # 去重保序
+    seen, out = set(), []
+    for f in fields:
+        if f and f not in seen:
+            seen.add(f)
+            out.append(f)
+    return out
 
 
 @frappe.whitelist()
@@ -168,20 +218,15 @@ def get_report_sample_data(report_name, filters=None, sample_rows=20):
     except Exception:
         report_fields = []
 
-    # 2类 筛选字段(rep.filters.字段名):传入 filters 的键 + Query Report 型 Report doc 定义
+    # 2类 筛选字段(rep.filters.字段名):传入 filters 的键 + 报表定义双通道
+    # (Report doc filters + 报表 JS 文件解析,Script Report 筛选在 JS 里)
     filter_fields = []
-    try:
-        for k in (given or {}).keys():
-            if k and not str(k).startswith('__') and k != 'prepared_report_name':
-                filter_fields.append(str(k))
-        rep_filters_json = frappe.db.get_value("Report", report_name, "filters") or ""
-        if rep_filters_json:
-            for fd in json.loads(rep_filters_json):
-                fn = (fd or {}).get("fieldname")
-                if fn and fn not in filter_fields:
-                    filter_fields.append(fn)
-    except Exception:
-        pass
+    for k in (given or {}).keys():
+        if k and not str(k).startswith('__') and k != 'prepared_report_name':
+            filter_fields.append(str(k))
+    for fn in _get_report_filter_fields(report_name):
+        if fn not in filter_fields:
+            filter_fields.append(fn)
 
     n = max(1, min(cint(sample_rows) or 20, 200))
     return {

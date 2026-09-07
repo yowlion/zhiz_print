@@ -1911,7 +1911,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                     qr = query_results.get(cell_data['query_name'])
                     if qr is None:
                         # query 未执行(如纯模板结构预览 doc_name=None):显示 {query.data_key} 占位符,与本地设计器网格一致
-                        cell_value = '{' + cell_data['query_name'] + '.' + cell_data['data_key'] + '}'
+                        # __report_main__ 报表伪查询显示 rep 命名空间({rep.items.字段} 等)
+                        _ph_ns = 'rep' if cell_data['query_name'] == '__report_main__' else cell_data['query_name']
+                        cell_value = '{' + _ph_ns + '.' + cell_data['data_key'] + '}'
                     else:
                         qr_data = qr.get('data', [])
                         if qr_data and isinstance(qr_data, list) and len(qr_data) > 0:
