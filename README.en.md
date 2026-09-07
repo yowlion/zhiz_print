@@ -25,6 +25,7 @@ A custom print template designer built on the Frappe/ERPNext framework, providin
 - **Print Log** — Records every print/export operation for preview追溯
 - **Parameterized Templates** — Custom print parameters with pre-print dialog
 - **Template Platform** — Share designs to a central platform; per-template visibility (Everyone / Specific Companies / Private), quick view filters, one-click install; company names & QR/URL desensitized
+- **Report Printing** (v15.22) — Design print templates for ERPNext reports (Query / Script Reports, e.g. Stock Balance, General Ledger): `rep` placeholders (`{rep.name}` / `{rep.filters.field}` / `{rep.items.field}`), three data-key categories in the designer, report page menu takeover (filters carried via URL), dedicated preview badge & print logs
 
 ## DocType List
 
@@ -37,6 +38,7 @@ A custom print template designer built on the Frappe/ERPNext framework, providin
 | Super Print Paper | Main Doc | Paper size management |
 | Super Print Log | Main Doc | Print operation log |
 | Super Print Enabled Doctype | Child Table | DocTypes with print enabled |
+| Super Print Enabled Report | Child Table | Reports with print enabled (report printing) |
 | Zprint Setting | Single Doc | Global print designer settings |
 
 ## Supported Environments
@@ -96,6 +98,8 @@ Select the engine in **Zprint Setting** → "PDF Conversion Mode".
 2. Define paper sizes in **Super Print Paper**
 3. Design print templates in **Super Print Design**
 4. Open any document and click Print — custom template selector appears on the left
+
+**Report printing** (v15.22): in **Zprint Setting → Report Print** section, enable report printing (all reports, or specific ones). On a report view (filters set, data loaded), the menu **Print** action opens the Super Print preview directly — filters are carried in the URL (shareable/bookmarkable), and native PDF / Export menu items are hidden. Click "Create Report Design" on the preview page to start designing (target report is pre-filled).
 
 ---
 ## Basic Usage Tutorial
@@ -194,6 +198,23 @@ You can set a row's `row_type` in the designer:
 | Fixed Height | Fixed row height, overflow is hidden |
 | Auto Shrink Font | Font size shrinks automatically to fit fixed row height |
 
+### 3.5 Report Field Binding (v15.22)
+
+When a design targets a **Report** (`design_target = Report`), the `rep` namespace binds report data — same level as `doc` / `param`:
+
+| Syntax | Data Source | Example |
+|--------|-------------|---------|
+| `{rep.field}` | Report's own fields (Report doc: name / report_name / ref_doctype / module) | `{rep.name}` |
+| `{rep.filters.field}` | Current report filter values — usable in any cell and header/footer | `{rep.filters.company}` |
+| `{rep.items.field}` | Report row data — **auto-triggers data-driven row expansion** | `{rep.items.item_code}` |
+
+In the designer, binding a cell to query "Report Data" shows the data-key dropdown in three categories (report fields / filter fields / report columns); selecting a key writes the placeholder into the cell automatically.
+
+Notes:
+- `rep` is a **reserved prefix** — data query names cannot be named `rep`
+- Report engine auto-appended total rows are excluded from printing; design totals yourself with `=rowsum(R:C)` / `=pagerowsum(R:C)`
+- Draft No Print does not apply to report designs (reports have no docstatus)
+
 ### 4. Cell Types
 
 | cell_type | Description | Additional Config |
@@ -220,6 +241,8 @@ The four edge bands of the paper (top/bottom/left/right margin bands) hold compa
 | `{date_time}` | Current date and time | `2026-04-16 14:30:00` |
 
 **Document Field Placeholders:** Header and footer also support `{doc.field_name}` to reference target document fields, e.g., `{doc.name}` displays the document number.
+
+**Report Placeholders (v15.22):** In report mode, `{rep.field}` and `{rep.filters.field}` work in all four areas — e.g., `{rep.filters.company}` shows the company filter in the header, `{rep.filters.from_date}`–`{rep.filters.to_date}` the date range.
 
 **Examples:**
 

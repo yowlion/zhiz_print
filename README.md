@@ -45,11 +45,13 @@
 
 zhiz_print 用表格式网格设计打印版面,支持单元格合并、四种取值语义(静态 / 逻辑 / 表达式 / 合计)、按列排序、自动分页、二维码条码图片,以及多引擎 PDF / Excel 导出。所有打印操作记录为持久化日志(渲染快照,不随后续设计改动而变化)。
 
+v15.22 起支持**报表打印**:设计目标可选「报表」(Report),ERPNext 报表(Query Report / Script Report,如库存余额 / 总账)同样可以用本设计器设计打印模板 —— 报表行绑定 `rep` 占位符、筛选值进页眉、合计用 `=rowsum()` 自行设计,与单据打印共用同一套渲染 / 分页 / 输出管线。
+
 ### 数据流
 
 | 阶段 | 说明 | 关键代码 |
 |---|---|---|
-| **1. 数据获取** | 从目标单据(doc)读主表字段、子表(如 `items`)、自定义查询(`design_queries`)、用户参数(`param`) | `frappe.get_doc` · `_execute_query_with_doc_context` |
+| **1. 数据获取** | 单据模式:从目标单据(doc)读主表字段、子表(如 `items`)、自定义查询(`design_queries`)、用户参数(`param`);报表模式:以当前用户身份同步执行报表查询,报表行注入为 `__report_main__` 伪查询 | `frappe.get_doc` · `_execute_query_with_doc_context` · `zhiz_print.api.report_print._run_report` |
 | **2. 运算** | 四种单元格值语义:静态替换、logic 条件表达式、`=` 算术表达式、`=rowsum()` 合计 | `_eval_logic_code` · `_eval_expression_cell` · `_eval_rowsum` |
 | **3. 渲染** | 展开数据驱动行 → 按行级 `sorts` 排序 → 列值计算 → 客户端实测分页 → 组装 HTML | `_build_expanded_rows_v2` · `_build_row_html` · `build_measurement_html` |
 | **4. 输出** | 打印预览 / PDF(wkhtmltopdf·WeasyPrint·Chromium) / Excel(openpyxl) / 批量 | `render_print_preview` · `generate_print_pdf` · `export_print_excel` |
@@ -65,7 +67,8 @@ zhiz_print 用表格式网格设计打印版面,支持单元格合并、四种�
 | Super Print Paper | 主文档 | 纸张尺寸(mm) |
 | Super Print Log | 主文档 | 打印日志(含渲染快照) |
 | Super Print Enabled Doctype | 子表 | 启用超级打印的单据类型 |
-| Zprint Setting | 单文档 | 全局设置(PDF 引擎等) |
+| Super Print Enabled Report | 子表 | 启用超级打印的报表(报表打印指定启用) |
+| Zprint Setting | 单文档 | 全局设置(单据/报表打印启用、PDF 引擎等) |
 
 ---
 
@@ -88,6 +91,15 @@ bench build
 3. **Super Print Enabled Doctype** → 把要用的单据类型(如 Sales Invoice)加入启用列表
 4. **Super Print Design** → 设计模板,填 `target_doctype`、`print_paper`
 5. 打开任意目标单据,点打印 → 左侧显示自定义模板选择器
+
+### 报表打印启用 (v15.22 新)
+
+1. **Zprint Setting** →「报表打印」段 → 勾选「启用报表打印」
+2. 启用方式二选一:**全部启用**(所有报表) / **指定启用**(在「启用的报表」子表加入目标报表,如 Stock Balance)
+3. 打开目标报表页(设好筛选、跑出数据)→ 菜单「打印」→ 直达高级打印预览页(原生 PDF / 导出菜单自动隐藏,导出功能收进预览页)
+4. 预览页「新建报表设计」→ 自动预填设计目标=报表 → 开始设计(见[三、设计器入门·报表模式](#报表模式设计-v1522-新)))
+
+> 💡 报表打印与单据打印开关独立,互不影响;关闭开关即完整还原报表页原生菜单。
 
 ---
 
@@ -113,6 +125,19 @@ bench build
 
 除「页面设置」按钮外,**点击画布空白区域**直接打开页面设置:点击纸张**上半**自动选中页眉页签、**下半**自动选中页脚页签(详见[九、页眉/页脚](#九页眉页脚左眉右脚))。
 
+### 报表模式设计 (v15.22 新)
+
+新建设计时「设计目标」可选 **DocType(单据)** 或 **Report(报表)**:
+
+- 选「报表」后填「目标报表」(如 Stock Balance),网格设计操作与单据模式完全一致
+- 单元格绑定「数据查询」→ 查询选「**报表数据**」,数据键下拉分三类:
+  - **报表字段**:`name` / `report_name` / `ref_doctype` 等(报表本身的属性)
+  - **筛选字段**:`filters.company` / `filters.from_date` 等(当前报表筛选)
+  - **报表数据列**:`items.item_code` / `items.bal_qty` 等(报表行数据)
+- 选择数据键后单元格自动写入对应占位符并即时显示,如选「物料」→ 单元格显示 `{rep.items.item_code}`
+- 数据行:把行类型设为「数据驱动行」(或单元格含 `{rep.items.字段}` 自动识别),打印时按报表行数自动展开
+- 报表模式下「模板演示单据」「草稿拦截」等单据专属功能自动隐藏
+
 ### 三个核心区域(表单 Tab)
 
 - **Design View(设计视图)** — 可视化网格编辑器
@@ -125,7 +150,7 @@ bench build
 
 在单元格的 `cell_value` 里用占位符绑定数据。占位符打印时被替换为实际值。
 
-### 四种占位符
+### 占位符
 
 | 语法 | 数据来源 | 示例 |
 |---|---|---|
@@ -133,6 +158,21 @@ bench build
 | `{doc.子表.字段}` | 子表行字段(**自动触发数据驱动行**) | `{doc.items.item_code}` · `{doc.items.qty}` |
 | `{param.参数名}` | 用户打印前填入的参数 | `{param.remark}` |
 | `{查询名.列名}` | 自定义查询结果(首行) | `{bom_list.qty}` |
+| `{rep.字段}` | 报表本身字段(报表模式) | `{rep.name}` · `{rep.ref_doctype}` |
+| `{rep.filters.字段}` | 当前报表筛选值(报表模式) | `{rep.filters.company}` · `{rep.filters.from_date}` |
+| `{rep.items.字段}` | 报表行数据(**自动触发数据驱动行**,报表模式) | `{rep.items.item_code}` · `{rep.items.bal_qty}` |
+
+### rep 报表占位符 (v15.22 新)
+
+报表模式下 `rep` 与 `doc` / `param` 同级,三段语义:
+
+| 写法 | 含义 |
+|---|---|
+| `{rep.name}`(单级) | 报表本身字段(Report 文档:name / report_name / ref_doctype / module 等) |
+| `{rep.filters.字段}` | 当前报表筛选值 —— 任意单元格与页眉页脚均可用,常用于打印标题区(公司 / 日期区间) |
+| `{rep.items.字段}` | 报表当前行数据 —— 仅数据驱动行内生效;含此占位符的行自动按报表行展开 |
+
+> ⚠️ `rep` 是保留前缀,**数据查询名称不能命名为 rep**;报表打印会剔除报表引擎自动附加的合计行,合计请用 `=rowsum()` 自行设计(见[五、单元格值语义](#五单元格值的四种语义-核心))。
 
 > 💡 富文本字段(Text Editor 类型,如 `terms`)打印时自动取**纯文本**显示,不输出 HTML 标签。
 
@@ -313,6 +353,8 @@ fmt(row.qty * row.weight_per_unit, 3)
 ```
 
 > 💡 **关键**:rowsum 复用列值计算逻辑,所以合计对象即使是 `=` 表达式列、logic 列,都能算对。非数字单元格自动跳过。
+>
+> 📊 **报表打印(v15.22)**:报表引擎自动附加的合计行**不会**带入打印 —— 报表合计请用 `=rowsum()` 在模板里自行设计(如数据驱动行为第 8 行、数量在第 4 列,合计行单元格填 `=rowsum(8:4)`;每页小计用 `=pagerowsum(8:4)`)。
 
 ### ⑤ =pagerowsum(R:C) — 当前打印页合计函数 (新)
 
@@ -498,6 +540,7 @@ page_count = 2
 | `{now_time}` | 当前时间 | 14:30:00 |
 | `{date_time}` | 日期时间 | 2026-07-02 14:30:00 |
 | `{doc.字段}` | 单据字段(同正文) | SRT-2606-00117 |
+| `{rep.字段}` / `{rep.filters.字段}` | 报表字段 / 当前筛选值(报表模式,同正文) | 广德智兆科技有限公司 |
 
 ```
 页脚居中:  第 {page} 页 / 共 {pages} 页
@@ -583,6 +626,8 @@ doc.company == '广优' && get_value("Item", doc.production_item, "classificatio
 
 用于「设计还在调整,不想被误打印成正式单据」的场景。
 
+> 📊 报表打印不适用草稿拦截:报表不是单据、无 docstatus 概念,报表模式下该字段自动隐藏、不参与校验(v15.22)。
+
 ---
 
 ## 十二、输出(预览/PDF/Excel/批量)
@@ -590,6 +635,16 @@ doc.company == '广优' && get_value("Item", doc.production_item, "classificatio
 ### 打印预览
 
 目标单据点「打印」进入超级打印预览:左侧选设计、右侧按纸张渲染(白底纸张 + 阴影 + 灰底衬托 + 缩放控件)。预览采用客户端实测分页,与最终打印/PDF 完全一致。
+
+### 报表打印输出 (v15.22 新)
+
+启用报表打印后,报表页菜单「打印」直达高级打印预览页:
+
+- **入口**:报表页设好筛选、跑出数据 → 菜单「打印」→ 预览页(原生 PDF / 导出菜单自动隐藏)
+- **筛选传递**:当前筛选随 URL 带入预览页(`?company=...&from_date=...`),徽标下方显示筛选摘要;打印链接可收藏、可分享,直接打开即按该筛选取数
+- **模式区分**:预览页顶部徽标区分「📄 单据打印」(蓝)与「📊 报表打印」(青),避免混淆
+- **输出**:打印 / 导出 PDF / 导出 Excel 三通道齐备;PDF 与 Excel 按筛选取数后经多引擎 / openpyxl 管线输出,样式与预览一致
+- **数据一致性**:以当前用户身份同步执行报表查询(权限与报表页一致),打印行 = 报表页数据行(引擎合计行剔除,合计自行设计)
 
 ### 原生打印模板复用 (新)
 
@@ -639,6 +694,9 @@ CSS 样式转 Excel 格式(openpyxl),条码 / 二维码以图片形式嵌入单�
 | print_user / print_time / print_count | 操作人 / 时间 / 该单据累计打印次数 |
 | parameters_used | 打印时填的参数(JSON) |
 | print_preview_html | 渲染快照(预览页读它显示,持久化) |
+| log_type | Document Print(单据)/ **Report Print**(报表,v15.22) |
+| report_name | 报表名(报表打印日志) |
+| filters_used | 报表筛选条件快照(JSON,v15.22) |
 
 > 💡 **批量日志也有快照**:批量打印日志创建时同样渲染 html 存快照(后端估算分页)。单文档日志存客户端精确分页快照,批量存后端估算分页,内容一致、分页位置可能略有出入。
 
@@ -646,10 +704,19 @@ CSS 样式转 Excel 格式(openpyxl),条码 / 二维码以图片形式嵌入单�
 
 ## 十四、全局设置 Zprint Setting
 
+设置页分四个配置段(v15.22 起单据打印 / 报表打印两段结构对称):
+
 | 配置项 | 说明 |
 |---|---|
-| 启用超级打印页面 | 总开关,关闭后单据恢复原生打印 |
-| PDF 转换模式 | wkhtmltopdf / WeasyPrint / Chromium 三选一 |
+| **单据打印段** | |
+| 启用单据打印 | 总开关,关闭后单据恢复原生打印 |
+| 单据启用方式 | 全部启用 / 指定启用(启用的单据类型子表) |
+| **报表打印段** (v15.22 新) | |
+| 启用报表打印 | 报表打印总开关,关闭后报表页恢复原生菜单 |
+| 报表启用方式 | 全部启用 / 指定启用(启用的报表子表) |
+| **打印引擎段** | |
+| PDF 引擎模式 | wkhtmltopdf / WeasyPrint / Chromium 三选一(单据与报表共用) |
+| **其他** | |
 | explicit_image_preview | 勾选后图片单元格转 base64 嵌入 PDF(自包含);不勾保持 URL 引用 |
 
 ---
@@ -669,7 +736,7 @@ CSS 样式转 Excel 格式(openpyxl),条码 / 二维码以图片形式嵌入单�
 
 在设计器(Super Print Design 表单)点「**分享到模板平台**」按钮:
 
-1. 序列化设计数据 + 渲染预览(sample_doc 实际预览 + 模板结构预览)
+1. 序列化设计数据 + 渲染预览(单据模板用 sample_doc 实际预览 + 模板结构预览;**报表模板用报表真实数据渲染预览**,v15.22)
 2. 图片转 base64 嵌入(跨服务器自包含,解决推送后图片 URL 指向原服务器不可达)
 
 ### 浏览模板平台
@@ -730,6 +797,9 @@ CSS 样式转 Excel 格式(openpyxl),条码 / 二维码以图片形式嵌入单�
 | `{doc.子表.字段}` | 子表行(触发数据驱动行) | `{doc.items.qty}` |
 | `{param.名}` | 用户参数 | `{param.remark}` |
 | `{query.列}` | 查询结果首行 | `{bom.qty}` |
+| `{rep.字段}` | 报表本身字段(报表模式) | `{rep.name}` |
+| `{rep.filters.字段}` | 报表筛选值(报表模式) | `{rep.filters.company}` |
+| `{rep.items.字段}` | 报表行(触发数据驱动行,报表模式) | `{rep.items.qty}` |
 | `{page}` `{pages}` `{date_time}` 等 | 页眉页脚 | `第{page}页` |
 
 ### ② cell_value 写法速查
