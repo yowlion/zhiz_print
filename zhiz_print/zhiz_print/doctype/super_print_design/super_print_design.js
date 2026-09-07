@@ -57,9 +57,27 @@ class SuperPrintDesigner {
             { value: 'image', label: __('Image'), icon: 'fa-image' }
         ];
 
+        // 22 种码制(python-barcode),group 用于下拉分组展示
         this.barcodeFormats = [
-            { value: 'CODE128', label: 'CODE128' },
-            { value: 'CODE39', label: 'CODE39' }
+            { value: 'CODE128', label: 'CODE128 (通用·任意文本)', group: '通用' },
+            { value: 'CODE39', label: 'CODE39 (通用·大写字母数字)', group: '通用' },
+            { value: 'CODABAR', label: 'Codabar (通用·数字)', group: '通用' },
+            { value: 'NW-7', label: 'NW-7 (Codabar 别名)', group: '通用' },
+            { value: 'EAN-13', label: 'EAN-13 (零售·12/13位数字)', group: '零售' },
+            { value: 'EAN-13-GUARD', label: 'EAN-13 Guard (带保护条)', group: '零售' },
+            { value: 'EAN-8', label: 'EAN-8 (零售短码)', group: '零售' },
+            { value: 'EAN-8-GUARD', label: 'EAN-8 Guard (带保护条)', group: '零售' },
+            { value: 'UPC-A', label: 'UPC-A (北美零售·11/12位)', group: '零售' },
+            { value: 'JAN', label: 'JAN (日本零售)', group: '零售' },
+            { value: 'EAN-14', label: 'EAN-14 / ITF-14 (外箱·13/14位)', group: '包装物流' },
+            { value: 'ITF', label: 'ITF (交叉25码·偶数位数字)', group: '包装物流' },
+            { value: 'GS1-128', label: 'GS1-128 (物流·带AI标识)', group: '包装物流' },
+            { value: 'ISBN-13', label: 'ISBN-13 (图书)', group: '出版' },
+            { value: 'ISBN-10', label: 'ISBN-10 (图书旧版)', group: '出版' },
+            { value: 'ISSN', label: 'ISSN (期刊)', group: '出版' },
+            { value: 'PZN', label: 'PZN (德国医药)', group: '医药/标准' },
+            { value: 'GS1', label: 'GS1 (医药)', group: '医药/标准' },
+            { value: 'GTIN', label: 'GTIN (全球贸易项)', group: '医药/标准' },
         ];
     }
 
@@ -673,7 +691,11 @@ class SuperPrintDesigner {
                         const phNs = cell.query_name === '__report_main__' ? 'rep' : cell.query_name;
                         content = '<div class="super-zprint-cell-content" style="color:#6a5acd;font-style:italic;">{' + this.escapeHtml(phNs) + '.' + this.escapeHtml(cell.data_key) + '}</div>';
                     } else if (cell_type === 'barcode' || cell_type === 'qrcode') {
-                        content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + typeInfo.label + '</span></div>';
+                        // 条码:显示码制+值摘要+文本开关标记(所见即所得提示)
+                        const bFmt = cell.barcode_format || 'CODE128';
+                        const bTxt = (cell.barcode_show_text === undefined || parseInt(cell.barcode_show_text)) ? ' · 文本' : '';
+                        const valHint = hasValue ? this.escapeHtml(cell_value.length > 14 ? cell_value.slice(0, 14) + '…' : cell_value) : '';
+                        content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + bFmt + bTxt + '</span>' + (valHint ? '<span style="color:#999;font-size:10px">' + valHint + '</span>' : '') + '</div>';
                     } else if (!hasValue) {
                         content = '';
                     } else {
@@ -1723,7 +1745,14 @@ class SuperPrintDesigner {
         }
 
         const typeOptions = this.cellTypes.map(t => '<option value="' + t.value + '">' + t.label + '</option>').join('');
-        const barcodeFormatOptions = this.barcodeFormats.map(f => '<option value="' + f.value + '">' + f.label + '</option>').join('');
+        // 按 group 分组的 optgroup 下拉
+        const barcodeFormatOptions = (() => {
+            const groups = {};
+            this.barcodeFormats.forEach(f => { (groups[f.group || '其他'] = groups[f.group || '其他'] || []).push(f); });
+            return Object.keys(groups).map(g =>
+                '<optgroup label="' + g + '">' + groups[g].map(f =>
+                    '<option value="' + f.value + '">' + f.label + '</option>').join('') + '</optgroup>').join('');
+        })();
         const queryOptions = this.generateQueryOptions();
 
         const activeTab = this.lastActiveTab || 'style';
@@ -1754,6 +1783,9 @@ class SuperPrintDesigner {
                     '<input type="number" id="prop-barcode-width" class="form-control" value="100">' +
                     '<label>' + __('Height (px)') + ':</label>' +
                     '<input type="number" id="prop-barcode-height" class="form-control" value="40">' +
+                    '<label style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="prop-barcode-show-text" checked> ' + __('Show Text Below Barcode') + '</label>' +
+                    '<label>' + __('Text Size (px)') + ':</label>' +
+                    '<input type="number" id="prop-barcode-text-size" class="form-control" value="10">' +
                 '</div>' +
                 '<div id="qrcode-group" style="display:none">' +
                     '<p style="font-size:11px;color:#888;margin:4px 0;">' + __('QR code auto-fits cell dimensions (1:1)') + '</p>' +
@@ -1859,6 +1891,9 @@ class SuperPrintDesigner {
         setValue('prop-barcode-format', cell.barcode_format || 'CODE128');
         setValue('prop-barcode-width', cell.barcode_width || 100);
         setValue('prop-barcode-height', cell.barcode_height || 40);
+        const showTextCb = container.querySelector('#prop-barcode-show-text');
+        if (showTextCb) showTextCb.checked = (cell.barcode_show_text === undefined) ? true : !!parseInt(cell.barcode_show_text);
+        setValue('prop-barcode-text-size', cell.barcode_text_size || 10);
         const _driverCb = container.querySelector('#prop-print-count-driver');
         if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         this.togglePropertyGroups(cell.cell_type);
@@ -1990,6 +2025,12 @@ class SuperPrintDesigner {
         container.querySelector('#prop-query-name')?.addEventListener('change', (e) => {
             this.updateCellProperty('query_name', e.target.value);
             this.loadDataKeyOptions(e.target.value);
+        });
+        container.querySelector('#prop-barcode-show-text')?.addEventListener('change', (e) => {
+            this.updateCellProperty('barcode_show_text', e.target.checked ? 1 : 0);
+        });
+        container.querySelector('#prop-barcode-text-size')?.addEventListener('change', (e) => {
+            this.updateCellProperty('barcode_text_size', parseInt(e.target.value) || 10);
         });
         container.querySelector('#prop-barcode-format')?.addEventListener('change', (e) => {
             this.updateCellProperty('barcode_format', e.target.value);
@@ -2779,6 +2820,8 @@ class SuperPrintDesigner {
                             css_style: cell.css_style || '', query_name: cell.query_name || '',
                             data_key: cell.data_key || '', barcode_format: cell.barcode_format || 'CODE128',
                             barcode_width: cell.barcode_width || 100, barcode_height: cell.barcode_height || 40,
+                            barcode_show_text: cell.barcode_show_text === undefined ? 1 : (parseInt(cell.barcode_show_text) || 0),
+                            barcode_text_size: cell.barcode_text_size || 10,
                             row_type: cell.row_type || '', row_display: cell.row_display || '',
                             is_print_count_driver: parseInt(cell.is_print_count_driver) || 0,
                         });

@@ -181,13 +181,46 @@ def extract_master_id(value):
 	return value[len(MERGED_PREFIX):-len(MERGED_SUFFIX)]
 
 
-def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=40):
-	"""Generate barcode SVG base64, pure Python, no external library dependency"""
+def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=40,
+                            show_text=True, text_size=10):
+	"""Generate barcode base64 image (PNG via python-barcode, fallback to built-in SVG).
+
+	v15.23: 主路径切 python-barcode,支持 22 种码制与条码下方文本(write_text);
+	码制输入约束不满足(如 EAN13 位数)时抛错 → 返回 None,由调用方回退显示原文。
+	无 Pillow/python-barcode 的环境回退内置纯 Python 实现(仅 CODE128/39,无文本)。"""
 	if not value:
 		return None
+	fmt = (barcode_format or 'CODE128').strip()
 	try:
-		fmt = (barcode_format or 'CODE128').upper()
-		if fmt == 'CODE39':
+		provider = BARCODE_FORMATS.get(fmt.upper()) or BARCODE_FORMATS.get(fmt.lower())
+		if provider:
+			import base64
+			from io import BytesIO
+			import barcode as _barcode
+			from barcode.writer import ImageWriter
+			bcode = _barcode.get(provider, str(value), writer=ImageWriter())
+			fp = BytesIO()
+			bcode.write(fp, options={
+				'write_text': bool(show_text),
+				'font_size': int(text_size or 10),
+				'text_distance': max(1, int(text_size or 10) // 5),
+				# 模块高度按目标高度近似换算(1模块≈1px级),宽度由模块密度决定
+				'module_height': max(8.0, float(height or 40) * 0.6),
+				'quiet_zone': 2.0,
+			})
+			return 'data:image/png;base64,' + base64.b64encode(fp.getvalue()).decode('ascii')
+	except Exception as e:
+		# 码制约束不满足等业务性失败:记录后返回 None(调用方显示原文),
+		# 不再走 fallback(用户明确选了该码制,静默换码制更危险)
+		if _is_barcode_input_error(e):
+			frappe.log_error("barcode={0} value={1!r}: {2}".format(
+				fmt, str(value)[:50], str(e)), 'Barcode input validation failed')
+			return None
+		frappe.log_error(frappe.get_traceback(), 'Barcode generation failed')
+	# fallback: 无库环境用内置纯 Python 实现(CODE128/39,SVG,无文本)
+	try:
+		u = (fmt or '').upper()
+		if u == 'CODE39':
 			svg = _generate_code39_svg(str(value), width, height)
 		else:
 			svg = _generate_code128_svg(str(value), width, height)
@@ -197,6 +230,40 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), 'Barcode generation failed')
 	return None
+
+
+# python-barcode 22 码制映射(设计器下拉值 → provider 名)
+BARCODE_FORMATS = {
+	# 通用
+	'CODE128': 'code128', 'CODE39': 'code39', 'CODABAR': 'codabar', 'NW-7': 'nw-7',
+	# 零售
+	'EAN-13': 'ean13', 'EAN-13-GUARD': 'ean13-guard', 'EAN-8': 'ean8', 'EAN-8-GUARD': 'ean8-guard',
+	'UPC-A': 'upca', 'JAN': 'jan',
+	# 包装物流
+	'EAN-14': 'ean14', 'ITF': 'itf', 'GS1-128': 'gs1_128',
+	# 出版
+	'ISBN-13': 'isbn13', 'ISBN-10': 'isbn10', 'ISSN': 'issn',
+	# 医药/标准
+	'PZN': 'pzn', 'GS1': 'gs1', 'GTIN': 'gtin',
+	# 兼容别名
+	'EAN': 'ean13', 'EAN13': 'ean13', 'UPC': 'upca',
+}
+
+
+def _is_barcode_input_error(exc):
+	"""区分『输入不满足码制约束』(返回 None 显示原文)与『环境/库故障』(走 fallback)。
+	python-barcode 约束类异常:NumberIllegalCharacter / NumberOfDigits /
+	BarcodeNotFoundError(码制名错)等,均为 ValueError 族或明确 message。"""
+	msg = str(exc)
+	markers = ('number of digits', 'can not be encoded', 'not known',
+	           'illegal character', 'invalid character', 'must contain only')
+	try:
+		from barcode.errors import BarcodeNotFoundError
+		if isinstance(exc, BarcodeNotFoundError):
+			return True
+	except Exception:
+		pass
+	return any(m in msg.lower() for m in markers)
 
 
 # Code128 encoding table (BSBSBS pattern, each digit represents bar/space width)

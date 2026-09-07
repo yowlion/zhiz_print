@@ -1,4 +1,5 @@
 # 不声明 frappe 依赖:v16 uv 解析 frappe 会触发 pypika URL 间接依赖冲突
+python-barcode
 # (frappe v16 内部 pypika URL 的 commit 已 404,且与 zhiz_print 自声明的 pypika URL 冲突);
 # frappe+pypika 已在 bench 环境装好,zhiz_print 运行时 import frappe 即可,无需声明
 qrcode

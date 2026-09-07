@@ -217,6 +217,24 @@ Notes:
 
 ### 4. Cell Types
 
+| cell_type | Description | Extra Config |
+|-----------|-------------|--------------|
+| static | Static text + placeholders / `=` expressions / `=rowsum` | — |
+| logic | Python conditional expression | — |
+| barcode | Barcode (**22 symbologies**, v15.23) | `barcode_format` · `barcode_width` · `barcode_height` · `barcode_show_text` · `barcode_text_size` |
+| qrcode | QR code | `barcode_width` · `barcode_height` |
+| image | Image, `cell_value` holds a URL or `/files/xxx.png` | — |
+
+**Barcode symbologies** (python-barcode, PNG output, optional human-readable text below):
+
+- General: CODE128 · CODE39 · Codabar · NW-7
+- Retail: EAN-13 (+guard) · EAN-8 (+guard) · UPC-A · JAN (12-digit EAN-13 auto-checksum)
+- Packaging/Logistics: EAN-14/ITF-14 · ITF · GS1-128
+- Publishing: ISBN-13 · ISBN-10 · ISSN
+- Pharma/Standards: PZN · GS1 · GTIN
+
+Input violations (e.g. letters in EAN-13) fall back to showing the raw text with a logged error. Legacy CODE128/CODE39 designs are upgraded automatically with text shown by default.
+
 | cell_type | Description | Additional Config |
 |-----------|-------------|-------------------|
 | `static` | Static text, supports `{doc.*}` / `{param.*}` placeholders | None |

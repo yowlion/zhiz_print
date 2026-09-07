@@ -2088,7 +2088,9 @@ class SuperPrintDesign(frappe.model.document.Document):
             value,
             barcode_format=cell_data.get('barcode_format', 'CODE128'),
             width=bw,
-            height=bh
+            height=bh,
+            show_text=cint(cell_data.get('barcode_show_text', 1)),
+            text_size=cint(cell_data.get('barcode_text_size', 10)) or 10,
         )
         if img_src:
             return f'<img src="{img_src}" style="max-width:{bw}px;max-height:{bh}px;object-fit:contain;">'

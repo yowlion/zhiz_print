@@ -454,9 +454,25 @@ row.1                   ← 方向可省略,默认 ASC
 |---|---|---|
 | static | 静态文本 + 占位符 / `=`表达式 / `=rowsum` | — |
 | logic | Python 条件表达式 | — |
-| barcode | 条形码(CODE128 / CODE39) | `barcode_format` · `barcode_width` · `barcode_height` |
+| barcode | 条形码(**22 种码制**,见下) | `barcode_format` · `barcode_width` · `barcode_height` · `barcode_show_text` · `barcode_text_size` |
 | qrcode | 二维码 | `barcode_width` · `barcode_height` |
 | image | 图片,`cell_value` 填 URL 或 `/files/xxx.png` | — |
+
+### 条形码(22 种码制,v15.23 新)
+
+基于 python-barcode,PNG 输出,**条码下方可显示对应文本**(开关 + 字号):
+
+| 分组 | 码制 | 输入要求 |
+|---|---|---|
+| 通用 | CODE128 · CODE39 · Codabar · NW-7 | 128/39 任意文本(39 需大写);Codabar 数字+起止符 |
+| 零售 | EAN-13(含 Guard 变体) · EAN-8(含 Guard) · UPC-A · JAN | 12 位数字自动补校验位;UPC-A 11/12 位 |
+| 包装物流 | EAN-14(ITF-14) · ITF · GS1-128 | EAN-14 13 位自动补位;ITF 偶数位(奇数自动前补 0);GS1-128 带应用标识 |
+| 出版 | ISBN-13 · ISBN-10 · ISSN | 对应标准号码 |
+| 医药/标准 | PZN · GS1 · GTIN | 对应标准编码 |
+
+- **文本选项**:单元格属性勾选「条码下方显示文本」+ 字号(默认开,10px);EAN/UPC 等零售码的文本按标准位置分组显示
+- **校验降级**:输入不满足码制约束(如 EAN-13 填了字母)时单元格回退显示原文并记录日志,不出空白
+- **存量兼容**:旧设计的 CODE128/CODE39 自动升级,默认带出文本;无 Pillow 环境自动回退内置实现(仅 128/39,无文本)
 
 ### 对齐(text-align)
 

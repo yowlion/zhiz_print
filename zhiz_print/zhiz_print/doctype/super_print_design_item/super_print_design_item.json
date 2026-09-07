@@ -1,217 +1,232 @@
 {
-  "actions": [],
-  "creation": "2026-04-03 10:00:00.000000",
-  "doctype": "DocType",
-  "editable_grid": 1,
-  "engine": "InnoDB",
-  "field_order": [
-    "cell_id",
-    "row",
-    "col",
-    "column_break_pos",
-    "rowspan",
-    "colspan",
-    "section_break_type",
-    "cell_type",
-    "cell_value",
-    "column_break_type",
-    "data_key",
-    "query_name",
-    "section_break_barcode",
-    "barcode_format",
-    "column_break_bc",
-    "barcode_width",
-    "barcode_height",
-    "section_break_row_config",
-    "row_type",
-    "column_break_row_display",
-    "row_display",
-    "section_break_style",
-    "css_style",
-    "column_break_misc",
-    "cell_options",
-    "required",
-    "is_print_count_driver"
-  ],
-  "fields": [
-    {
-      "fieldname": "cell_id",
-      "fieldtype": "Data",
-      "in_list_view": 1,
-      "label": "Cell ID",
-      "read_only": 1
-    },
-    {
-      "default": "1",
-      "fieldname": "page_no",
-      "fieldtype": "Int",
-      "in_list_view": 1,
-      "label": "Page",
-      "reqd": 1
-    },
-    {
-      "fieldname": "row",
-      "fieldtype": "Int",
-      "in_list_view": 1,
-      "label": "Row",
-      "reqd": 1
-    },
-    {
-      "fieldname": "col",
-      "fieldtype": "Int",
-      "in_list_view": 1,
-      "label": "Column",
-      "reqd": 1
-    },
-    {
-      "fieldname": "column_break_pos",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "1",
-      "fieldname": "rowspan",
-      "fieldtype": "Int",
-      "label": "Rowspan"
-    },
-    {
-      "default": "1",
-      "fieldname": "colspan",
-      "fieldtype": "Int",
-      "label": "Colspan"
-    },
-    {
-      "fieldname": "section_break_type",
-      "fieldtype": "Section Break",
-      "label": "Content"
-    },
-    {
-      "fieldname": "cell_type",
-      "fieldtype": "Select",
-      "in_list_view": 1,
-      "label": "Cell Type",
-      "options": "static\nlogic\ndata_query\nbarcode\nqrcode\nimage",
-      "default": "static"
-    },
-    {
-      "fieldname": "cell_value",
-      "fieldtype": "Small Text",
-      "in_list_view": 1,
-      "label": "Cell Value"
-    },
-    {
-      "fieldname": "column_break_type",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "data_key",
-      "fieldtype": "Data",
-      "label": "Data Key",
-      "description": "Field name bound to query result"
-    },
-    {
-      "fieldname": "query_name",
-      "fieldtype": "Data",
-      "label": "Bound Query"
-    },
-    {
-      "fieldname": "section_break_barcode",
-      "fieldtype": "Section Break",
-      "label": "Barcode / QR Code"
-    },
-    {
-      "default": "CODE128",
-      "fieldname": "barcode_format",
-      "fieldtype": "Select",
-      "label": "Barcode Format",
-      "options": "CODE128\nCODE39",
-      "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
-    },
-    {
-      "fieldname": "column_break_bc",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "100",
-      "fieldname": "barcode_width",
-      "fieldtype": "Int",
-      "label": "Width (px)",
-      "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
-    },
-    {
-      "default": "40",
-      "fieldname": "barcode_height",
-      "fieldtype": "Int",
-      "label": "Height (px)",
-      "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
-    },
-    {
-      "fieldname": "section_break_row_config",
-      "fieldtype": "Section Break",
-      "label": "Row Configuration"
-    },
-    {
-      "fieldname": "row_type",
-      "fieldtype": "Select",
-      "label": "Row Type",
-      "options": "\nNormal Row\nRepeat Title Row\nData-Driven Row",
-      "default": "",
-      "description": "Empty or Normal Row is default; Repeat Title Row repeats on every page; Data-Driven Row auto-expands based on data"
-    },
-    {
-      "fieldname": "column_break_row_display",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "row_display",
-      "fieldtype": "Select",
-      "label": "Row Display Effect",
-      "options": "\nAuto Wrap\nFixed Height\nAuto Shrink Font",
-      "default": "",
-      "description": "Empty or Auto Wrap is default (text wraps, row height grows); Fixed Height locks height and hides overflow; Auto Shrink Font scales font to fit"
-    },
-    {
-      "fieldname": "section_break_style",
-      "fieldtype": "Section Break",
-      "label": "Style"
-    },
-    {
-      "fieldname": "css_style",
-      "fieldtype": "Code",
-      "label": "CSS Style",
-      "options": "CSS"
-    },
-    {
-      "fieldname": "column_break_misc",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "cell_options",
-      "fieldtype": "Text",
-      "label": "Options"
-    },
-    {
-      "default": "0",
-      "fieldname": "required",
-      "fieldtype": "Check",
-      "label": "Required"
-    },
-    {
-      "default": "0",
-      "fieldname": "is_print_count_driver",
-      "fieldtype": "Check",
-      "label": "Is Print Count Driver"
-    }
-  ],
-  "index_web_pages_for_search": 0,
-  "istable": 1,
-  "links": [],
-  "modified": "2026-04-09 10:00:00.000000",
-  "modified_by": "Administrator",
-  "module": "Zhiz Print",
-  "name": "Super Print Design Item",
-  "owner": "Administrator",
-  "permissions": [],
-  "sort_field": "creation",
-  "sort_order": "DESC",
-  "states": []
+ "actions": [],
+ "creation": "2026-04-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "cell_id",
+  "page_no",
+  "row",
+  "col",
+  "column_break_pos",
+  "rowspan",
+  "colspan",
+  "section_break_type",
+  "cell_type",
+  "cell_value",
+  "column_break_type",
+  "data_key",
+  "query_name",
+  "section_break_barcode",
+  "barcode_format",
+  "column_break_bc",
+  "barcode_width",
+  "barcode_height",
+  "barcode_show_text",
+  "barcode_text_size",
+  "section_break_row_config",
+  "row_type",
+  "column_break_row_display",
+  "row_display",
+  "section_break_style",
+  "css_style",
+  "column_break_misc",
+  "cell_options",
+  "required",
+  "is_print_count_driver"
+ ],
+ "fields": [
+  {
+   "fieldname": "cell_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Cell ID",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "page_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Page",
+   "reqd": 1
+  },
+  {
+   "fieldname": "row",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Row",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Column",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_pos",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "rowspan",
+   "fieldtype": "Int",
+   "label": "Rowspan"
+  },
+  {
+   "default": "1",
+   "fieldname": "colspan",
+   "fieldtype": "Int",
+   "label": "Colspan"
+  },
+  {
+   "fieldname": "section_break_type",
+   "fieldtype": "Section Break",
+   "label": "Content"
+  },
+  {
+   "fieldname": "cell_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Cell Type",
+   "options": "static\nlogic\ndata_query\nbarcode\nqrcode\nimage",
+   "default": "static"
+  },
+  {
+   "fieldname": "cell_value",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Cell Value"
+  },
+  {
+   "fieldname": "column_break_type",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "data_key",
+   "fieldtype": "Data",
+   "label": "Data Key",
+   "description": "Field name bound to query result"
+  },
+  {
+   "fieldname": "query_name",
+   "fieldtype": "Data",
+   "label": "Bound Query"
+  },
+  {
+   "fieldname": "section_break_barcode",
+   "fieldtype": "Section Break",
+   "label": "Barcode / QR Code"
+  },
+  {
+   "default": "CODE128",
+   "fieldname": "barcode_format",
+   "fieldtype": "Select",
+   "label": "Barcode Format",
+   "options": "CODE128\nCODE39",
+   "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
+  },
+  {
+   "fieldname": "column_break_bc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "100",
+   "fieldname": "barcode_width",
+   "fieldtype": "Int",
+   "label": "Width (px)",
+   "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
+  },
+  {
+   "default": "40",
+   "fieldname": "barcode_height",
+   "fieldtype": "Int",
+   "label": "Height (px)",
+   "depends_on": "eval:['barcode','qrcode'].includes(doc.cell_type)"
+  },
+  {
+   "default": "1",
+   "fieldname": "barcode_show_text",
+   "fieldtype": "Check",
+   "label": "Barcode Show Text"
+  },
+  {
+   "default": "10",
+   "fieldname": "barcode_text_size",
+   "fieldtype": "Int",
+   "label": "Barcode Text Size"
+  },
+  {
+   "fieldname": "section_break_row_config",
+   "fieldtype": "Section Break",
+   "label": "Row Configuration"
+  },
+  {
+   "fieldname": "row_type",
+   "fieldtype": "Select",
+   "label": "Row Type",
+   "options": "\nNormal Row\nRepeat Title Row\nData-Driven Row",
+   "default": "",
+   "description": "Empty or Normal Row is default; Repeat Title Row repeats on every page; Data-Driven Row auto-expands based on data"
+  },
+  {
+   "fieldname": "column_break_row_display",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "row_display",
+   "fieldtype": "Select",
+   "label": "Row Display Effect",
+   "options": "\nAuto Wrap\nFixed Height\nAuto Shrink Font",
+   "default": "",
+   "description": "Empty or Auto Wrap is default (text wraps, row height grows); Fixed Height locks height and hides overflow; Auto Shrink Font scales font to fit"
+  },
+  {
+   "fieldname": "section_break_style",
+   "fieldtype": "Section Break",
+   "label": "Style"
+  },
+  {
+   "fieldname": "css_style",
+   "fieldtype": "Code",
+   "label": "CSS Style",
+   "options": "CSS"
+  },
+  {
+   "fieldname": "column_break_misc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cell_options",
+   "fieldtype": "Text",
+   "label": "Options"
+  },
+  {
+   "default": "0",
+   "fieldname": "required",
+   "fieldtype": "Check",
+   "label": "Required"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_print_count_driver",
+   "fieldtype": "Check",
+   "label": "Is Print Count Driver"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-09 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Super Print Design Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }
