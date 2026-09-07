@@ -199,16 +199,21 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 			import barcode as _barcode
 			from barcode.writer import ImageWriter
 			bcode = _barcode.get(provider, str(value), writer=ImageWriter())
-			# 两段式渲染(v15.22.33):
+			# 两段式渲染(v15.22.33/34):
 			# ① 库出纯条码(write_text=False,模块0.26mm 标准比例,300dpi 高清);
+			#    条纹高度由 height 驱动(渲染端传"单元格高-2*(内边距+1)",
+			#    打印体系 4px=1mm 换算;未传时默认 12mm)
 			# ② show_text 时用 Pillow 在图底部合成白底文本块 —— 底对齐覆盖在
 			#    条纹下沿之上:文字可读、整图高度不变、零间距(不追加高度)。
+			_px_per_mm = 4.0
+			_h = int(height or 0)
+			mh_mm = max(4.0, _h / _px_per_mm) if _h >= 16 else 12.0
 			fp = BytesIO()
 			bcode.write(fp, options={
 				'write_text': False,
-				'module_height': 12.0,   # 条纹高12mm
-				'module_width': 0.26,    # 模块宽0.26mm(GS1 标准 X 维)
-				'quiet_zone': 2.5,       # 左右静区
+				'module_height': round(mh_mm, 2),  # 条纹高=可用高(单元格内)
+				'module_width': 0.26,              # 模块宽0.26mm(GS1 标准 X 维)
+				'quiet_zone': 2.5,                 # 左右静区
 			})
 			png = fp.getvalue()
 			if show_text:

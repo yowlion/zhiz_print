@@ -1468,6 +1468,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                     'barcode_format': item.barcode_format or 'CODE128',
                     'barcode_width': item.barcode_width or 100,
                     'barcode_height': item.barcode_height or 40,
+                    'barcode_show_text': cint(item.barcode_show_text) if item.barcode_show_text is not None else 1,
+                    'barcode_text_size': cint(item.barcode_text_size) or 10,
                     'is_print_count_driver': cint(item.is_print_count_driver),
                 }
         return cell_map
@@ -2078,12 +2080,27 @@ class SuperPrintDesign(frappe.model.document.Document):
             return re.sub(r'\r\n|\r|\n', '<br>', escaped)
 
     def _render_barcode_content(self, value, cell_data, cell_w=100, cell_h=40):
-        """Render barcode — v15.22.32 起条码尺寸跟随单元格,不再使用宽高设置项"""
+        """Render barcode — v15.22.32 起条码尺寸跟随单元格,不再使用宽高设置项。
+
+        v15.22.34: 条码目标高 = 单元格高 - 2*(单元格内边距+1)。
+        内边距从单元格 css_style 的 padding 解析(默认 2px)。"""
         if not value:
             return '<span style="color:#999">--</span>'
+        # 解析单元格内边距(css padding,统一取四向最大值;无则默认2px)
+        pad = 2
+        try:
+            css = cell_data.get('css_style') or ''
+            import re as _re
+            m = _re.search(r'padding\s*:\s*(\d+(?:\.\d+)?)px', css)
+            if m:
+                pad = float(m.group(1))
+        except Exception:
+            pass
+        avail_h = max(20, int(cell_h) - 2 * int(pad + 1))
         img_src = generate_barcode_base64(
             value,
             barcode_format=cell_data.get('barcode_format', 'CODE128'),
+            height=avail_h,
             show_text=cint(cell_data.get('barcode_show_text', 1)),
             text_size=cint(cell_data.get('barcode_text_size', 10)) or 10,
         )
