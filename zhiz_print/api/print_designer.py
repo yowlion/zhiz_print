@@ -763,10 +763,17 @@ def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, pag
                 'marginTop': 0, 'marginBottom': 0, 'marginLeft': 0, 'marginRight': 0,
             }))
         chrome_args.append('file://' + html_path)
-        result = subprocess.run(chrome_args, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(chrome_args, capture_output=True, text=True, timeout=60)
 
         if not os.path.exists(pdf_path):
-            frappe.throw(_("Chromium PDF generation failed"))
+            # 可观测性:returncode/stderr 进日志与异常,不再无声失败
+            _stderr_tail = (result.stderr or '')[-500:] if result else ''
+            frappe.log_error(
+                "chromium_cmd={0} returncode={1}\nstderr_tail={2}\ncmd={3}".format(
+                    chromium_cmd, getattr(result, 'returncode', None), _stderr_tail, chrome_args),
+                'Chromium PDF generation failed (pdf file not created)')
+            frappe.throw(_("Chromium PDF generation failed: rc={0}, stderr={1}").format(
+                getattr(result, 'returncode', None), _stderr_tail or 'N/A'))
 
         with open(pdf_path, 'rb') as f:
             pdf_bytes = f.read()
