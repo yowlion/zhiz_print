@@ -54,6 +54,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                 frappe.throw(_("报表设计必须选择目标报表"))
         else:
             self.report_name = None
+        # rep 为报表数据保留占位符前缀({rep.字段名}),禁止占用为查询名
+        for q in (self.design_queries or []):
+            if (q.query_name or '').strip().lower() == 'rep':
+                frappe.throw(_("查询名称不能设为 rep — rep 是报表数据保留占位符前缀({{rep.字段名}})"))
 
     def validate_print_count_driver(self):
         """打印次数驱动单元格:全设计最多 1 个 + cell_value 必须解析为数字(纯数字 或 数字类型字段占位符)"""
@@ -465,6 +469,25 @@ class SuperPrintDesign(frappe.model.document.Document):
         return re.sub(r'\{doc\.(\w+)\.(\w+)\}', replacer, value)
 
     @staticmethod
+    def _replace_rep_placeholders(value, data_item):
+        """Replace {rep.field_name} with report row values(报表数据驱动行当前行字段).
+
+        rep 为保留占位符前缀,与 doc/param 同级:{rep.qty} = 报表当前行的 qty 列。
+        仅在报表数据行展开上下文(data_item 非空)生效,其余场景占位符原样保留。"""
+        if not value or not data_item:
+            return value or ''
+
+        def replacer(match):
+            field_name = match.group(1)
+            if hasattr(data_item, field_name):
+                return SuperPrintDesign._fmt_val(getattr(data_item, field_name))
+            if isinstance(data_item, dict) and field_name in data_item:
+                return SuperPrintDesign._fmt_val(data_item.get(field_name))
+            return match.group(0)
+
+        return re.sub(r'\{rep\.(\w+)\}', replacer, value)
+
+    @staticmethod
     def _replace_param_placeholders(value, params):
         """Replace {param.param_name} with user input parameter values"""
         if not value or not params:
@@ -506,8 +529,8 @@ class SuperPrintDesign(frappe.model.document.Document):
         def replacer(match):
             qn = match.group(1)
             col = match.group(2)
-            # Skip doc/param prefixes (handled by other methods)
-            if qn in ('doc', 'param'):
+            # Skip doc/param/rep prefixes (handled by other methods; rep 为报表保留前缀)
+            if qn in ('doc', 'param', 'rep'):
                 return match.group(0)
             qr = query_results.get(qn, {})
             data = qr.get('data', [])
@@ -599,6 +622,12 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if child_patterns:
                     is_data_driven = True
 
+                # {rep.field} 模式:自动识别为报表数据行(与子表 {doc.child.field} 同款机制),
+                # 绑定伪查询 __report_main__(报表行由 render_report_preview 注入)
+                rep_patterns = re.findall(r'\{rep\.(\w+)\}', cv)
+                if rep_patterns:
+                    is_data_driven = True
+
                 # query 绑定(qn 供 data-driven 行收集 query_names 用)。
                 # 注意:不再仅凭 data_query cell 就把整行判为 data-driven —— 非数据驱动行
                 # 的 data_query cell 只取 query 首条值(_build_row_html 第1426行 fallback),
@@ -621,6 +650,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                     for (table_name, _) in child_patterns:
                         data_driven_rows[row_num]['child_tables'].add(
                             table_name)
+                    if rep_patterns:
+                        data_driven_rows[row_num]['query_names'].add('__report_main__')
                     if qn:
                         data_driven_rows[row_num]['query_names'].add(qn)
         return data_driven_rows
@@ -1811,6 +1842,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # Replace {doc.child_table.field_name} child table placeholder
                 if data_item:
                     cell_value = self._replace_child_table_placeholders(
+                        cell_value, data_item)
+                    # {rep.field} 报表当前行字段(与 {doc.child.field} 同一替换时机)
+                    cell_value = self._replace_rep_placeholders(
                         cell_value, data_item)
                     # data_key method: first try data_item, then fallback to query_results
                     if cell_data.get('data_key'):

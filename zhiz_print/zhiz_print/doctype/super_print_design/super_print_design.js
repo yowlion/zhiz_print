@@ -3373,6 +3373,11 @@ class SuperPrintDesigner {
                     frappe.msgprint(__('Query name must start with a letter and contain only letters, digits and underscores'));
                     return;
                 }
+                // rep 为报表数据保留占位符前缀({rep.字段名}),禁止占用为查询名
+                if (values.query_name.trim().toLowerCase() === 'rep') {
+                    frappe.msgprint(__('"{0}" is a reserved placeholder prefix for report data ({1}), it cannot be used as a query name', ['rep', '{rep.field}']));
+                    return;
+                }
 
                 if (isEdit) {
                     queries[editIndex] = values;
