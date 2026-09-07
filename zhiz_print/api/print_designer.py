@@ -507,7 +507,9 @@ def generate_print_pdf(doctype, docname, design_name, params=None, page_break_ma
     so PDF pagination matches the on-screen preview exactly.
     """
     _check_license()
-    _check_draft_no_print(design_name, frappe.get_doc(doctype, docname))
+    # 报表模式(report_filters 非空):报表非单据,无 docstatus 草稿语义,doc=None 跳过拦截
+    _check_draft_no_print(design_name,
+                          None if report_filters is not None else frappe.get_doc(doctype, docname))
 
     def _as_dict(v):
         if not v:

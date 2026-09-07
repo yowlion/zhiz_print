@@ -22,11 +22,19 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				this.is_super_print_mode = true;
 				this.is_report_mode = true;
 				this.report_name = decodeURIComponent(route[2]);
+				// 筛选来源:URL query 优先(拦截器直传,可见可分享) →
+				// 按报表名分键的 sessionStorage 兜底 → 空(由服务端补默认筛选)
+				const urlFilters = {};
 				try {
-					this.report_filters = JSON.parse(sessionStorage.getItem('spd_report_filters') || '{}');
-				} catch (e) {
-					this.report_filters = {};
-				}
+					new URLSearchParams(window.location.search).forEach((v, k) => {
+						if (v !== '') urlFilters[k] = v;
+					});
+				} catch (e) { /* ignore */ }
+				let storedFilters = {};
+				try {
+					storedFilters = JSON.parse(sessionStorage.getItem('spd_report_filters:' + this.report_name) || '{}');
+				} catch (e) { /* ignore */ }
+				this.report_filters = Object.keys(urlFilters).length ? urlFilters : (storedFilters || {});
 				this.wrapper = $(this.wrapper || []);
 				this.print_settings = frappe.model.get_doc(":Print Settings", "Print Settings");
 				return;
@@ -196,6 +204,8 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		// v15.04.25: draft_no_print is a per-design toggle that blocks printing
 		// when the *document* is in draft state (docstatus=0). Submitted docs
 		// print normally even when the design has draft_no_print=1.
+		// v15.23 报表模式:报表非单据,无 docstatus 草稿语义,不做拦截
+		if (this.is_report_mode) return false;
 		const designFlagged = this.current_design_info?.draft_no_print;
 		const isDesignFlagged = designFlagged === 1 || designFlagged === '1' || designFlagged === true;
 		const docstatus = parseInt(this.frm?.doc?.docstatus || 0, 10);

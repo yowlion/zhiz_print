@@ -56,7 +56,6 @@ zhiz_print.report.is_enabled_for = function (report_name) {
 
 zhiz_print.report.open_print_page = function (query_report) {
     if (!query_report || !query_report.report_name) return;
-    // 筛选值经 sessionStorage 传递(不落 URL,避免长度/敏感问题)
     let filters = {};
     try {
         filters = query_report.get_filter_values
@@ -65,6 +64,21 @@ zhiz_print.report.open_print_page = function (query_report) {
     } catch (e) {
         console.warn('zhiz_print: get_filter_values failed', e);
     }
-    sessionStorage.setItem('spd_report_filters', JSON.stringify(filters || {}));
-    frappe.set_route('print', 'Report', query_report.report_name);
+    filters = filters || {};
+
+    // 筛选双通道:URL 直传(可见/可分享/可收藏,预览页优先读取)
+    // + 按报表名分键的 sessionStorage 兜底(超长筛选或直接打开页面场景)
+    try {
+        sessionStorage.setItem('spd_report_filters:' + query_report.report_name,
+            JSON.stringify(filters));
+    } catch (e) { /* ignore */ }
+
+    const qs = Object.keys(filters)
+        .filter(k => filters[k] !== '' && filters[k] != null)
+        .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(filters[k]))
+        .join('&');
+
+    // 整页跳转(非 SPA set_route):确保 print 页面全新加载并携带 query
+    window.location.href = '/app/print/Report/' + encodeURIComponent(query_report.report_name)
+        + (qs ? '?' + qs : '');
 };

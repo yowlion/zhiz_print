@@ -96,6 +96,7 @@ def get_report_designs(report_name):
             filters={"parent": d.name, "parenttype": "Super Print Design"})
         result.append({
             "name": d.name,
+            "design_name": d.design_name or d.name,
             "label": d.design_name or d.name,
             "is_default": (d.name == default_name),
             "print_paper": d.print_paper,
