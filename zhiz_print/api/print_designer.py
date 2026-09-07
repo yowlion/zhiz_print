@@ -263,14 +263,26 @@ def render_print_preview(doctype, docname, design_name, params=None,
 
 
 @frappe.whitelist()
-def record_print_log(doctype, docname, design_name, params=None, preview_html=None, export_type=None):
-    """Record print log"""
+def record_print_log(design_name, doctype=None, docname=None, params=None,
+                     preview_html=None, export_type=None,
+                     log_type=None, report_name=None, filters_used=None):
+    """Record print log.
+
+    v15.23: 报表打印 — log_type='Report Print' 时 report_name 必填,
+    filters_used 记录筛选快照;reference_doctype/name 填 'Report'/报表名
+    (兼容按 doctype 聚合的既有统计)。"""
     _check_license()
     if isinstance(params, str):
         try:
             params = json.loads(params)
         except (json.JSONDecodeError, TypeError):
             params = {}
+
+    if (log_type or '') == 'Report Print':
+        if not report_name:
+            frappe.throw(_("报表打印日志缺少 report_name"))
+        doctype = doctype or 'Report'
+        docname = docname or report_name
 
     log = frappe.get_doc({
         "doctype": "Super Print Log",
@@ -280,6 +292,9 @@ def record_print_log(doctype, docname, design_name, params=None, preview_html=No
         "parameters_used": json.dumps(params, ensure_ascii=False) if params else "{}",
         "print_preview_html": preview_html or "",
         "export_type": export_type or "Print",
+        "log_type": log_type or "Document Print",
+        "report_name": report_name if (log_type or '') == 'Report Print' else None,
+        "filters_used": filters_used if (log_type or '') == 'Report Print' else None,
     })
     log.insert(ignore_permissions=True)
 
@@ -415,7 +430,8 @@ def _resolve_image_urls_for_pdf(html):
 
 
 def _render_print_html(doctype, docname, design_name, params=None, skip_px_scaling=False,
-                      page_break_map=None, row_heights=None, shrink_map=None):
+                      page_break_map=None, row_heights=None, shrink_map=None,
+                      report_filters=None, inject_query_results=None):
     """Common function: render print HTML and apply px scaling, shared by PDF engines.
     Returns (html, design) tuple.
 
@@ -432,11 +448,15 @@ def _render_print_html(doctype, docname, design_name, params=None, skip_px_scali
 
     design = frappe.get_doc("Super Print Design", design_name)
 
-    if not frappe.has_permission(doctype, "print", docname):
+    # 报表模式(report_filters 非空):权限链由调用方(Report read + 同用户 run)完成,
+    # 此处跳过单据 print 权限检查;渲染时 doc_name=None + 伪 doc/注入数据
+    if report_filters is None and not frappe.has_permission(doctype, "print", docname):
         frappe.throw(_("No print permission"), frappe.PermissionError)
 
-    html = design.get_preview_for_document(doc_name=docname, params=params,
-                                           page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
+    html = design.get_preview_for_document(
+        doc_name=(docname if report_filters is None else None), params=params,
+        page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map,
+        report_filters=report_filters, inject_query_results=inject_query_results)
 
     if not skip_px_scaling:
         # WeasyPrint px->mm conversion rate: 25.4/96 ~ 0.264583 mm/px
@@ -480,7 +500,7 @@ def _pdf_response(pdf_bytes, filename):
 
 
 @frappe.whitelist()
-def generate_print_pdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
+def generate_print_pdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None, report_filters=None, inject_query_results=None):
     """Unified PDF generation endpoint. Auto-selects engine based on Zprint Setting.
 
     v15.10.01: page_break_map / row_heights (client-measured) forwarded to the engine
@@ -504,20 +524,22 @@ def generate_print_pdf(doctype, docname, design_name, params=None, page_break_ma
     shrink_map = _as_dict(shrink_map)
 
     engine_mode = frappe.db.get_single_value("Zprint Setting", "pdf_engine_mode") or "wkhtmltopdf"
+    engine_kwargs = dict(report_filters=report_filters, inject_query_results=inject_query_results)
     if engine_mode == "WeasyPrint":
-        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map)
+        return _generate_print_pdf_weasyprint(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map, **engine_kwargs)
     elif engine_mode == "Chromium":
-        return _generate_print_pdf_chromium(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map)
+        return _generate_print_pdf_chromium(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map, **engine_kwargs)
     else:
-        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map)
+        return _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params, page_break_map, row_heights, shrink_map, **engine_kwargs)
 
 
-def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
+def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None, report_filters=None, inject_query_results=None):
     """Generate PDF using WeasyPrint, browser inline preview"""
     from weasyprint import HTML as WeasyHTML
 
     html, design = _render_print_html(doctype, docname, design_name, params,
-                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
+                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map,
+                                      report_filters=report_filters, inject_query_results=inject_query_results)
 
     # PDF-specific: fix ghost borders of merged cells
     html = _fix_merged_cell_borders_for_pdf(html)
@@ -642,12 +664,13 @@ def _prepare_html_for_wkhtmltopdf(html):
     return html
 
 
-def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
+def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None, report_filters=None, inject_query_results=None):
     """Generate PDF using wkhtmltopdf, browser inline preview"""
     import pdfkit
 
     html, design = _render_print_html(doctype, docname, design_name, params,
-                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
+                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map,
+                                      report_filters=report_filters, inject_query_results=inject_query_results)
 
     # wkhtmltopdf preprocessing: SVG->PNG, background shorthand fix, flex->table
     html = _prepare_html_for_wkhtmltopdf(html)
@@ -680,14 +703,15 @@ def _generate_print_pdf_wkhtmltopdf(doctype, docname, design_name, params=None, 
         frappe.throw(_("PDF generation failed: {0}").format(str(e)))
 
 
-def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None):
+def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, page_break_map=None, row_heights=None, shrink_map=None, report_filters=None, inject_query_results=None):
     """Generate PDF using Chromium headless, browser inline preview"""
     import os
     import subprocess
     import tempfile
 
     html, design = _render_print_html(doctype, docname, design_name, params,
-                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
+                                      page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map,
+                                      report_filters=report_filters, inject_query_results=inject_query_results)
 
     # PDF-specific: convert relative image URLs to file:// paths
     html = _resolve_image_urls_for_pdf(html)

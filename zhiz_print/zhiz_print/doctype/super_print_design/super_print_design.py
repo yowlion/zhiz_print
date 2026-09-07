@@ -43,8 +43,17 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     def validate(self):
         self.check_license_on_save()
+        self.validate_design_target()
         self.ensure_full_coverage()
         self.validate_print_count_driver()
+
+    def validate_design_target(self):
+        """设计目标校验:Report 模式必须有目标报表;DocType 模式清空 report_name"""
+        if (self.design_target or 'DocType') == 'Report':
+            if not self.report_name:
+                frappe.throw(_("报表设计必须选择目标报表"))
+        else:
+            self.report_name = None
 
     def validate_print_count_driver(self):
         """打印次数驱动单元格:全设计最多 1 个 + cell_value 必须解析为数字(纯数字 或 数字类型字段占位符)"""
@@ -201,12 +210,16 @@ class SuperPrintDesign(frappe.model.document.Document):
 
     @frappe.whitelist()
     def get_preview_for_document(self, doc_name=None, params=None,
-                                page_break_map=None, row_heights=None, shrink_map=None):
+                                page_break_map=None, row_heights=None, shrink_map=None,
+                                inject_query_results=None, report_filters=None):
         """Preview design.
 
         v15.10.01: page_break_map / row_heights forwarded to build_preview_html so a
         client-measured pagination can drive the render (preview/print/PDF share this).
+        v15.23: 报表模式 — inject_query_results 注入伪查询数据(如 __report_main__ 报表行),
+        report_filters 构造伪 doc 供 {doc.xxx}/{filter.xxx} 占位符与 logic 单元格求值。
         """
+        self._active_filters = None
         try:
             if isinstance(params, str):
                 params = json.loads(params)
@@ -218,6 +231,11 @@ class SuperPrintDesign(frappe.model.document.Document):
                     doc = frappe.get_doc(self.target_doctype, doc_name)
                 except Exception:
                     pass
+
+            # 报表模式:无单据,用筛选值构造伪 doc(占位符/logic 可引用筛选字段)
+            if isinstance(report_filters, dict) and doc is None:
+                self._active_filters = report_filters
+                doc = frappe._dict(report_filters)
 
             # Execute queries (仅当有具体 doc 时执行;doc_name=None 是纯模板结构预览,
             # query parameters 依赖 doc.xxx,doc 为空时无法过滤会返回全表,导致 data-driven
@@ -238,6 +256,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                         frappe.log_error(frappe.get_traceback(), 'Query execution failed: {0}'.format(q.query_name))
                         query_results[q.query_name] = {'data': []}
 
+            # 报表注入(伪查询)后置合并:可覆盖同名设计查询,__report_main__ 为报表行保留键
+            if inject_query_results:
+                query_results.update(inject_query_results)
+
             html = self.build_preview_html(
                 query_results, doc_name, doc, params=params,
                 page_break_map=page_break_map, row_heights=row_heights, shrink_map=shrink_map)
@@ -246,11 +268,16 @@ class SuperPrintDesign(frappe.model.document.Document):
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), 'Print preview failed')
             return f'<div class="alert alert-danger">Preview failed: {frappe.utils.escape_html(str(e))}</div>'
+        finally:
+            self._active_filters = None
 
-    def get_measurement_for_document(self, doc_name=None, params=None):
+    def get_measurement_for_document(self, doc_name=None, params=None,
+                                     inject_query_results=None, report_filters=None):
         """v15.10.01: produce the off-screen measurement scaffold for this document.
         Runs the same doc/query setup as get_preview_for_document, then builds the
-        unpaginated measurement HTML + geometry meta. Returns (html, meta)."""
+        unpaginated measurement HTML + geometry meta. Returns (html, meta).
+        v15.23: 报表模式注入参数同 get_preview_for_document。"""
+        self._active_filters = None
         try:
             if isinstance(params, str):
                 params = json.loads(params)
@@ -261,6 +288,11 @@ class SuperPrintDesign(frappe.model.document.Document):
                     doc = frappe.get_doc(self.target_doctype, doc_name)
                 except Exception:
                     pass
+
+            # 报表模式:无单据,用筛选值构造伪 doc
+            if isinstance(report_filters, dict) and doc is None:
+                self._active_filters = report_filters
+                doc = frappe._dict(report_filters)
 
             query_results = {}
             for q in self.design_queries:
@@ -276,11 +308,16 @@ class SuperPrintDesign(frappe.model.document.Document):
                     frappe.log_error(frappe.get_traceback(), 'Query execution failed: {0}'.format(q.query_name))
                     query_results[q.query_name] = {'data': []}
 
+            if inject_query_results:
+                query_results.update(inject_query_results)
+
             return self.build_measurement_html(query_results, doc=doc, params=params)
 
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), 'Measurement scaffold failed')
             return '', {}
+        finally:
+            self._active_filters = None
 
     def execute_query(self, query_code, parameters=None, doc_name=None, doc_type=None, user_params=None, current_row_index=None):
         """Execute query with parameter injection as .where() clauses
@@ -442,6 +479,24 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         return re.sub(r'\{param\.(\w+)\}', replacer, value)
 
+    def _replace_filter_placeholders(self, value):
+        """Replace {filter.filter_name} with report filters (报表模式专用).
+
+        依赖实例属性 _active_filters(由 get_preview_for_document /
+        get_measurement_for_document 的 report_filters 参数设置)。"""
+        filters = getattr(self, '_active_filters', None)
+        if not value or not filters:
+            return value or ''
+
+        def replacer(match):
+            filter_name = match.group(1)
+            if filter_name in filters:
+                v = filters[filter_name]
+                return SuperPrintDesign._fmt_val(v)
+            return match.group(0)
+
+        return re.sub(r'\{filter\.(\w+)\}', replacer, value)
+
     @staticmethod
     def _replace_query_data_placeholders(value, query_results):
         """Replace {query_name.column} with query result data (first row)"""
@@ -472,9 +527,9 @@ class SuperPrintDesign(frappe.model.document.Document):
             return []
         return re.findall(r'\{doc\.(\w+)\.(\w+)\}', cell_value)
 
-    @staticmethod
-    def _replace_header_footer_placeholders(html, page_num, total_pages, raw=False):
-        """Replace fixed placeholders in header/footer. raw=True 时原样返回(doc=None 模板结构预览不替换)"""
+    def _replace_header_footer_placeholders(self, html, page_num, total_pages, raw=False):
+        """Replace fixed placeholders in header/footer. raw=True 时原样返回(doc=None 模板结构预览不替换)
+        v15.23: 非 raw 路径追加 {filter.xxx} 报表筛选替换(报表模式页眉页脚用)"""
         if raw or not html:
             return html or ''
         now = datetime.datetime.now()
@@ -487,7 +542,7 @@ class SuperPrintDesign(frappe.model.document.Document):
         }
         for placeholder, val in replacements.items():
             html = html.replace(placeholder, val)
-        return html
+        return self._replace_filter_placeholders(html)
 
     # ==================== Row Metadata ====================
 
@@ -1745,6 +1800,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # Replace {param.param_name} user parameter placeholder
                 cell_value = self._replace_param_placeholders(
                     cell_value, params)
+
+                # Replace {filter.filter_name} report filter placeholder (报表模式)
+                cell_value = self._replace_filter_placeholders(cell_value)
 
                 # Replace {query_name.column} query data placeholder (non-doc/param)
                 cell_value = self._replace_query_data_placeholders(

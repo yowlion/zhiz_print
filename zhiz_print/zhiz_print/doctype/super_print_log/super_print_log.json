@@ -1,144 +1,170 @@
 {
-  "actions": [],
-  "autoname": "SPL-.YYYY.-.#####",
-  "creation": "2026-04-03 10:00:00.000000",
-  "doctype": "DocType",
-  "engine": "InnoDB",
-  "field_order": [
-    "reference_doctype",
-    "reference_name",
-    "export_type",
-    "column_break_ref",
-    "print_design",
-    "print_time",
-    "parameters_used",
-    "section_break_detail",
-    "print_user",
-    "column_break_detail",
-    "print_count",
-    "section_break_preview",
-    "print_preview_html",
-    "preview_render"
-  ],
-  "fields": [
-    {
-      "fieldname": "reference_doctype",
-      "fieldtype": "Link",
-      "in_list_view": 1,
-      "label": "DocType",
-      "options": "DocType",
-      "reqd": 1,
-      "read_only": 1
-    },
-    {
-      "fieldname": "reference_name",
-      "fieldtype": "Data",
-      "in_list_view": 1,
-      "label": "Document Name",
-      "reqd": 1,
-      "read_only": 1
-    },
-    {
-      "fieldname": "column_break_ref",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "print_design",
-      "fieldtype": "Data",
-      "in_list_view": 1,
-      "label": "Print Design",
-      "reqd": 1,
-      "read_only": 1
-    },
-    {
-      "fieldname": "print_time",
-      "fieldtype": "Datetime",
-      "in_list_view": 1,
-      "label": "Print Time",
-      "read_only": 1
-    },
-    {
-      "fieldname": "export_type",
-      "fieldtype": "Select",
-      "in_list_view": 1,
-      "label": "Operation Type",
-      "options": "\nPrint\nExport PDF\nExport Excel",
-      "read_only": 1
-    },
-    {
-      "fieldname": "section_break_detail",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "print_user",
-      "fieldtype": "Link",
-      "label": "Print User",
-      "options": "User",
-      "read_only": 1
-    },
-    {
-      "fieldname": "print_count",
-      "fieldtype": "Int",
-      "in_list_view": 1,
-      "label": "Print Count",
-      "read_only": 1
-    },
-    {
-      "fieldname": "column_break_detail",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "parameters_used",
-      "fieldtype": "Code",
-      "label": "Parameters Used",
-      "options": "JSON",
-      "read_only": 1
-    },
-    {
-      "fieldname": "section_break_preview",
-      "fieldtype": "Tab Break",
-      "label": "Print Preview"
-    },
-    {
-      "fieldname": "print_preview_html",
-      "fieldtype": "Code",
-      "hidden": 1,
-      "label": "Print Preview Content",
-      "read_only": 1
-    },
-    {
-      "fieldname": "preview_render",
-      "fieldtype": "HTML",
-      "label": "Preview"
-    }
-  ],
-  "hide_toolbar": 1,
-  "in_create": 1,
-  "index_web_pages_for_search": 0,
-  "links": [],
-  "modified": "2026-04-10 10:00:00.000000",
-  "modified_by": "Administrator",
-  "module": "Zhiz Print",
-  "name": "Super Print Log",
-  "naming_rule": "SPL-.YYYY.-.#####",
-  "owner": "Administrator",
-  "permissions": [
-    {
-      "email": 1,
-      "export": 1,
-      "print": 1,
-      "read": 1,
-      "report": 1,
-      "role": "System Manager",
-      "share": 1
-    },
-    {
-      "read": 1,
-      "role": "All"
-    }
-  ],
-  "sort_field": "print_time",
-  "sort_order": "DESC",
-  "states": [],
-  "title_field": "reference_name"
+ "actions": [],
+ "autoname": "SPL-.YYYY.-.#####",
+ "creation": "2026-04-03 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "log_type",
+  "reference_doctype",
+  "reference_name",
+  "report_name",
+  "column_break_ref",
+  "print_design",
+  "print_time",
+  "export_type",
+  "section_break_detail",
+  "print_user",
+  "print_count",
+  "column_break_detail",
+  "parameters_used",
+  "filters_used",
+  "section_break_preview",
+  "print_preview_html",
+  "preview_render"
+ ],
+ "fields": [
+  {
+   "default": "Document Print",
+   "fieldname": "log_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Log Type",
+   "options": "Document Print\nReport Print"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "DocType",
+   "options": "DocType",
+   "reqd": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Document Name",
+   "reqd": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "report_name",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Report Name",
+   "options": "Report",
+   "depends_on": "eval:doc.log_type === 'Report Print'"
+  },
+  {
+   "fieldname": "column_break_ref",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "print_design",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Print Design",
+   "reqd": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "print_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Print Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "export_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Operation Type",
+   "options": "\nPrint\nExport PDF\nExport Excel",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_detail",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "print_user",
+   "fieldtype": "Link",
+   "label": "Print User",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "print_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Print Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_detail",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "parameters_used",
+   "fieldtype": "Code",
+   "label": "Parameters Used",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filters_used",
+   "fieldtype": "Code",
+   "label": "Filters Used",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "section_break_preview",
+   "fieldtype": "Tab Break",
+   "label": "Print Preview"
+  },
+  {
+   "fieldname": "print_preview_html",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Print Preview Content",
+   "read_only": 1
+  },
+  {
+   "fieldname": "preview_render",
+   "fieldtype": "HTML",
+   "label": "Preview"
+  }
+ ],
+ "hide_toolbar": 1,
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-04-10 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Super Print Log",
+ "naming_rule": "SPL-.YYYY.-.#####",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "read": 1,
+   "role": "All"
+  }
+ ],
+ "sort_field": "print_time",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "reference_name"
 }

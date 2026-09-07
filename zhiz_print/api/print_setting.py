@@ -101,7 +101,29 @@ def _get_print_designer_boot_settings(setting):
             # Native Print Formats toggle (sidebar collapsible section)
             result["enable_native_print_formats"] = bool(frappe.utils.cint(setting.get("enable_native_print_formats")))
 
-            # PDF engine mode (avoid frontend DB call)
+            # 报表打印配置(v15.23):总开关 + Enable for All/Specific + 命中报表列表 +
+        # 有设计的报表列表(拦截层判定"启用即接管"用,与 doctype_has_design 同语义)
+        report_enabled = bool(frappe.utils.cint(setting.get("report_print_enabled")))
+        result["report_enabled"] = report_enabled
+        if report_enabled:
+            rmode = setting.get("report_enable_mode") or "Enable for All"
+            result["report_enable_mode"] = rmode
+            rlist = []
+            if rmode == "Enable for Specific":
+                for item in setting.get("report_enabled_reports", []):
+                    if item.enabled and item.report_name:
+                        rlist.append(item.report_name)
+            result["report_enabled_list"] = rlist
+            try:
+                _rns = frappe.get_all("Super Print Design",
+                    filters={"enabled": 1, "design_target": "Report"},
+                    fields=["report_name"], distinct=True, pluck="report_name",
+                    ignore_permissions=True)
+                result["report_has_design"] = {rn: True for rn in _rns if rn}
+            except Exception:
+                result["report_has_design"] = {}
+
+        # PDF engine mode (avoid frontend DB call)
             result["pdf_engine_mode"] = setting.get("pdf_engine_mode") or "wkhtmltopdf"
 
             # License expired flag

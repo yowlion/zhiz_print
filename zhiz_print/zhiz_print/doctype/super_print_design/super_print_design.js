@@ -1882,6 +1882,36 @@ class SuperPrintDesigner {
         select.innerHTML = '<option value="">--</option>';
         if (!queryName) return;
 
+        // 报表伪查询:Data Key 列表 = 报表列(get_report_sample_data 前 N 行推导)
+        if (queryName === '__report_main__') {
+            frappe.call({
+                method: 'zhiz_print.api.report_print.get_report_sample_data',
+                args: {
+                    report_name: this.frm.doc.report_name,
+                    filters: {},
+                    sample_rows: this.frm.doc.sample_rows || 20,
+                },
+                callback: (r) => {
+                    const m = r.message || {};
+                    (m.columns || []).forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.fieldname;
+                        opt.textContent = c.label || c.fieldname;
+                        select.appendChild(opt);
+                    });
+                    const cell = this.cellDataMap[this.currentCell];
+                    if (cell && cell.data_key) select.value = cell.data_key;
+                    if (m.error) {
+                        frappe.show_alert({
+                            message: __('Failed to load report columns') + ': ' + m.error,
+                            indicator: 'orange',
+                        });
+                    }
+                },
+            });
+            return;
+        }
+
         frappe.call({
             method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.get_query_keys',
             args: { design_name: this.frm.doc.name, query_name: queryName },
@@ -2680,10 +2710,16 @@ class SuperPrintDesigner {
 
     generateQueryOptions() {
         const queries = this.frm.doc.design_queries || [];
-        if (!queries.length) return '';
-        return queries.map(q =>
+        // 报表模式(v15.23):首位注入伪查询 __report_main__(报表数据源,行=报表行);
+        // 单元格绑它 + Data Key 选报表列 → 数据驱动行按报表行展开
+        let opts = '';
+        if ((this.frm.doc.design_target || 'DocType') === 'Report') {
+            opts += '<option value="__report_main__">' + __('Report Data') + '</option>';
+        }
+        opts += queries.map(q =>
             '<option value="' + q.query_name + '">' + __(q.query_name) + '</option>'
         ).join('');
+        return opts;
     }
 
     syncToForm() {
@@ -3956,6 +3992,13 @@ frappe.ui.form.on('Super Print Design', {
     onload(frm) {
         if (frm.is_new()) {
             frm.set_df_property('design_view_tab', 'hidden', 1);
+            // 预览页「新建报表设计」深链预填(v15.23):route_options 带 design_target=Report + report_name
+            if (frappe.route_options && frappe.route_options.design_target === 'Report' && frappe.route_options.report_name) {
+                frm.set_value('design_target', 'Report');
+                frm.set_value('report_name', frappe.route_options.report_name);
+                frappe.show_alert({ message: __('已按报表预填设计目标') + ': ' + frappe.route_options.report_name, indicator: 'blue' });
+            }
+            frappe.route_options = null;
         }
     },
 
@@ -4153,13 +4196,18 @@ frappe.ui.form.on('Super Print Design', {
             });
         }, 300);
 
-        if (frm.is_new() && !frm.doc.target_doctype) {
+        // 报表模式判定(v15.23):design_target='Report' 且已选报表即可设计;
+        // 单据模式维持原 target_doctype 判定
+        const isReportTarget = (frm.doc.design_target === 'Report') && !!frm.doc.report_name;
+        const isDocTarget = (frm.doc.design_target !== 'Report') && !!frm.doc.target_doctype;
+
+        if (frm.is_new() && !isReportTarget && !isDocTarget) {
             frm.set_df_property('design_view_tab', 'hidden', 1);
         } else {
             frm.set_df_property('design_view_tab', 'hidden', 0);
         }
 
-        if (frm.doc.target_doctype) {
+        if (isDocTarget || isReportTarget) {
             // Skip loadPaperSize if server data already has paper info
             if (!serverData || !serverData.paper || !serverData.paper.width) {
                 await spd_designer.loadPaperSize();
@@ -4170,6 +4218,15 @@ frappe.ui.form.on('Super Print Design', {
             setTimeout(() => {
                 if (spd_designer) {
                     spd_designer.bindEvents();
+                    // 报表模式:隐藏单据专用按钮(模板关联单据/演示预览 — 依赖 sample doc,
+                    // 报表无单据概念;验证走"保存后到报表页菜单→超级打印")
+                    if (isReportTarget) {
+                        const c = document.getElementById(spd_designer.designContainerId);
+                        const b1 = c?.querySelector('#spd-sample-doc-btn');
+                        const b2 = c?.querySelector('#spd-preview-sample-btn');
+                        if (b1) b1.style.display = 'none';
+                        if (b2) b2.style.display = 'none';
+                    }
                 }
             }, 100);
         } else {
@@ -4180,6 +4237,20 @@ frappe.ui.form.on('Super Print Design', {
     },
     async target_doctype(frm) {
         if (frm.doc.target_doctype && spd_designer) {
+            spd_designer = new SuperPrintDesigner(frm);
+            spd_designer.init();
+            await spd_designer.loadPaperSize();
+            const html = await spd_designer.fetchDesignerHtml();
+            frm.set_df_property('design_html', 'options', html);
+            refresh_field('design_html');
+            setTimeout(() => {
+                if (spd_designer) { spd_designer.bindEvents(); }
+            }, 100);
+        }
+    },
+    async report_name(frm) {
+        // 报表模式切换目标报表(v15.23):与 target_doctype 同款重建设计器
+        if (frm.doc.report_name && frm.doc.design_target === 'Report' && spd_designer) {
             spd_designer = new SuperPrintDesigner(frm);
             spd_designer.init();
             await spd_designer.loadPaperSize();

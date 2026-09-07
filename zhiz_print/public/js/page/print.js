@@ -14,6 +14,25 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		const route = frappe.get_route();
 		const doctype = route[1];
 		const pd = frappe.boot.zhiz_print?.print_designer;
+
+		// 报表模式:/app/print/Report/<report_name> — Zprint Setting 启用报表打印即接管
+		// (Enable for All/Specific 的入口拦截在报表页菜单;此处只管预览页本身的接管)
+		if (doctype === 'Report' && route[2]) {
+			if (pd && pd.report_enabled) {
+				this.is_super_print_mode = true;
+				this.is_report_mode = true;
+				this.report_name = decodeURIComponent(route[2]);
+				try {
+					this.report_filters = JSON.parse(sessionStorage.getItem('spd_report_filters') || '{}');
+				} catch (e) {
+					this.report_filters = {};
+				}
+				this.wrapper = $(this.wrapper || []);
+				this.print_settings = frappe.model.get_doc(":Print Settings", "Print Settings");
+				return;
+			}
+		}
+
 		let superPrintEnabled = false;
 		if (pd && pd.enabled && doctype) {
 			if (!pd.enable_mode || pd.enable_mode === 'Enable for All') {
@@ -94,8 +113,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		this.setup_toolbar();
 		this.setup_menu();
 
+		// 模式徽标条:清晰区分「单据打印」/「报表打印」(v15.23)
+		this.page.main.append(this._build_mode_badge());
+
 		// Layout
-		const enableNative = !!(frappe.boot.zhiz_print?.print_designer?.enable_native_print_formats);
+		const enableNative = !!(frappe.boot.zhiz_print?.print_designer?.enable_native_print_formats) && !this.is_report_mode;
 		this.page.main.html(`
 			<div class="super-print-layout">
 				<div class="super-print-sidebar" id="super-print-sidebar">
@@ -144,6 +166,32 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	// ==================== Toolbar Override ====================
 
+	// 模式徽标条:报表模式(青色 fa-table) / 单据模式(蓝色 fa-file-text-o) + 筛选摘要(v15.23)
+	_build_mode_badge() {
+		const div = document.createElement('div');
+		if (this.is_report_mode) {
+			const chips = Object.keys(this.report_filters || {})
+				.filter(k => this.report_filters[k] !== '' && this.report_filters[k] != null)
+				.map(k => `${__(k)}: ${this.report_filters[k]}`)
+				.join('  ·  ');
+			div.className = 'sp-mode-badge sp-mode-badge-report';
+			div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:7px 14px;background:#e0f2f1;border-bottom:1px solid #b2dfdb;font-size:12px;color:#00695c;';
+			div.innerHTML =
+				'<span style="display:inline-flex;align-items:center;gap:5px;background:#009688;color:#fff;border-radius:3px;padding:2px 8px;font-weight:600;white-space:nowrap;">' +
+				'<i class="fa fa-table"></i> ' + __('Report Print') + '</span>' +
+				'<b style="font-size:13px;color:#004d40;">' + this.escapeHtml(this.report_name || '') + '</b>' +
+				(chips ? '<span style="color:#00796b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + this.escapeHtml(chips) + '"><i class="fa fa-filter"></i> ' + this.escapeHtml(chips) + '</span>' : '');
+		} else {
+			div.className = 'sp-mode-badge sp-mode-badge-doc';
+			div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:7px 14px;background:#e3f2fd;border-bottom:1px solid #bbdefb;font-size:12px;color:#1565c0;';
+			div.innerHTML =
+				'<span style="display:inline-flex;align-items:center;gap:5px;background:#1976d2;color:#fff;border-radius:3px;padding:2px 8px;font-weight:600;white-space:nowrap;">' +
+				'<i class="fa fa-file-text-o"></i> ' + __('Document Print') + '</span>' +
+				'<b style="font-size:13px;color:#0d47a1;">' + this.escapeHtml(this.frm?.doctype || '') + ' · ' + this.escapeHtml(this.frm?.docname || '') + '</b>';
+		}
+		return div;
+	}
+
 	_is_preview_only() {
 		// v15.04.25: draft_no_print is a per-design toggle that blocks printing
 		// when the *document* is in draft state (docstatus=0). Submitted docs
@@ -189,7 +237,8 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				if (pd?.allow_export_pdf !== false) {
 					this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
 				}
-				if (pd?.allow_export_excel !== false) {
+				// 报表模式 P1 暂不提供 Excel 导出(端点为单据型),后续版本扩展
+				if (pd?.allow_export_excel !== false && !this.is_report_mode) {
 					this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
 				}
 			}
@@ -280,16 +329,24 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	async load_templates() {
 		const listEl = document.getElementById('sp-template-list');
 		try {
-			const res = await frappe.call({
-				method: 'zhiz_print.api.print_designer.get_available_designs',
-				args: { doctype: this.frm.doctype, docname: this.frm.docname }
-			});
+			// 报表模式:取该报表绑定的设计(design_target='Report')
+			const res = this.is_report_mode
+				? await frappe.call({
+					method: 'zhiz_print.api.report_print.get_report_designs',
+					args: { report_name: this.report_name }
+				})
+				: await frappe.call({
+					method: 'zhiz_print.api.print_designer.get_available_designs',
+					args: { doctype: this.frm.doctype, docname: this.frm.docname }
+				});
 
 			const designs = res.message || [];
 			if (designs.length === 0) {
 				listEl.innerHTML = `
 					<div class="sp-empty">
-						<p>${__('No print templates available')}</p>
+						<p>${this.is_report_mode
+							? __('No report designs found. Create one to start printing this report.')
+							: __('No print templates available')}</p>
 					</div>`;
 				this._append_new_design_btn(listEl);
 				return;
@@ -327,10 +384,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	_append_new_design_btn(listEl) {
 		const btn = document.createElement('div');
 		btn.className = 'sp-new-design-btn';
-		btn.innerHTML = '<i class="fa fa-plus"></i> ' + __('New Print Design');
+		btn.innerHTML = '<i class="fa fa-plus"></i> ' + (this.is_report_mode ? __('Create Report Design') : __('New Print Design'));
 		btn.addEventListener('click', () => {
 			const hash = Math.random().toString(36).substring(2, 12);
-			frappe.route_options = { target_doctype: this.frm.doctype };
+			// 报表模式:预填 design_target=Report + report_name(设计器 onload 读取 route_options)
+			frappe.route_options = this.is_report_mode
+				? { design_target: 'Report', report_name: this.report_name }
+				: { target_doctype: this.frm.doctype };
 			frappe.set_route('Form', 'Super Print Design', 'new-super-print-design-' + hash);
 		});
 		listEl.appendChild(btn);
@@ -527,19 +587,28 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			margin_top: msg.margin_top, margin_bottom: msg.margin_bottom,
 			margin_left: msg.margin_left, margin_right: msg.margin_right,
 		});
-		const callArgs = (extra) => Object.assign({
+		const callArgs = (extra) => Object.assign(this.is_report_mode ? {
+			report_name: this.report_name,
+			filters: this.report_filters || {},
+			design_name: this.current_design,
+			params: this.current_params || {},
+		} : {
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
 			design_name: this.current_design,
 			params: this.current_params || {},
 		}, extra || {});
+		// 报表模式走 render_report_preview(注入 __report_main__ 报表行)
+		const renderMethod = this.is_report_mode
+			? 'zhiz_print.api.report_print.render_report_preview'
+			: 'zhiz_print.api.print_designer.render_print_preview';
 
 		// v15.10.02: measure-first, render precise ONCE — no estimation flash.
 		// The spinner stays up until the precise HTML is ready; the estimation is
 		// fetched only as a fallback if measurement / precise is unavailable.
 		try {
 			const r1 = await frappe.call({
-				method: 'zhiz_print.api.print_designer.render_print_preview',
+				method: renderMethod,
 				args: callArgs({ measurement_only: 1 })
 			});
 			if (r1.message && r1.message.measurement_html && r1.message.content_h_px) {
@@ -549,7 +618,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 					const breakMap = this._compute_break_map(measured, msg1);
 					if (breakMap) {
 						const r2 = await frappe.call({
-							method: 'zhiz_print.api.print_designer.render_print_preview',
+							method: renderMethod,
 							args: callArgs({ page_break_map: breakMap.page_break_map, row_heights: breakMap.row_heights, shrink_map: breakMap.shrink_map })
 						});
 						if (r2.message && r2.message.precise) {
@@ -577,7 +646,9 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 	// Estimation fallback: fetched only when the precise (measured) path is unavailable.
 	async _render_estimation_fallback(callArgs) {
 		const r = await frappe.call({
-			method: 'zhiz_print.api.print_designer.render_print_preview',
+			method: this.is_report_mode
+				? 'zhiz_print.api.report_print.render_report_preview'
+				: 'zhiz_print.api.print_designer.render_print_preview',
 			args: callArgs({})
 		});
 		if (r.message && r.message.html) {
@@ -845,7 +916,10 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		try {
 			const res = await frappe.call({
 				method: 'zhiz_print.api.print_designer.get_print_log_list',
-				args: { doctype: this.frm.doctype, docname: this.frm.docname }
+				// 报表日志按 Report/报表名 归组(record_print_log 的兼容策略)
+				args: this.is_report_mode
+					? { doctype: 'Report', docname: this.report_name }
+					: { doctype: this.frm.doctype, docname: this.frm.docname }
 			});
 
 			const data = res.message || {};
@@ -913,6 +987,30 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 	// ==================== Print / PDF / Excel ====================
 
+	// 日志参数辅助(v15.23):报表模式走 log_type='Report Print' + report_name + 筛选快照;
+	// 单据模式保持原参数。design_label 允许调用方覆盖(如 '原生: xxx',仅单据模式)。
+	_log_args(export_type, design_label) {
+		if (this.is_report_mode) {
+			return {
+				design_name: design_label || this.current_design,
+				log_type: 'Report Print',
+				report_name: this.report_name,
+				filters_used: JSON.stringify(this.report_filters || {}),
+				params: this.current_params || {},
+				preview_html: this.current_preview_html || '',
+				export_type: export_type,
+			};
+		}
+		return {
+			doctype: this.frm.doctype,
+			docname: this.frm.docname,
+			design_name: design_label || this.current_design,
+			params: this.current_params || {},
+			preview_html: this.current_preview_html || '',
+			export_type: export_type,
+		};
+	}
+
 	printit() {
 		if (this.is_super_print_mode) {
 			if (this.current_native_format) {
@@ -942,14 +1040,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		try {
 			await frappe.call({
 				method: 'zhiz_print.api.print_designer.record_print_log',
-				args: {
-					doctype: this.frm.doctype,
-					docname: this.frm.docname,
-					design_name: this.current_design,
-					params: this.current_params || {},
-					preview_html: this.current_preview_html,
-					export_type: 'Print'
-				}
+				args: this._log_args('Print')
 			});
 		} catch (e) {
 			console.error('Failed to record print log:', e);
@@ -1195,6 +1286,12 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			return;
 		}
 
+		// 报表模式:筛选可能超 GET URL 长度,改 POST(XHR blob 下载)走 generate_report_pdf
+		if (this.is_report_mode) {
+			await this._report_pdf_post();
+			return;
+		}
+
 		const params = new URLSearchParams({
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
@@ -1216,6 +1313,69 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 
 		// Record PDF export log
 		this.record_export_log('Export PDF');
+	}
+
+	// 报表 PDF:POST generate_report_pdf(XHR blob),转发实测分页参数与预览一致
+	async _report_pdf_post() {
+		frappe.show_alert({ message: __('Generating PDF...'), indicator: 'blue' });
+		const payload = {
+			report_name: this.report_name,
+			filters: this.report_filters || {},
+			design_name: this.current_design,
+			params: this.current_params || {},
+		};
+		if (this.current_break_map) {
+			payload.page_break_map = JSON.stringify(this.current_break_map.page_break_map);
+			payload.row_heights = JSON.stringify(this.current_break_map.row_heights);
+			if (this.current_break_map.shrink_map) payload.shrink_map = JSON.stringify(this.current_break_map.shrink_map);
+		}
+		try {
+			const blob = await new Promise((resolve, reject) => {
+				const xhr = new XMLHttpRequest();
+				xhr.open('POST', '/api/method/zhiz_print.api.report_print.generate_report_pdf', true);
+				xhr.responseType = 'blob';
+				xhr.setRequestHeader('Content-Type', 'application/json');
+				xhr.setRequestHeader('X-Frappe-CSRF-Token', frappe.csrf_token);
+				xhr.setRequestHeader('Accept', 'application/pdf');
+				xhr.onload = function () {
+					if (xhr.status === 200) {
+						const ct = xhr.getResponseHeader('Content-Type') || '';
+						if (ct.indexOf('application/pdf') !== -1) {
+							resolve(xhr.response);
+						} else {
+							// JSON 错误响应
+							const reader = new FileReader();
+							reader.onload = function () {
+								try {
+									const err = JSON.parse(reader.result);
+									reject(new Error(err.exception || err.message || __('Export failed')));
+								} catch (e) {
+									reject(new Error(reader.result || __('Export failed')));
+								}
+							};
+							reader.readAsText(xhr.response);
+						}
+					} else {
+						reject(new Error(__('Export failed (HTTP {0})', [xhr.status])));
+					}
+				};
+				xhr.onerror = function () { reject(new Error(__('Network error'))); };
+				xhr.send(JSON.stringify(payload));
+			});
+			const blobUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = blobUrl;
+			a.download = this.report_name + '-' + (this.current_design_info?.design_name || 'report') + '.pdf';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(blobUrl);
+			frappe.show_alert({ message: __('PDF exported'), indicator: 'green' });
+			this.record_export_log('Export PDF');
+		} catch (e) {
+			console.error('Report PDF export failed:', e);
+			frappe.show_alert({ message: e.message || __('PDF export failed'), indicator: 'red' });
+		}
 	}
 
 
@@ -1302,14 +1462,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		try {
 			await frappe.call({
 				method: 'zhiz_print.api.print_designer.record_print_log',
-				args: {
-					doctype: this.frm.doctype,
-					docname: this.frm.docname,
-					design_name: this.current_design || '',
-					params: this.current_params || {},
-					preview_html: this.current_preview_html || '',
-					export_type: export_type
-				}
+				args: this._log_args(export_type)
 			});
 			this.load_print_logs();
 		} catch (e) {

@@ -1,422 +1,545 @@
 {
-  "actions": [],
-  "allow_rename": 1,
-  "autoname": "field:design_name",
-  "creation": "2026-04-03 10:00:00.000000",
-  "doctype": "DocType",
-  "engine": "InnoDB",
-  "field_order": [
-    "design_view_tab",
-    "design_html",
-    "settings_tab",
-    "section_enabled",
-    "enabled",
-    "column_break_priority",
-    "priority",
-    "column_break_draft",
-    "draft_no_print",
-    "page_count",
-    "section_basic",
-    "design_name",
-    "target_doctype",
-    "column_break_sample",
-    "sample_doc",
-    "column_break_basic",
-    "print_paper",
-    "section_enable_condition",
-    "enable_condition",
-    "section_grid",
-    "rows",
-    "column_break_grid_a",
-    "columns",
-    "column_break_grid_b",
-    "font_family",
-    "column_break_grid_c",
-    "font_size",
-    "table_css",
-    "row_styles",
-    "col_styles",
-    "section_header_footer",
-    "section_page_header",
-    "use_native_letterhead_header",
-    "page_header_left",
-    "column_break_header_center",
-    "page_header_center",
-    "column_break_header_right",
-    "page_header_right",
-    "section_page_footer",
-    "use_native_letterhead_footer",
-    "page_footer_left",
-    "column_break_footer_center",
-    "page_footer_center",
-    "column_break_footer_right",
-    "page_footer_right",
-    "items_tab",
-    "design_items",
-    "params_tab",
-    "design_parameters",
-    "design_queries"
-  ],
-  "fields": [
-    {
-      "fieldname": "design_view_tab",
-      "fieldtype": "Tab Break",
-      "label": "Design View"
-    },
-    {
-      "fieldname": "design_html",
-      "fieldtype": "HTML",
-      "label": "Designer",
-      "hidden": 0
-    },
-    {
-      "fieldname": "settings_tab",
-      "fieldtype": "Tab Break",
-      "label": "Settings"
-    },
-    {
-      "fieldname": "section_enabled",
-      "fieldtype": "Section Break",
-      "label": "Enabled Status"
-    },
-    {
-      "default": "1",
-      "fieldname": "enabled",
-      "fieldtype": "Check",
-      "label": "Enabled"
-    },
-    {
-      "fieldname": "column_break_priority",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "5",
-      "fieldname": "priority",
-      "fieldtype": "Select",
-      "label": "Priority",
-      "options": "1\n2\n3\n4\n5\n6\n7\n8\n9",
-      "in_list_view": 1,
-      "in_standard_filter": 1,
-      "description": "Lower number means higher priority. Used for template ordering and auto-match selection."
-    },
-    {
-      "fieldname": "column_break_draft",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "1",
-      "fieldname": "draft_no_print",
-      "fieldtype": "Check",
-      "label": "Draft No Print",
-      "in_list_view": 1,
-      "in_standard_filter": 1,
-      "description": "When checked, design can be previewed but cannot be printed or exported (PDF / Excel / batch). Uncheck to make the design live."
-    },
-    {
-      "fieldname": "section_basic",
-      "fieldtype": "Section Break",
-      "label": "Basic Information"
-    },
-    {
-      "fieldname": "design_name",
-      "fieldtype": "Data",
-      "label": "Design Name",
-      "reqd": 1
-    },
-    {
-      "fieldname": "target_doctype",
-      "fieldtype": "Link",
-      "in_list_view": 1,
-      "in_standard_filter": 1,
-      "label": "Target DocType",
-      "options": "DocType",
-      "reqd": 1
-    },
-
-    {
-      "fieldname": "column_break_sample",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "sample_doc",
-      "fieldtype": "Dynamic Link",
-      "label": "Sample Document",
-      "options": "target_doctype",
-      "reqd": 1,
-      "description": "Used for query preview to resolve doc.field parameters and demo preview."
-    },
-    {
-      "fieldname": "column_break_basic",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "print_paper",
-      "fieldtype": "Link",
-      "in_list_view": 1,
-      "in_standard_filter": 1,
-      "label": "Paper Type",
-      "options": "Super Print Paper",
-      "reqd": 1
-    },
-    {
-      "fieldname": "section_enable_condition",
-      "fieldtype": "Section Break",
-      "label": "Enable Condition"
-    },
-    {
-      "fieldname": "enable_condition",
-      "fieldtype": "Code",
-      "label": "Enable Condition",
-      "options": "Python",
-      "description": "eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). Helpers: get_value(doctype,name,field), has_native_print_format(). E.g.: doc.status=='Submitted' and not has_native_print_format()"
-    },
-    {
-      "fieldname": "section_grid",
-      "fieldtype": "Section Break",
-      "label": "Grid Settings",
-      "collapsible": 1
-    },
-    {
-      "default": "20",
-      "fieldname": "rows",
-      "fieldtype": "Int",
-      "label": "Rows"
-    },
-    {
-      "fieldname": "column_break_grid_a",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "15",
-      "fieldname": "columns",
-      "fieldtype": "Int",
-      "label": "Columns"
-    },
-    {
-      "default": "1",
-      "fieldname": "page_count",
-      "fieldtype": "Int",
-      "label": "Page Count",
-      "read_only": 1,
-      "hidden": 1,
-      "description": "Number of logical pages per print job. Each page renders as a separate .print-page div. Use 1 for single-page designs."
-    },
-    {
-      "fieldname": "column_break_grid_b",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "Microsoft YaHei",
-      "fieldname": "font_family",
-      "fieldtype": "Select",
-      "label": "Font",
-      "options": "Microsoft YaHei\nSimSun\nSimHei\nKaiTi\nFangSong"
-    },
-    {
-      "fieldname": "column_break_grid_c",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "12",
-      "fieldname": "font_size",
-      "fieldtype": "Int",
-      "label": "Default Font Size (px)"
-    },
-    {
-      "fieldname": "table_css",
-      "fieldtype": "Code",
-      "hidden": 1,
-      "label": "Table Style",
-      "options": "JSON"
-    },
-    {
-      "fieldname": "row_styles",
-      "fieldtype": "Code",
-      "hidden": 1,
-      "label": "Row Style",
-      "options": "JSON"
-    },
-    {
-      "fieldname": "col_styles",
-      "fieldtype": "Code",
-      "hidden": 1,
-      "label": "Column Style",
-      "options": "JSON"
-    },
-    {
-      "fieldname": "section_header_footer",
-      "fieldtype": "Section Break",
-      "label": "Header & Footer"
-    },
-    {
-      "fieldname": "section_page_header",
-      "fieldtype": "Section Break",
-      "label": "Page Header",
-      "hidden": 1
-    },
-    {
-      "fieldname": "use_native_letterhead_header",
-      "fieldtype": "Check",
-      "label": "Use Native Letter Head Header",
-      "default": "0",
-      "description": "Inject the document's native Letter Head content into the header band, replacing the Left/Center/Right fields below."
-    },
-    {
-      "fieldname": "page_header_left",
-      "fieldtype": "Code",
-      "label": "Header - Left",
-      "options": "HTML",
-      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
-    },
-    {
-      "fieldname": "column_break_header_center",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "page_header_center",
-      "fieldtype": "Code",
-      "label": "Header - Center",
-      "options": "HTML",
-      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
-    },
-    {
-      "fieldname": "column_break_header_right",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "page_header_right",
-      "fieldtype": "Code",
-      "label": "Header - Right",
-      "options": "HTML",
-      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
-    },
-    {
-      "fieldname": "page_header_align",
-      "fieldtype": "Select",
-      "label": "Header Align",
-      "options": "Top\nCenter\nBottom",
-      "default": "Center",
-      "description": "Vertical alignment of header within top margin"
-    },
-    {"fieldname": "page_header_left_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Left", "hidden": 1},
-    {"fieldname": "page_header_center_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
-    {"fieldname": "page_header_right_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Right", "hidden": 1},
-    {
-      "fieldname": "section_page_footer",
-      "fieldtype": "Section Break",
-      "label": "Page Footer",
-      "hidden": 1
-    },
-    {
-      "fieldname": "use_native_letterhead_footer",
-      "fieldtype": "Check",
-      "label": "Use Native Letter Head Footer",
-      "default": "0",
-      "description": "Inject the document's native Letter Head footer into the footer band, replacing the Left/Center/Right fields below."
-    },
-    {
-      "fieldname": "page_footer_left",
-      "fieldtype": "Code",
-      "label": "Footer - Left",
-      "options": "HTML",
-      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
-    },
-    {
-      "fieldname": "column_break_footer_center",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "page_footer_center",
-      "fieldtype": "Code",
-      "label": "Footer - Center",
-      "options": "HTML",
-      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
-    },
-    {
-      "fieldname": "column_break_footer_right",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "page_footer_right",
-      "fieldtype": "Code",
-      "label": "Footer - Right",
-      "options": "HTML",
-      "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
-    },
-    {
-      "fieldname": "page_footer_align",
-      "fieldtype": "Select",
-      "label": "Footer Align",
-      "options": "Top\nCenter\nBottom",
-      "default": "Center",
-      "description": "Vertical alignment of footer within bottom margin"
-    },
-    {"fieldname": "page_footer_left_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Left", "hidden": 1},
-    {"fieldname": "page_footer_center_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
-    {"fieldname": "page_footer_right_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Right", "hidden": 1},
-    {"fieldname": "page_left_header", "fieldtype": "Code", "options": "HTML", "hidden": 1, "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"},
-    {"fieldname": "page_left_header_h_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
-    {"fieldname": "page_left_header_v_align", "fieldtype": "Select", "options": "Top\nCenter\nBottom", "default": "Center", "hidden": 1},
-    {"fieldname": "page_right_footer", "fieldtype": "Code", "options": "HTML", "hidden": 1, "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"},
-    {"fieldname": "page_right_footer_h_align", "fieldtype": "Select", "options": "Left\nCenter\nRight", "default": "Center", "hidden": 1},
-    {"fieldname": "page_right_footer_v_align", "fieldtype": "Select", "options": "Top\nCenter\nBottom", "default": "Center", "hidden": 1},
-    {
-      "fieldname": "items_tab",
-      "fieldtype": "Tab Break",
-      "label": "Design Items",
-      "hidden": 1
-    },
-    {
-      "fieldname": "design_items",
-      "fieldtype": "Table",
-      "label": "Design Items",
-      "options": "Super Print Design Item",
-      "read_only": 1
-    },
-    {
-      "fieldname": "params_tab",
-      "fieldtype": "Tab Break",
-      "label": "Parameter Definitions",
-      "hidden": 1
-    },
-    {
-      "fieldname": "design_parameters",
-      "fieldtype": "Table",
-      "label": "Print Parameters",
-      "options": "Super Print Design Parameter"
-    },
-    {
-      "fieldname": "design_queries",
-      "fieldtype": "Table",
-      "label": "Query Definition",
-      "options": "Super Print Design Query"
-    }
-  ],
-  "index_web_pages_for_search": 0,
-  "links": [],
-  "modified": "2026-04-27 10:00:00.000000",
-  "modified_by": "Administrator",
-  "module": "Zhiz Print",
-  "name": "Super Print Design",
-  "naming_rule": "By fieldname",
-  "owner": "Administrator",
-  "permissions": [
-    {
-      "create": 1,
-      "delete": 1,
-      "email": 1,
-      "export": 1,
-      "print": 1,
-      "read": 1,
-      "report": 1,
-      "role": "System Manager",
-      "share": 1,
-      "write": 1
-    }
-  ],
-  "show_sidebar": 0,
-  "sort_field": "creation",
-  "sort_order": "DESC",
-  "states": [],
-  "title_field": "design_name"
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:design_name",
+ "creation": "2026-04-03 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "design_view_tab",
+  "design_html",
+  "settings_tab",
+  "section_enabled",
+  "enabled",
+  "column_break_priority",
+  "priority",
+  "column_break_draft",
+  "draft_no_print",
+  "section_basic",
+  "design_name",
+  "design_target",
+  "target_doctype",
+  "report_name",
+  "column_break_sample",
+  "sample_doc",
+  "sample_rows",
+  "report_columns",
+  "column_break_basic",
+  "print_paper",
+  "section_enable_condition",
+  "enable_condition",
+  "section_grid",
+  "rows",
+  "column_break_grid_a",
+  "columns",
+  "page_count",
+  "column_break_grid_b",
+  "font_family",
+  "column_break_grid_c",
+  "font_size",
+  "table_css",
+  "row_styles",
+  "col_styles",
+  "section_header_footer",
+  "section_page_header",
+  "use_native_letterhead_header",
+  "page_header_left",
+  "column_break_header_center",
+  "page_header_center",
+  "column_break_header_right",
+  "page_header_right",
+  "page_header_align",
+  "page_header_left_align",
+  "page_header_center_align",
+  "page_header_right_align",
+  "section_page_footer",
+  "use_native_letterhead_footer",
+  "page_footer_left",
+  "column_break_footer_center",
+  "page_footer_center",
+  "column_break_footer_right",
+  "page_footer_right",
+  "page_footer_align",
+  "page_footer_left_align",
+  "page_footer_center_align",
+  "page_footer_right_align",
+  "page_left_header",
+  "page_left_header_h_align",
+  "page_left_header_v_align",
+  "page_right_footer",
+  "page_right_footer_h_align",
+  "page_right_footer_v_align",
+  "items_tab",
+  "design_items",
+  "params_tab",
+  "design_parameters",
+  "design_queries"
+ ],
+ "fields": [
+  {
+   "fieldname": "design_view_tab",
+   "fieldtype": "Tab Break",
+   "label": "Design View"
+  },
+  {
+   "fieldname": "design_html",
+   "fieldtype": "HTML",
+   "label": "Designer",
+   "hidden": 0
+  },
+  {
+   "fieldname": "settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "Settings"
+  },
+  {
+   "fieldname": "section_enabled",
+   "fieldtype": "Section Break",
+   "label": "Enabled Status"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "column_break_priority",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "5",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "1\n2\n3\n4\n5\n6\n7\n8\n9",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Lower number means higher priority. Used for template ordering and auto-match selection."
+  },
+  {
+   "fieldname": "column_break_draft",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "draft_no_print",
+   "fieldtype": "Check",
+   "label": "Draft No Print",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "When checked, design can be previewed but cannot be printed or exported (PDF / Excel / batch). Uncheck to make the design live."
+  },
+  {
+   "fieldname": "section_basic",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "design_name",
+   "fieldtype": "Data",
+   "label": "Design Name",
+   "reqd": 1
+  },
+  {
+   "default": "DocType",
+   "fieldname": "design_target",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Design Target",
+   "options": "DocType\nReport"
+  },
+  {
+   "fieldname": "target_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Target DocType",
+   "options": "DocType",
+   "depends_on": "eval:doc.design_target !== 'Report'",
+   "mandatory_depends_on": "eval:doc.design_target !== 'Report'"
+  },
+  {
+   "fieldname": "report_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Target Report",
+   "options": "Report",
+   "depends_on": "eval:doc.design_target === 'Report'",
+   "mandatory_depends_on": "eval:doc.design_target === 'Report'"
+  },
+  {
+   "fieldname": "column_break_sample",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sample_doc",
+   "fieldtype": "Dynamic Link",
+   "label": "Sample Document",
+   "options": "target_doctype",
+   "reqd": 1,
+   "description": "Used for query preview to resolve doc.field parameters and demo preview."
+  },
+  {
+   "default": "20",
+   "fieldname": "sample_rows",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Sample Rows"
+  },
+  {
+   "fieldname": "report_columns",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Report Columns Snapshot",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "print_paper",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Paper Type",
+   "options": "Super Print Paper",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_enable_condition",
+   "fieldtype": "Section Break",
+   "label": "Enable Condition"
+  },
+  {
+   "fieldname": "enable_condition",
+   "fieldtype": "Code",
+   "label": "Enable Condition",
+   "options": "Python",
+   "description": "eval expression, leave empty to always enable. Available variables: doc (target document), user (current username). Helpers: get_value(doctype,name,field), has_native_print_format(). E.g.: doc.status=='Submitted' and not has_native_print_format()"
+  },
+  {
+   "fieldname": "section_grid",
+   "fieldtype": "Section Break",
+   "label": "Grid Settings",
+   "collapsible": 1
+  },
+  {
+   "default": "20",
+   "fieldname": "rows",
+   "fieldtype": "Int",
+   "label": "Rows"
+  },
+  {
+   "fieldname": "column_break_grid_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "15",
+   "fieldname": "columns",
+   "fieldtype": "Int",
+   "label": "Columns"
+  },
+  {
+   "default": "1",
+   "fieldname": "page_count",
+   "fieldtype": "Int",
+   "label": "Page Count",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "Number of logical pages per print job. Each page renders as a separate .print-page div. Use 1 for single-page designs."
+  },
+  {
+   "fieldname": "column_break_grid_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Microsoft YaHei",
+   "fieldname": "font_family",
+   "fieldtype": "Select",
+   "label": "Font",
+   "options": "Microsoft YaHei\nSimSun\nSimHei\nKaiTi\nFangSong"
+  },
+  {
+   "fieldname": "column_break_grid_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "12",
+   "fieldname": "font_size",
+   "fieldtype": "Int",
+   "label": "Default Font Size (px)"
+  },
+  {
+   "fieldname": "table_css",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Table Style",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "row_styles",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Row Style",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "col_styles",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Column Style",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "section_header_footer",
+   "fieldtype": "Section Break",
+   "label": "Header & Footer"
+  },
+  {
+   "fieldname": "section_page_header",
+   "fieldtype": "Section Break",
+   "label": "Page Header",
+   "hidden": 1
+  },
+  {
+   "fieldname": "use_native_letterhead_header",
+   "fieldtype": "Check",
+   "label": "Use Native Letter Head Header",
+   "default": "0",
+   "description": "Inject the document's native Letter Head content into the header band, replacing the Left/Center/Right fields below."
+  },
+  {
+   "fieldname": "page_header_left",
+   "fieldtype": "Code",
+   "label": "Header - Left",
+   "options": "HTML",
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "column_break_header_center",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "page_header_center",
+   "fieldtype": "Code",
+   "label": "Header - Center",
+   "options": "HTML",
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "column_break_header_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "page_header_right",
+   "fieldtype": "Code",
+   "label": "Header - Right",
+   "options": "HTML",
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "page_header_align",
+   "fieldtype": "Select",
+   "label": "Header Align",
+   "options": "Top\nCenter\nBottom",
+   "default": "Center",
+   "description": "Vertical alignment of header within top margin"
+  },
+  {
+   "fieldname": "page_header_left_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Left",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_header_center_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Center",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_header_right_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Right",
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_page_footer",
+   "fieldtype": "Section Break",
+   "label": "Page Footer",
+   "hidden": 1
+  },
+  {
+   "fieldname": "use_native_letterhead_footer",
+   "fieldtype": "Check",
+   "label": "Use Native Letter Head Footer",
+   "default": "0",
+   "description": "Inject the document's native Letter Head footer into the footer band, replacing the Left/Center/Right fields below."
+  },
+  {
+   "fieldname": "page_footer_left",
+   "fieldtype": "Code",
+   "label": "Footer - Left",
+   "options": "HTML",
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "column_break_footer_center",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "page_footer_center",
+   "fieldtype": "Code",
+   "label": "Footer - Center",
+   "options": "HTML",
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "column_break_footer_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "page_footer_right",
+   "fieldtype": "Code",
+   "label": "Footer - Right",
+   "options": "HTML",
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "page_footer_align",
+   "fieldtype": "Select",
+   "label": "Footer Align",
+   "options": "Top\nCenter\nBottom",
+   "default": "Center",
+   "description": "Vertical alignment of footer within bottom margin"
+  },
+  {
+   "fieldname": "page_footer_left_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Left",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_footer_center_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Center",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_footer_right_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Right",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_left_header",
+   "fieldtype": "Code",
+   "options": "HTML",
+   "hidden": 1,
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "page_left_header_h_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Center",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_left_header_v_align",
+   "fieldtype": "Select",
+   "options": "Top\nCenter\nBottom",
+   "default": "Center",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_right_footer",
+   "fieldtype": "Code",
+   "options": "HTML",
+   "hidden": 1,
+   "description": "Available placeholders: {page} {pages} {now_date} {now_time} {date_time}"
+  },
+  {
+   "fieldname": "page_right_footer_h_align",
+   "fieldtype": "Select",
+   "options": "Left\nCenter\nRight",
+   "default": "Center",
+   "hidden": 1
+  },
+  {
+   "fieldname": "page_right_footer_v_align",
+   "fieldtype": "Select",
+   "options": "Top\nCenter\nBottom",
+   "default": "Center",
+   "hidden": 1
+  },
+  {
+   "fieldname": "items_tab",
+   "fieldtype": "Tab Break",
+   "label": "Design Items",
+   "hidden": 1
+  },
+  {
+   "fieldname": "design_items",
+   "fieldtype": "Table",
+   "label": "Design Items",
+   "options": "Super Print Design Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "params_tab",
+   "fieldtype": "Tab Break",
+   "label": "Parameter Definitions",
+   "hidden": 1
+  },
+  {
+   "fieldname": "design_parameters",
+   "fieldtype": "Table",
+   "label": "Print Parameters",
+   "options": "Super Print Design Parameter"
+  },
+  {
+   "fieldname": "design_queries",
+   "fieldtype": "Table",
+   "label": "Query Definition",
+   "options": "Super Print Design Query"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-04-27 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Super Print Design",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_sidebar": 0,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "design_name"
 }

@@ -1,174 +1,208 @@
 {
-  "actions": [],
-  "autoname": "Zprint Setting",
-  "creation": "2026-04-13 00:00:00.000000",
-  "doctype": "DocType",
-  "engine": "InnoDB",
-  "field_order": [
-    "enable_super_print_page",
-    "section_break_print_mode",
-    "print_enable_mode",
-    "column_break_print_engine",
-    "pdf_engine_mode",
-    "section_break_image_render",
-    "explicit_image_preview",
-    "section_break_print_doctypes",
-    "print_enabled_doctypes",
-    "section_break_export",
-    "allow_export_pdf",
-    "column_break_export",
-    "allow_export_excel",
-    "section_break_native",
-    "enable_native_print_formats",
-    "section_break_license",
-    "license_info",
-    "license_key_input",
-    "contact_info"
-  ],
-  "fields": [
-    {
-      "default": "0",
-      "description": "When enabled, the print page displays a custom print template selector on the left. Create print templates in Super Print Design first",
-      "fieldname": "enable_super_print_page",
-      "fieldtype": "Check",
-      "label": "Enable Super Print Page"
-    },
-    {
-      "depends_on": "eval:doc.enable_super_print_page",
-      "fieldname": "section_break_print_mode",
-      "fieldtype": "Section Break"
-    },
-    {
-      "default": "Enable for All",
-      "depends_on": "eval:doc.enable_super_print_page",
-      "description": "Enable for All: all DocTypes use Super Print; Enable for Specific: only DocTypes listed below use Super Print",
-      "fieldname": "print_enable_mode",
-      "fieldtype": "Select",
-      "label": "Enable Mode",
-      "options": "Enable for All\nEnable for Specific"
-    },
-    {
-      "fieldname": "column_break_print_engine",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "wkhtmltopdf",
-      "depends_on": "eval:doc.enable_super_print_page",
-      "description": "Select the conversion engine for PDF export",
-      "fieldname": "pdf_engine_mode",
-      "fieldtype": "Select",
-      "label": "PDF Engine Mode",
-      "options": "WeasyPrint\nwkhtmltopdf\nChromium"
-    },
-    {
-      "depends_on": "eval:doc.enable_super_print_page",
-      "fieldname": "section_break_image_render",
-      "fieldtype": "Section Break",
-      "label": "Image Rendering"
-    },
-    {
-      "default": "0",
-      "depends_on": "eval:doc.enable_super_print_page",
-      "description": "When enabled, images are embedded as base64 data URIs for self-contained PDF output. Otherwise referenced by URL.",
-      "fieldname": "explicit_image_preview",
-      "fieldtype": "Check",
-      "label": "Use Explicit Image Rendering"
-    },
-    {
-      "depends_on": "eval:doc.enable_super_print_page && doc.print_enable_mode==='Enable for Specific'",
-      "fieldname": "section_break_print_doctypes",
-      "fieldtype": "Section Break",
-      "label": "Enabled DocTypes"
-    },
-    {
-      "depends_on": "eval:doc.enable_super_print_page && doc.print_enable_mode==='Enable for Specific'",
-      "description": "Add DocTypes for Super Print. Only these DocTypes will use the Super Print page",
-      "fieldname": "print_enabled_doctypes",
-      "fieldtype": "Table",
-      "label": "Enabled DocTypes",
-      "options": "Super Print Enabled Doctype"
-    },
-    {
-      "depends_on": "eval:doc.enable_super_print_page",
-      "fieldname": "section_break_export",
-      "fieldtype": "Section Break",
-      "label": "Export Settings"
-    },
-    {
-      "default": "1",
-      "depends_on": "eval:doc.enable_super_print_page",
-      "fieldname": "allow_export_pdf",
-      "fieldtype": "Check",
-      "label": "Allow Export PDF"
-    },
-    {
-      "fieldname": "column_break_export",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "1",
-      "depends_on": "eval:doc.enable_super_print_page",
-      "fieldname": "allow_export_excel",
-      "fieldtype": "Check",
-      "label": "Allow Export Excel"
-    },
-    {
-      "depends_on": "eval:doc.enable_super_print_page",
-      "fieldname": "section_break_native",
-      "fieldtype": "Section Break",
-      "label": "Native Print Formats"
-    },
-    {
-      "default": "0",
-      "depends_on": "eval:doc.enable_super_print_page",
-      "description": "Show a collapsible \"Native Print Formats\" section in the print preview sidebar. Users can preview/print with frappe built-in Print Formats (e.g. Standard); native prints are recorded in print history too.",
-      "fieldname": "enable_native_print_formats",
-      "fieldtype": "Check",
-      "label": "Enable Supported Native Print Formats"
-    },
-    {
-      "fieldname": "section_break_license",
-      "fieldtype": "Section Break",
-      "label": "Subscription"
-    },
-    {
-      "fieldname": "license_info",
-      "fieldtype": "HTML",
-      "label": "License Info",
-      "options": "<div id=\"license-info-container\"></div>"
-    },
-    {
-      "fieldname": "license_key_input",
-      "fieldtype": "Data",
-      "label": "Current License",
-      "read_only": 1
-    },
-    {
-      "fieldname": "contact_info",
-      "fieldtype": "HTML",
-      "label": "Contact Info",
-      "options": "<div id=\"contact-info-container\"></div>"
-    }
-  ],
-  "issingle": 1,
-  "links": [],
-  "modified": "2026-04-13 00:00:00.000000",
-  "modified_by": "Administrator",
-  "module": "Zhiz Print",
-  "name": "Zprint Setting",
-  "owner": "Administrator",
-  "permissions": [
-    {
-      "create": 1,
-      "delete": 1,
-      "email": 1,
-      "export": 1,
-      "print": 1,
-      "read": 1,
-      "report": 1,
-      "role": "System Manager",
-      "share": 1,
-      "write": 1
-    }
-  ]
+ "actions": [],
+ "autoname": "Zprint Setting",
+ "creation": "2026-04-13 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enable_super_print_page",
+  "section_break_print_mode",
+  "print_enable_mode",
+  "column_break_print_engine",
+  "pdf_engine_mode",
+  "section_break_image_render",
+  "explicit_image_preview",
+  "section_break_print_doctypes",
+  "print_enabled_doctypes",
+  "section_break_export",
+  "allow_export_pdf",
+  "column_break_export",
+  "allow_export_excel",
+  "section_break_native",
+  "enable_native_print_formats",
+  "section_break_license",
+  "license_info",
+  "license_key_input",
+  "contact_info",
+  "section_break_report",
+  "report_print_enabled",
+  "column_break_report",
+  "report_enable_mode",
+  "report_enabled_reports"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "description": "When enabled, the print page displays a custom print template selector on the left. Create print templates in Super Print Design first",
+   "fieldname": "enable_super_print_page",
+   "fieldtype": "Check",
+   "label": "Enable Super Print Page"
+  },
+  {
+   "depends_on": "eval:doc.enable_super_print_page",
+   "fieldname": "section_break_print_mode",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "Enable for All",
+   "depends_on": "eval:doc.enable_super_print_page",
+   "description": "Enable for All: all DocTypes use Super Print; Enable for Specific: only DocTypes listed below use Super Print",
+   "fieldname": "print_enable_mode",
+   "fieldtype": "Select",
+   "label": "Enable Mode",
+   "options": "Enable for All\nEnable for Specific"
+  },
+  {
+   "fieldname": "column_break_print_engine",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "wkhtmltopdf",
+   "depends_on": "eval:doc.enable_super_print_page",
+   "description": "Select the conversion engine for PDF export",
+   "fieldname": "pdf_engine_mode",
+   "fieldtype": "Select",
+   "label": "PDF Engine Mode",
+   "options": "WeasyPrint\nwkhtmltopdf\nChromium"
+  },
+  {
+   "depends_on": "eval:doc.enable_super_print_page",
+   "fieldname": "section_break_image_render",
+   "fieldtype": "Section Break",
+   "label": "Image Rendering"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.enable_super_print_page",
+   "description": "When enabled, images are embedded as base64 data URIs for self-contained PDF output. Otherwise referenced by URL.",
+   "fieldname": "explicit_image_preview",
+   "fieldtype": "Check",
+   "label": "Use Explicit Image Rendering"
+  },
+  {
+   "depends_on": "eval:doc.enable_super_print_page && doc.print_enable_mode==='Enable for Specific'",
+   "fieldname": "section_break_print_doctypes",
+   "fieldtype": "Section Break",
+   "label": "Enabled DocTypes"
+  },
+  {
+   "depends_on": "eval:doc.enable_super_print_page && doc.print_enable_mode==='Enable for Specific'",
+   "description": "Add DocTypes for Super Print. Only these DocTypes will use the Super Print page",
+   "fieldname": "print_enabled_doctypes",
+   "fieldtype": "Table",
+   "label": "Enabled DocTypes",
+   "options": "Super Print Enabled Doctype"
+  },
+  {
+   "depends_on": "eval:doc.enable_super_print_page",
+   "fieldname": "section_break_export",
+   "fieldtype": "Section Break",
+   "label": "Export Settings"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.enable_super_print_page",
+   "fieldname": "allow_export_pdf",
+   "fieldtype": "Check",
+   "label": "Allow Export PDF"
+  },
+  {
+   "fieldname": "column_break_export",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.enable_super_print_page",
+   "fieldname": "allow_export_excel",
+   "fieldtype": "Check",
+   "label": "Allow Export Excel"
+  },
+  {
+   "depends_on": "eval:doc.enable_super_print_page",
+   "fieldname": "section_break_native",
+   "fieldtype": "Section Break",
+   "label": "Native Print Formats"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.enable_super_print_page",
+   "description": "Show a collapsible \"Native Print Formats\" section in the print preview sidebar. Users can preview/print with frappe built-in Print Formats (e.g. Standard); native prints are recorded in print history too.",
+   "fieldname": "enable_native_print_formats",
+   "fieldtype": "Check",
+   "label": "Enable Supported Native Print Formats"
+  },
+  {
+   "fieldname": "section_break_license",
+   "fieldtype": "Section Break",
+   "label": "Subscription"
+  },
+  {
+   "fieldname": "license_info",
+   "fieldtype": "HTML",
+   "label": "License Info",
+   "options": "<div id=\"license-info-container\"></div>"
+  },
+  {
+   "fieldname": "license_key_input",
+   "fieldtype": "Data",
+   "label": "Current License",
+   "read_only": 1
+  },
+  {
+   "fieldname": "contact_info",
+   "fieldtype": "HTML",
+   "label": "Contact Info",
+   "options": "<div id=\"contact-info-container\"></div>"
+  },
+  {
+   "fieldname": "section_break_report",
+   "fieldtype": "Section Break",
+   "label": "Report Print"
+  },
+  {
+   "fieldname": "report_print_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Report Print"
+  },
+  {
+   "fieldname": "column_break_report",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "report_enable_mode",
+   "fieldtype": "Select",
+   "label": "Report Enable Mode",
+   "options": "Enable for All\nEnable for Specific",
+   "depends_on": "eval:doc.report_print_enabled",
+   "default": "Enable for All"
+  },
+  {
+   "fieldname": "report_enabled_reports",
+   "fieldtype": "Table",
+   "label": "Report Enabled Reports",
+   "options": "Super Print Enabled Report",
+   "depends_on": "eval:doc.report_print_enabled && doc.report_enable_mode === 'Enable for Specific'"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-04-13 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Setting",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ]
 }

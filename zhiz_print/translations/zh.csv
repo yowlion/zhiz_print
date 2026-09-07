@@ -391,3 +391,31 @@ Select at least one row,至少勾选一行
 Select All,全选
 Selected,已选
 Failed to load data rows,加载数据行失败
+Design Target,设计目标
+DocType,单据类型
+Report,报表
+Target Report,目标报表
+Sample Rows,取样行数
+Report Print,报表打印
+Enable Report Print,启用报表打印
+Report Enable Mode,报表启用方式
+Enable for All,全部启用
+Enable for Specific,指定启用
+Report Enabled Reports,启用的报表
+Super Print Enabled Report,打印启用报表
+Log Type,日志类型
+Document Print,单据打印
+Report Name,报表名称
+Filters Used,使用的筛选
+超级打印,超级打印
+Filters Applied,已应用筛选
+Create Report Design,新建报表设计
+No report designs found. Create one to start printing this report.,未找到报表设计,新建后即可打印该报表。
+Refresh Report Data,刷新报表数据
+Too many rows,行数过多
+Rows exceed limit. Consider exporting to Excel instead.,行数超出上限,建议改用 Excel 导出。
+Report Data,报表数据
+Failed to load report columns,加载报表列失败
+Generating PDF...,正在生成 PDF...
+PDF exported,PDF 已导出
+PDF export failed,PDF 导出失败
