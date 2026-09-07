@@ -1,8 +1,8 @@
 // Report Print Interceptor (v15.23 报表打印 P1)
 // Patches frappe.views.QueryReport.get_menu_items — 启用即接管:
 // Zprint Setting 开启报表打印且命中(All/Specific)时:
-//   · 原生 Print / PDF 菜单项保留原标签,点击改跳超级打印预览页(路径变掉,入口不变)
-//   · 原生 Export(Excel/CSV) 菜单项移除(打印预览页内提供 Excel 导出)
+//   · 原生 Print 菜单项保留原标签,点击改跳超级打印预览页(路径变掉,入口不变)
+//   · 原生 PDF / Export(Excel/CSV) 菜单项移除(打印预览页内提供 PDF/Excel 导出)
 // 未启用/未命中:原样返回原生菜单,关开关即还原。
 
 frappe.provide('zhiz_print.report');
@@ -28,13 +28,13 @@ frappe.provide('zhiz_print.report');
         return items.map(item => {
             const label = typeof item.label === 'string' ? item.label : (item.label?.__str__ || '');
 
-            // Print / PDF:保留原标签,替换 action 与跳转路径
-            if (label === __('Print') || label === 'Print' ||
-                label === __('PDF') || label === 'PDF') {
+            // Print:保留原标签,替换 action 与跳转路径
+            if (label === __('Print') || label === 'Print') {
                 return Object.assign({}, item, { action: openPrint });
             }
-            // Export(Excel/CSV):移除(预览页内已有 Excel 导出)
-            if (label === __('Export') || label === 'Export') {
+            // PDF / Export(Excel/CSV):移除(PDF/Excel 导出都在打印预览页内)
+            if (label === __('PDF') || label === 'PDF' ||
+                label === __('Export') || label === 'Export') {
                 return null;
             }
             return item;

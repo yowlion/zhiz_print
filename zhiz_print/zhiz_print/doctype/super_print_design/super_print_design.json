@@ -19,9 +19,9 @@
   "design_name",
   "design_target",
   "target_doctype",
-  "report_name",
   "column_break_sample",
   "sample_doc",
+  "report_name",
   "sample_rows",
   "report_columns",
   "column_break_basic",
@@ -162,16 +162,6 @@
    "mandatory_depends_on": "eval:doc.design_target !== 'Report'"
   },
   {
-   "fieldname": "report_name",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Target Report",
-   "options": "Report",
-   "depends_on": "eval:doc.design_target === 'Report'",
-   "mandatory_depends_on": "eval:doc.design_target === 'Report'"
-  },
-  {
    "fieldname": "column_break_sample",
    "fieldtype": "Column Break"
   },
@@ -183,6 +173,16 @@
    "description": "Used for query preview to resolve doc.field parameters and demo preview.",
    "depends_on": "eval:doc.design_target !== 'Report'",
    "mandatory_depends_on": "eval:doc.design_target !== 'Report'"
+  },
+  {
+   "fieldname": "report_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Target Report",
+   "options": "Report",
+   "depends_on": "eval:doc.design_target === 'Report'",
+   "mandatory_depends_on": "eval:doc.design_target === 'Report'"
   },
   {
    "default": "20",

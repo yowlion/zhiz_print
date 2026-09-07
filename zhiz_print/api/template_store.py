@@ -232,10 +232,20 @@ def share_template(design_name):
     design = frappe.get_doc("Super Print Design", design_name)
     design_data = _clean_doc(design.as_dict(no_nulls=True))
 
-    # 实际打印预览(sample_doc 数据渲染)
+    # 实际打印预览:单据型用 sample_doc;报表型注入报表真实数据(默认筛选取样)
+    is_report = (design.design_target or 'DocType') == 'Report'
     preview_html = ""
     try:
-        preview_html = design.get_preview_for_document(doc_name=design.sample_doc) or ""
+        if is_report:
+            from zhiz_print.api.report_print import _run_report, REPORT_MAIN_KEY
+            r_filters = {}
+            rows, _cols = _run_report(design.report_name, r_filters)
+            preview_html = design.get_preview_for_document(
+                doc_name=None,
+                inject_query_results={REPORT_MAIN_KEY: {'data': rows[:30]}},
+                report_filters=r_filters) or ""
+        else:
+            preview_html = design.get_preview_for_document(doc_name=design.sample_doc) or ""
     except Exception:
         preview_html = ""
     # 设计渲染(None 占位符原样,纯模板结构)
@@ -287,7 +297,10 @@ def share_template(design_name):
     import zhiz_print
     body = {
         "template_name": design.design_name,
-        "target_doctype": design.target_doctype,
+        "design_target": design.design_target or "DocType",
+        "report_name": design.report_name or "",
+        # 报表型 target_doctype 用哨兵(中心端唯一键三元组非空,按报表区分)
+        "target_doctype": ("Report: " + design.report_name) if is_report else design.target_doctype,
         "print_paper_name": design.print_paper or "",
         "print_paper_config": json.dumps(paper_config, ensure_ascii=False),
         "design_data": json.dumps(design_data, ensure_ascii=False, default=str),
@@ -408,8 +421,13 @@ def install_template(template_id, new_design_name=None, new_paper_name=None):
         frappe.throw((tpl or {}).get("error", "Cannot fetch template"))
 
     target_doctype = tpl.get("target_doctype")
-    # 1. doctype 检查
-    if not frappe.db.exists("DocType", target_doctype):
+    design_target = tpl.get("design_target") or "DocType"
+    report_name = tpl.get("report_name") or ""
+    # 1. 目标检查:报表型查本地 Report,单据型查 DocType
+    if design_target == "Report":
+        if not frappe.db.exists("Report", report_name):
+            frappe.throw("本地不存在报表「{0}」,无法安装此模板".format(report_name))
+    elif not frappe.db.exists("DocType", target_doctype):
         frappe.throw("本地不存在 DocType「{0}」,无法安装此模板".format(target_doctype))
 
     # 2. 纸张处理
@@ -458,6 +476,13 @@ def install_template(template_id, new_design_name=None, new_paper_name=None):
     design_data["design_name"] = design_name
     design_data["print_paper"] = final_paper
     design_data["sample_doc"] = ""  # 剔除演示单据
+    design_data["design_target"] = design_target
+    if design_target == "Report":
+        # 报表模板:还原报表归属,清空单据专属字段
+        design_data["report_name"] = report_name
+        design_data["target_doctype"] = ""
+    else:
+        design_data["report_name"] = ""
     design_data.pop("name", None)
 
     # 5. 创建
