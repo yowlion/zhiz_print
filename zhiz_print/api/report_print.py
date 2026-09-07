@@ -237,3 +237,22 @@ def generate_report_pdf(report_name, filters, design_name, params=None,
         report_filters=filters,
         inject_query_results={REPORT_MAIN_KEY: {'data': rows}},
     )
+
+
+@frappe.whitelist()
+def export_report_excel(report_name, filters, design_name, params=None):
+    """报表 Excel 导出(POST):复用 export_print_excel 的 HTML→openpyxl 管线,
+    注入 __report_main__ 报表行渲染后解析表格写出。"""
+    _check_license()
+    _check_report_permission(report_name)
+
+    filters = _as_dict(filters) or {}
+    rows, _columns = _run_report(report_name, filters)
+
+    from zhiz_print.api.print_designer import export_print_excel
+    return export_print_excel(
+        doctype='Report', docname=report_name, design_name=design_name,
+        params=params,
+        report_filters=filters,
+        inject_query_results={REPORT_MAIN_KEY: {'data': rows}},
+    )

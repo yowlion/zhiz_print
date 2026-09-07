@@ -1650,10 +1650,11 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 # ==================== Excel Export Main Function ====================
 
 @frappe.whitelist()
-def export_print_excel(doctype, docname, design_name=None, params=None):
+def export_print_excel(doctype, docname, design_name=None, params=None, report_filters=None, inject_query_results=None):
     """Export print design data to Excel file download."""
     _check_license()
-    _check_draft_no_print(design_name, frappe.get_doc(doctype, docname))
+    # 报表模式(report_filters 非空):无单据,跳过草稿拦截(doc=None 即不拦)
+    _check_draft_no_print(design_name, None if report_filters is not None else frappe.get_doc(doctype, docname))
     from io import BytesIO
     from frappe.utils.xlsxutils import make_xlsx
     from bs4 import BeautifulSoup
@@ -1683,11 +1684,14 @@ def export_print_excel(doctype, docname, design_name=None, params=None):
 
     design = frappe.get_doc("Super Print Design", design_name)
 
-    if not frappe.has_permission(doctype, "print", docname):
+    # 报表模式:权限链由调用方(Report read)完成,跳过单据 print 权限
+    if report_filters is None and not frappe.has_permission(doctype, "print", docname):
         frappe.throw(_("No print permission"), frappe.PermissionError)
 
-    # Render HTML (same as print preview)
-    html = design.get_preview_for_document(doc_name=docname, params=params)
+    # Render HTML (same as print preview; 报表模式注入 __report_main__ + 伪 doc)
+    html = design.get_preview_for_document(
+        doc_name=(docname if report_filters is None else None), params=params,
+        report_filters=report_filters, inject_query_results=inject_query_results)
 
     # Parse HTML
     soup = BeautifulSoup(html, 'html.parser')

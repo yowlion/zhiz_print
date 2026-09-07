@@ -7,6 +7,7 @@
  "field_order": [
   "section_break_doc_print",
   "enable_super_print_page",
+  "column_break_doc",
   "print_enable_mode",
   "print_enabled_doctypes",
   "section_break_report",
@@ -41,6 +42,10 @@
    "fieldname": "enable_super_print_page",
    "fieldtype": "Check",
    "label": "Enable Document Print"
+  },
+  {
+   "fieldname": "column_break_doc",
+   "fieldtype": "Column Break"
   },
   {
    "default": "Enable for All",

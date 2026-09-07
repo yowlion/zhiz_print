@@ -1,8 +1,9 @@
 // Report Print Interceptor (v15.23 报表打印 P1)
 // Patches frappe.views.QueryReport.get_menu_items — 启用即接管:
-// Zprint Setting 开启报表打印且命中(All/Specific)时,移除原生 Print/PDF 菜单项,
-// 注入「超级打印」入口跳 /app/print/Report/<name>(print.js 报表模式分支)。
-// 未启用/未命中:原样返回原生菜单,关开关即还原。Export(Excel/CSV) 不动。
+// Zprint Setting 开启报表打印且命中(All/Specific)时:
+//   · 原生 Print / PDF 菜单项保留原标签,点击改跳超级打印预览页(路径变掉,入口不变)
+//   · 原生 Export(Excel/CSV) 菜单项移除(打印预览页内提供 Excel 导出)
+// 未启用/未命中:原样返回原生菜单,关开关即还原。
 
 frappe.provide('zhiz_print.report');
 
@@ -22,21 +23,22 @@ frappe.provide('zhiz_print.report');
             return items;
         }
 
-        // 启用即接管:移除原生 Print / PDF 项(Refresh/Edit/Export 等保留)
-        const nativeLabels = [__('Print'), 'Print', __('PDF'), 'PDF'];
-        const filtered = items.filter(item => {
+        const openPrint = () => zhiz_print.report.open_print_page(this);
+
+        return items.map(item => {
             const label = typeof item.label === 'string' ? item.label : (item.label?.__str__ || '');
-            return !nativeLabels.includes(label);
-        });
 
-        // 注入「超级打印」入口(置于菜单首位)
-        filtered.unshift({
-            label: __('超级打印'),
-            action: () => zhiz_print.report.open_print_page(this),
-            standard: true,
-        });
-
-        return filtered;
+            // Print / PDF:保留原标签,替换 action 与跳转路径
+            if (label === __('Print') || label === 'Print' ||
+                label === __('PDF') || label === 'PDF') {
+                return Object.assign({}, item, { action: openPrint });
+            }
+            // Export(Excel/CSV):移除(预览页内已有 Excel 导出)
+            if (label === __('Export') || label === 'Export') {
+                return null;
+            }
+            return item;
+        }).filter(Boolean);
     };
     patched._zhiz_report_print_patched = true;
     frappe.views.QueryReport.prototype.get_menu_items = patched;

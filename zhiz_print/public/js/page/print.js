@@ -237,8 +237,7 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 				if (pd?.allow_export_pdf !== false) {
 					this.page.add_button(__('Export PDF'), () => this.generate_super_pdf(), { icon: 'es-solid-pdf' });
 				}
-				// 报表模式 P1 暂不提供 Excel 导出(端点为单据型),后续版本扩展
-				if (pd?.allow_export_excel !== false && !this.is_report_mode) {
+				if (pd?.allow_export_excel !== false) {
 					this.page.add_button(__('Export Excel'), () => this.export_super_excel(), { icon: 'es-solid-excel' });
 				}
 			}
@@ -1315,6 +1314,49 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		this.record_export_log('Export PDF');
 	}
 
+	// 报表二进制导出通用方法:POST JSON → blob 下载(筛选不落 GET URL)
+	async _report_post_download(method_path, payload, filename) {
+		const blob = await new Promise((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			xhr.open('POST', '/api/method/' + method_path, true);
+			xhr.responseType = 'blob';
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			xhr.setRequestHeader('X-Frappe-CSRF-Token', frappe.csrf_token);
+			xhr.onload = function () {
+				if (xhr.status === 200) {
+					const ct = xhr.getResponseHeader('Content-Type') || '';
+					if (ct.indexOf('json') !== -1 || ct.indexOf('text/html') !== -1) {
+						// JSON 错误响应
+						const reader = new FileReader();
+						reader.onload = function () {
+							try {
+								const err = JSON.parse(reader.result);
+								reject(new Error(err.exception || err.message || __('Export failed')));
+							} catch (e) {
+								reject(new Error(reader.result || __('Export failed')));
+							}
+						};
+						reader.readAsText(xhr.response);
+					} else {
+						resolve(xhr.response);
+					}
+				} else {
+					reject(new Error(__('Export failed (HTTP {0})', [xhr.status])));
+				}
+			};
+			xhr.onerror = function () { reject(new Error(__('Network error'))); };
+			xhr.send(JSON.stringify(payload));
+		});
+		const blobUrl = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = blobUrl;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(blobUrl);
+	}
+
 	// 报表 PDF:POST generate_report_pdf(XHR blob),转发实测分页参数与预览一致
 	async _report_pdf_post() {
 		frappe.show_alert({ message: __('Generating PDF...'), indicator: 'blue' });
@@ -1330,46 +1372,11 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 			if (this.current_break_map.shrink_map) payload.shrink_map = JSON.stringify(this.current_break_map.shrink_map);
 		}
 		try {
-			const blob = await new Promise((resolve, reject) => {
-				const xhr = new XMLHttpRequest();
-				xhr.open('POST', '/api/method/zhiz_print.api.report_print.generate_report_pdf', true);
-				xhr.responseType = 'blob';
-				xhr.setRequestHeader('Content-Type', 'application/json');
-				xhr.setRequestHeader('X-Frappe-CSRF-Token', frappe.csrf_token);
-				xhr.setRequestHeader('Accept', 'application/pdf');
-				xhr.onload = function () {
-					if (xhr.status === 200) {
-						const ct = xhr.getResponseHeader('Content-Type') || '';
-						if (ct.indexOf('application/pdf') !== -1) {
-							resolve(xhr.response);
-						} else {
-							// JSON 错误响应
-							const reader = new FileReader();
-							reader.onload = function () {
-								try {
-									const err = JSON.parse(reader.result);
-									reject(new Error(err.exception || err.message || __('Export failed')));
-								} catch (e) {
-									reject(new Error(reader.result || __('Export failed')));
-								}
-							};
-							reader.readAsText(xhr.response);
-						}
-					} else {
-						reject(new Error(__('Export failed (HTTP {0})', [xhr.status])));
-					}
-				};
-				xhr.onerror = function () { reject(new Error(__('Network error'))); };
-				xhr.send(JSON.stringify(payload));
-			});
-			const blobUrl = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = blobUrl;
-			a.download = this.report_name + '-' + (this.current_design_info?.design_name || 'report') + '.pdf';
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
-			URL.revokeObjectURL(blobUrl);
+			await this._report_post_download(
+				'zhiz_print.api.report_print.generate_report_pdf',
+				payload,
+				this.report_name + '-' + (this.current_design_info?.design_name || 'report') + '.pdf'
+			);
 			frappe.show_alert({ message: __('PDF exported'), indicator: 'green' });
 			this.record_export_log('Export PDF');
 		} catch (e) {
@@ -1393,6 +1400,23 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		}
 
 		// Use XMLHttpRequest for binary download with proper error handling
+		// 报表模式:POST export_report_excel(筛选不落 GET URL)
+		if (this.is_report_mode) {
+			await this._report_post_download(
+				'zhiz_print.api.report_print.export_report_excel',
+				{
+					report_name: this.report_name,
+					filters: this.report_filters || {},
+					design_name: this.current_design,
+					params: this.current_params || {},
+				},
+				this.report_name + '-' + (this.current_design_info?.design_name || 'report') + '.xlsx'
+			);
+			frappe.show_alert({ message: __('Excel exported'), indicator: 'green' });
+			this.record_export_log('Export Excel');
+			return;
+		}
+
 		const excelParams = new URLSearchParams({
 			doctype: this.frm.doctype,
 			docname: this.frm.docname,
