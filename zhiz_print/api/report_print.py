@@ -57,10 +57,13 @@ def _run_report(report_name, filters):
         ignore_prepared_report=not has_prepared_name)
     columns = res.get("columns") or []
     rows = res.get("result") or []
-    # Query Report(SQL型)兜底:极旧写法 result 为 list[list] 时按列转 dict
-    if rows and not isinstance(rows[0], dict):
+    # 逐行归一为 dict:Query Report(SQL型)整体为 list[list];
+    # 且 frappe 的 add_total_row 在 normalize_result 之后追加合计行(是 list!),
+    # 混合 [dict,...,list] 形态必须逐行按列名 zip 转换,否则合计行占位符无法替换
+    if rows:
         keys = [c.get("fieldname") or str(i) for i, c in enumerate(columns)]
-        rows = [dict(zip(keys, r)) for r in rows if isinstance(r, (list, tuple))]
+        rows = [dict(zip(keys, r)) if isinstance(r, (list, tuple)) else r
+                for r in rows]
     return rows, columns
 
 
