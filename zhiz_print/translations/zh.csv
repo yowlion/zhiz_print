@@ -419,3 +419,6 @@ Failed to load report columns,加载报表列失败
 Generating PDF...,正在生成 PDF...
 PDF exported,PDF 已导出
 PDF export failed,PDF 导出失败
+Enable Document Print,启用单据打印
+Document Enable Mode,单据启用方式
+Print Engine,打印引擎
