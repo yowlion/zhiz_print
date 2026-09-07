@@ -199,21 +199,22 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 			import barcode as _barcode
 			from barcode.writer import ImageWriter
 			bcode = _barcode.get(provider, str(value), writer=ImageWriter())
-			# 正常比例渲染 + CSS 限制(v15.22.29):
-			# PNG 按标准可扫比例出图(模块0.26mm/条高12mm/300dpi 高清),保证扫码率与文字清晰;
-			# 设计器的宽高设置由前端 <img> 以 max-width/max-height + object-fit:contain
-			# 等比限制进单元格 —— 即"正常输出图片,显示时限制在设置的宽高内"。
-			# 文本不被条纹遮挡:python-barcode 总高=条纹高+文本行+间距(text_distance 2mm),
-			# 文本渲染在条纹下方独立空间;字号随设置缩放文本行高。
-			fs_pt = max(6, int(text_size or 10)) if show_text else 0
+			# 正常比例渲染 + CSS 限制(v15.22.31 修正文本单位):
+			# PNG 按标准可扫比例出图(模块0.26mm/300dpi 高清),<img> 以
+			# max-width/max-height 等比限制进设置的宽高框。
+			# ⚠️ python-barcode 0.16 实测语义:font_size/text_distance 近像素级
+			# (fs=10 → 文本高约30px@300dpi,td=5 → 间隙约19px),此前按 pt/mm 传参
+			# 导致文本被渲染成 ~9px 且间距 1px —— "文字一半被条码压住"的根因。
+			# 现按像素语义配比:字号=设计字号,间距=字号*0.5,文本区占总高约30%。
+			fs_px = max(6, int(text_size or 10)) if show_text else 0
 			fp = BytesIO()
 			bcode.write(fp, options={
 				'write_text': bool(show_text),
-				'font_size': fs_pt,
-				'text_distance': 2.0,      # 文本-条纹间距2mm,清晰分离
-				'module_height': 12.0,     # 条纹高12mm(标准比例)
-				'module_width': 0.26,      # 模块宽0.26mm(GS1 标准 X 维)
-				'quiet_zone': 2.5,         # 左右静区
+				'font_size': fs_px,
+				'text_distance': max(3, fs_px * 0.5),  # 文本-条纹间距(px语义)
+				'module_height': 10.0,                 # 条纹高10mm
+				'module_width': 0.26,                  # 模块宽0.26mm(GS1 标准 X 维)
+				'quiet_zone': 2.5,                     # 左右静区
 				'center_text': True,
 			})
 			return 'data:image/png;base64,' + base64.b64encode(fp.getvalue()).decode('ascii')
