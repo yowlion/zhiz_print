@@ -64,6 +64,11 @@ def _run_report(report_name, filters):
         keys = [c.get("fieldname") or str(i) for i, c in enumerate(columns)]
         rows = [dict(zip(keys, r)) if isinstance(r, (list, tuple)) else r
                 for r in rows]
+    # 剔除报表引擎自动追加的合计行(res.add_total_row 标志,合计行追加在末尾):
+    # 打印的合计由设计模板自己实现(=rowsum(R:C) / =pagerowsum(R:C) 表达式),
+    # 不自动带入引擎合计行,保证所见(报表页数据行)与所打(数据行)一致
+    if res.get("add_total_row") and rows:
+        rows = rows[:-1]
     return rows, columns
 
 
