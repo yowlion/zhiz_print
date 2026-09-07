@@ -199,14 +199,37 @@ def generate_barcode_base64(value, barcode_format='CODE128', width=100, height=4
 			import barcode as _barcode
 			from barcode.writer import ImageWriter
 			bcode = _barcode.get(provider, str(value), writer=ImageWriter())
+			# 尺寸单位(python-barcode 以 mm 计,300dpi 渲染,mm2px≈11.81):
+			#   module_height = 条纹高度(mm);文本高度 = pt2mm(font_size)/2;text_distance = 文本-条纹间距
+			# 目标总高 H:文本开启时按"条纹:文本"≈3:1 分配并留间距,确保文本不被条纹遮挡;
+			# 宽度:module_width 联动设计器目标宽 —— 内容短放大模块宽逼近目标宽,内容长取
+			# GS1 最小可读 X 维度(0.33mm)保扫码率,渲染后由 CSS max-width 适配单元格
+			_px2mm = 25.4 / 300.0
+			total_h = max(30, int(height or 40))
+			fs_pt = max(6, int(text_size or 10)) if show_text else 0
+			text_h_mm = (fs_pt * 25.4 / 72.0) / 2.0 if fs_pt else 0.0
+			dist_mm = max(0.8, fs_pt * 0.08) if fs_pt else 0.0
+			margin_mm = 0.6
+			bars_h_mm = max(4.0, total_h * _px2mm - text_h_mm - dist_mm - margin_mm * 2)
+			total_w = max(60, int(width or 100))
+			try:
+				_built = bcode.build()
+				# build() 返回 list[str](每行一个模块串),宽度按首行模块数
+				modules = len(_built[0]) if _built else 0
+			except Exception:
+				modules = 0
+			mw = max(0.33, min(total_w * _px2mm / max(1, modules + 4), 1.2)) if modules else 0.5
 			fp = BytesIO()
 			bcode.write(fp, options={
 				'write_text': bool(show_text),
-				'font_size': int(text_size or 10),
-				'text_distance': max(1, int(text_size or 10) // 5),
-				# 模块高度按目标高度近似换算(1模块≈1px级),宽度由模块密度决定
-				'module_height': max(8.0, float(height or 40) * 0.6),
-				'quiet_zone': 2.0,
+				'font_size': fs_pt,
+				'text_distance': dist_mm,
+				'module_height': bars_h_mm,
+				'module_width': round(mw, 3),
+				'quiet_zone': round(max(2.0, mw * 3), 2),
+				'margin_top': margin_mm,
+				'margin_bottom': margin_mm,
+				'center_text': True,
 			})
 			return 'data:image/png;base64,' + base64.b64encode(fp.getvalue()).decode('ascii')
 	except Exception as e:
