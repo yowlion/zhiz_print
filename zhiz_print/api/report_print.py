@@ -37,6 +37,21 @@ def _as_dict(v):
         return None
 
 
+def _default_report_filters(report_name=None):
+    """无用户筛选场景(模板平台预览等)的代表性默认筛选:
+
+    用户默认公司 + 当日区间 —— 让 {rep.filters.字段} 占位符可解析出演示值,
+    与 get_report_sample_data 的默认筛选补全思路一致。无公司时返回空(占位符保持原样)。"""
+    f = {}
+    company = (frappe.defaults.get_user_default("Company")
+               or frappe.defaults.get_global_default("company"))
+    if company:
+        f["company"] = company
+        f["from_date"] = frappe.utils.nowdate()
+        f["to_date"] = frappe.utils.nowdate()
+    return f
+
+
 def _check_report_permission(report_name):
     if not frappe.has_permission("Report", "read", report_name):
         frappe.throw(_("No permission to access this report"), frappe.PermissionError)

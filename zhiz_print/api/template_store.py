@@ -237,8 +237,10 @@ def share_template(design_name):
     preview_html = ""
     try:
         if is_report:
-            from zhiz_print.api.report_print import _run_report, REPORT_MAIN_KEY
-            r_filters = {}
+            from zhiz_print.api.report_print import _run_report, REPORT_MAIN_KEY, _default_report_filters
+            # 平台预览用代表性默认筛选(默认公司+当日区间),
+            # 使 {rep.filters.字段} 也能解析出演示值(空筛选会令其原样显示)
+            r_filters = _default_report_filters(design.report_name)
             rows, _cols = _run_report(design.report_name, r_filters)
             preview_html = design.get_preview_for_document(
                 doc_name=None,
