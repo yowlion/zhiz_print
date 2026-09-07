@@ -10,6 +10,11 @@
   "print_enable_mode",
   "column_break_print_engine",
   "pdf_engine_mode",
+  "section_break_report",
+  "report_print_enabled",
+  "column_break_report",
+  "report_enable_mode",
+  "report_enabled_reports",
   "section_break_image_render",
   "explicit_image_preview",
   "section_break_print_doctypes",
@@ -23,12 +28,7 @@
   "section_break_license",
   "license_info",
   "license_key_input",
-  "contact_info",
-  "section_break_report",
-  "report_print_enabled",
-  "column_break_report",
-  "report_enable_mode",
-  "report_enabled_reports"
+  "contact_info"
  ],
  "fields": [
   {
@@ -64,6 +64,35 @@
    "fieldtype": "Select",
    "label": "PDF Engine Mode",
    "options": "WeasyPrint\nwkhtmltopdf\nChromium"
+  },
+  {
+   "fieldname": "section_break_report",
+   "fieldtype": "Section Break",
+   "label": "Report Print"
+  },
+  {
+   "fieldname": "report_print_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Report Print"
+  },
+  {
+   "fieldname": "column_break_report",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "report_enable_mode",
+   "fieldtype": "Select",
+   "label": "Report Enable Mode",
+   "options": "Enable for All\nEnable for Specific",
+   "depends_on": "eval:doc.report_print_enabled",
+   "default": "Enable for All"
+  },
+  {
+   "fieldname": "report_enabled_reports",
+   "fieldtype": "Table",
+   "label": "Report Enabled Reports",
+   "options": "Super Print Enabled Report",
+   "depends_on": "eval:doc.report_print_enabled && doc.report_enable_mode === 'Enable for Specific'"
   },
   {
    "depends_on": "eval:doc.enable_super_print_page",
@@ -153,35 +182,6 @@
    "fieldtype": "HTML",
    "label": "Contact Info",
    "options": "<div id=\"contact-info-container\"></div>"
-  },
-  {
-   "fieldname": "section_break_report",
-   "fieldtype": "Section Break",
-   "label": "Report Print"
-  },
-  {
-   "fieldname": "report_print_enabled",
-   "fieldtype": "Check",
-   "label": "Enable Report Print"
-  },
-  {
-   "fieldname": "column_break_report",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "report_enable_mode",
-   "fieldtype": "Select",
-   "label": "Report Enable Mode",
-   "options": "Enable for All\nEnable for Specific",
-   "depends_on": "eval:doc.report_print_enabled",
-   "default": "Enable for All"
-  },
-  {
-   "fieldname": "report_enabled_reports",
-   "fieldtype": "Table",
-   "label": "Report Enabled Reports",
-   "options": "Super Print Enabled Report",
-   "depends_on": "eval:doc.report_print_enabled && doc.report_enable_mode === 'Enable for Specific'"
   }
  ],
  "issingle": 1,
