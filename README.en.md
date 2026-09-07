@@ -2,6 +2,15 @@
 
 A custom print template designer built on the Frappe/ERPNext framework, providing visual table design, multi-engine PDF export, Excel export, and more.
 
+## About
+
+**Zhiz Print** is owned and maintained by **Guangde Zhizhao Technology Co., Ltd.** (广德智兆科技有限公司), actively developed and iterated by **Zhi Zhao Huang** (智兆.黄, Gitee [@gdzhiz](https://gitee.com/gdzhiz)).
+
+- **Positioning**: A specialized ERPNext/Frappe app for **complex print format design** — WYSIWYG grid designing focused on multi-page layouts, cell merging, expression evaluation, barcode/QR codes, and multi-engine PDF export
+- **Official repository**: <https://gitee.com/gdzhiz/zhiz_print> (the only official source; all other copies are community forks)
+- **GitHub mirror**: <https://github.com/yowlion/zhiz_print> (auto-synced from the Gitee official source)
+- **Copyright**: © 2026 Guangde Zhizhao Technology Co., Ltd. (广德智兆科技有限公司). All rights reserved — see [LICENSE](LICENSE)
+
 ## Features
 
 - **Visual Print Designer** — Table-based drag-and-drop design with cell merging, style editing, data binding, and free column-resize by dragging

@@ -1,0 +1,25 @@
+# GitHub 镜像自动同步:官方源在 Gitee(gdzhiz/zhiz_print),本仓库为镜像
+# 每日定时 + 手动触发,从 Gitee 官方源裸克隆后镜像推送(仅推不触发其他 workflow,无循环)
+name: Mirror from Gitee
+
+on:
+  schedule:
+    - cron: '17 3 * * *'  # 每日 UTC 03:17(北京 11:17)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mirror-from-gitee
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull from Gitee and mirror-push
+        run: |
+          git clone --bare https://gitee.com/gdzhiz/zhiz_print.git repo
+          cd repo
+          git push --mirror "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"

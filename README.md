@@ -1,8 +1,22 @@
 # zhiz_print · 高级打印设计器 使用说明书
 
+> **出品维护** **广德智兆科技有限公司** ｜ **开发者** **智兆.黄** ｜ **官方仓库** <https://gitee.com/gdzhiz/zhiz_print>
+>
 > **适用版本** v15.22.01+ ｜ **截图来源** EXAMPLE_CLIENT生产环境 ｜ **更新** 2026-08-30
 >
 > 基于 Frappe / ERPNext 的可视化打印模板设计器 — 表格设计 · 数据绑定 · 表达式运算 · 多引擎 PDF · 批量打印 · 持久化日志。
+
+---
+
+## 关于 Zhiz Print
+
+**Zhiz Print** 由 **广德智兆科技有限公司**（Guangde Zhizhao Technology Co., Ltd.）出品并长期维护，开发人员 **智兆.黄**（Gitee [@gdzhiz](https://gitee.com/gdzhiz)）全力迭代更新。
+
+- **定位**：适用于 ERPNext / Frappe 的**复杂格式打印设计专用 App** —— 表格网格所见即所得设计，专攻多页版面、单元格合并、表达式运算、条码/二维码、多引擎 PDF 导出等复杂打印格式
+- **官方仓库**：<https://gitee.com/gdzhiz/zhiz_print>（唯一官方源，其余均为社区 fork）
+- **GitHub 镜像**：<https://github.com/yowlion/zhiz_print>（自动同步自 Gitee 官方源）
+- **发布讨论**：<https://discuss.frappe.io/t/zhiz-print-a-wysiwyg-print-designer-for-frappe-erpnext/163832>
+- **版权**：Copyright © 2026 广德智兆科技有限公司（Guangde Zhizhao Technology Co., Ltd.），保留所有权利，见 [LICENSE](LICENSE)
 
 ---
 
