@@ -1883,12 +1883,16 @@ class SuperPrintDesigner {
         if (!queryName) return;
 
         // 报表伪查询:Data Key 列表 = 报表列(get_report_sample_data 前 N 行推导)
+        // 筛选优先取报表页透传的 sessionStorage(从报表页进设计流程时),
+        // 否则空筛选由服务端逐级补默认筛选(公司/日期)重试
         if (queryName === '__report_main__') {
+            let reportFilters = {};
+            try { reportFilters = JSON.parse(sessionStorage.getItem('spd_report_filters') || '{}'); } catch (e) { /* ignore */ }
             frappe.call({
                 method: 'zhiz_print.api.report_print.get_report_sample_data',
                 args: {
                     report_name: this.frm.doc.report_name,
-                    filters: {},
+                    filters: reportFilters,
                     sample_rows: this.frm.doc.sample_rows || 20,
                 },
                 callback: (r) => {
@@ -1902,8 +1906,9 @@ class SuperPrintDesigner {
                     const cell = this.cellDataMap[this.currentCell];
                     if (cell && cell.data_key) select.value = cell.data_key;
                     if (m.error) {
-                        frappe.show_alert({
-                            message: __('Failed to load report columns') + ': ' + m.error,
+                        frappe.msgprint({
+                            title: __('Failed to load report columns'),
+                            message: __('{0}', [m.error]),
                             indicator: 'orange',
                         });
                     }

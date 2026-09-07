@@ -105,22 +105,46 @@ def get_report_designs(report_name):
 def get_report_sample_data(report_name, filters=None, sample_rows=20):
     """设计器报表模式:列清单 + 演示数据(前 N 行)。
 
-    filters 不传时以空筛选执行(报表必填筛选缺失会抛错,设计器前端
-    提示先在报表页运行一次后从 sessionStorage 取筛选)。"""
+    filters 为空时逐级补默认筛选重试:原样 → +公司(用户默认) → +公司+当日区间。
+    绝大多数 erpnext 报表必填 company,这样设计器无需用户填筛选即可拿到列清单;
+    全部失败时返回 error 提示(前端提示先在报表页运行一次)。"""
     _check_license()
     _check_report_permission(report_name)
 
-    filters = _as_dict(filters) or {}
-    try:
-        rows, columns = _run_report(report_name, filters)
-    except Exception as e:
-        return {"columns": [], "rows": [], "error": str(e)}
+    given = _as_dict(filters) or {}
+
+    attempts = [given]
+    if not given.get("company"):
+        company = (frappe.defaults.get_user_default("Company")
+                   or frappe.defaults.get_global_default("company"))
+        if company:
+            a = dict(given)
+            a["company"] = company
+            attempts.append(a)
+            b = dict(a)
+            b.setdefault("from_date", frappe.utils.nowdate())
+            b.setdefault("to_date", frappe.utils.nowdate())
+            attempts.append(b)
+
+    rows, columns, last_err = [], [], ""
+    for f in attempts:
+        try:
+            rows, columns = _run_report(report_name, f)
+            if columns:
+                break
+        except Exception as e:
+            last_err = str(e)
+            rows, columns = [], []
 
     cols = [{
         "fieldname": c.get("fieldname") or "",
         "label": c.get("label") or c.get("fieldname") or "",
         "fieldtype": c.get("fieldtype") or "Data",
     } for c in columns if (c.get("fieldname") or c.get("label"))]
+
+    if not cols:
+        hint = last_err or _("Report returned no columns. Run the report once in the report view with filters, then open the designer from the report page.")
+        return {"columns": [], "rows": [], "error": str(hint)}
 
     n = max(1, min(cint(sample_rows) or 20, 200))
     return {"columns": cols, "rows": rows[:n], "total_rows": len(rows)}
