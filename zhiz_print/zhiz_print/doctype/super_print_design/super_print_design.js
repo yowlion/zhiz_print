@@ -50,8 +50,8 @@ class SuperPrintDesigner {
 
         this.cellTypes = [
             { value: 'static', label: __('Static Text'), icon: 'fa-font' },
-            { value: 'logic', label: __('Logic Code'), icon: 'fa-code' },
-            { value: 'data_query', label: __('Data Query'), icon: 'fa-search' },
+            // v15.22.41: logic/data_query 类型移除,全部值语义(占位符/=表达式/=rowsum/=条件)
+            // 统一由 static 承载;老模板加载时归一化(见 loadExistingDesign)
             { value: 'barcode', label: __('Barcode'), icon: 'fa-barcode' },
             { value: 'qrcode', label: __('QR Code'), icon: 'fa-qrcode' },
             { value: 'image', label: __('Image'), icon: 'fa-image' }
@@ -232,14 +232,26 @@ class SuperPrintDesigner {
                         // 保留 cellDataMap entry(打散时需通过 child cell_id 找 master)
                         page.cellDataMap[childId] = { _merged: true, master_cell_id: masterId, cell_id: childId };
                     } else {
+                        // v15.22.41 类型归一化(读时兼容,保存时落库):
+                        // data_query → static(占位符渲染与类型无关,输出不变)
+                        // logic → static + 值前加 '='(=通道上下文已升级与 logic 同级,
+                        //          条件表达式照常求值;老模板不保存则库中 logic 永远可渲)
+                        let _normType = cell.cell_type || 'static';
+                        let _normValue = cell.cell_value || '';
+                        if (_normType === 'data_query') {
+                            _normType = 'static';
+                        } else if (_normType === 'logic' && _normValue) {
+                            _normValue = _normValue.trim().startsWith('=') ? _normValue : ('=' + _normValue);
+                            _normType = 'static';
+                        }
                         const cellData = {
                             cell_id: this._normalizeCellId(cell.cell_id, pageNo),
                             page_no: pageNo,
                             row: cell.row, col: cell.col,
                             rowspan: parseInt(cell.rowspan) || 1,
                             colspan: parseInt(cell.colspan) || 1,
-                            cell_type: cell.cell_type || 'static',
-                            cell_value: cell.cell_value || '',
+                            cell_type: _normType,
+                            cell_value: _normValue,
                             css_style: cell.css_style || '',
                             data_key: cell.data_key || '',
                             query_name: cell.query_name || '',
@@ -687,11 +699,13 @@ class SuperPrintDesigner {
                     const hasValue = cell_value && cell_value.trim();
 
                     let content = '';
-                    if ((cell_type === 'data_query' || cell_type === 'image') && cell.query_name && cell.data_key) {
+                    if ((cell_type === 'image') && cell.query_name && cell.data_key) {
                         // __report_main__ 为报表数据伪查询,网格显示用 rep 命名空间
-                        // ({rep.items.字段} / {rep.filters.字段} / {rep.报表字段})
                         const phNs = cell.query_name === '__report_main__' ? 'rep' : cell.query_name;
                         content = '<div class="super-zprint-cell-content" style="color:#6a5acd;font-style:italic;">{' + this.escapeHtml(phNs) + '.' + this.escapeHtml(cell.data_key) + '}</div>';
+                    } else if (cell_type === 'static' && hasValue && (/\{[a-zA-Z_][\w.]*\}/.test(cell_value) || cell_value.trim().startsWith('='))) {
+                        // v15.22.41:含占位符或=表达式的静态文本按代码样式显示(占位符原样可见)
+                        content = '<div class="super-zprint-cell-content" style="color:#6a5acd;font-style:italic;">' + this.escapeHtml(cell_value).replace(/ {2,}/g, m => '&nbsp;'.repeat(m.length)) + '</div>';
                     } else if (cell_type === 'barcode' || cell_type === 'qrcode') {
                         // 条码:显示码制+值摘要+文本开关标记(所见即所得提示)
                         const bFmt = cell.barcode_format || 'CODE128';
@@ -2023,7 +2037,7 @@ class SuperPrintDesigner {
         const _driverCb = container.querySelector('#prop-print-count-driver');
         if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         this.togglePropertyGroups(cell.cell_type);
-        if ((cell.cell_type === 'data_query' || cell.cell_type === 'image') && cell.query_name) {
+        if ((cell.cell_type === 'image' || cell.cell_type === 'data_query') && cell.query_name) {
             this.loadDataKeyOptions(cell.query_name);
         }
     }
@@ -2034,7 +2048,7 @@ class SuperPrintDesigner {
         const queryGroup = container.querySelector('#query-group');
         const barcodeGroup = container.querySelector('#barcode-group');
         const qrcodeGroup = container.querySelector('#qrcode-group');
-        if (queryGroup) queryGroup.style.display = (cellType === 'data_query' || cellType === 'image') ? 'block' : 'none';
+        if (queryGroup) queryGroup.style.display = (cellType === 'image' || (cellType === 'data_query')) ? 'block' : 'none';
         if (barcodeGroup) barcodeGroup.style.display = (cellType === 'barcode') ? 'block' : 'none';
         if (qrcodeGroup) qrcodeGroup.style.display = (cellType === 'qrcode') ? 'block' : 'none';
     }

@@ -452,8 +452,7 @@ row.1                   ← 方向可省略,默认 ASC
 
 | cell_type | 说明 | 额外配置 |
 |---|---|---|
-| static | 静态文本 + 占位符 / `=`表达式 / `=rowsum` | — |
-| logic | Python 条件表达式 | — |
+| static | **统一文本类型**(v15.22.41):占位符 / `=`算术表达式 / `=rowsum` / `=`条件表达式(原 logic 语义,前缀 `=` 承载) | — |
 | barcode | 条形码(**22 种码制**,见下) | `barcode_format` · `barcode_width` · `barcode_height` · `barcode_show_text` · `barcode_text_size` |
 | qrcode | 二维码 | `barcode_width` · `barcode_height` |
 | image | 图片,`cell_value` 填 URL 或 `/files/xxx.png` | — |

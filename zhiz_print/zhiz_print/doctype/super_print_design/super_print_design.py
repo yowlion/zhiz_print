@@ -1031,14 +1031,19 @@ class SuperPrintDesign(frappe.model.document.Document):
         return cv or ''
 
     def _eval_expression_cell(self, raw, doc, data_item, query_results, params):
-        """Evaluate a cell whose value starts with '=' (arithmetic expression).
+        """Evaluate a cell whose value starts with '=' (unified expression, v15.22.41).
 
         Placeholders are substituted first ({doc.x}, {doc.child.field},
         {param.x}, {query.column} → their formatted values), then the resulting
         expression is evaluated via safe_eval. Returns the formatted result;
         on any failure logs and returns the raw input so the user sees something
         instead of an empty cell. e.g. '={doc.items.qty}*{doc.items.rate}' with
-        qty=100, rate=0.5 → '100*0.5' → 50.0 → '50'."""
+        qty=100, rate=0.5 → '100*0.5' → 50.0 → '50'.
+
+        v15.22.41 上下文升级:与原条件表达式(logic)通道同级 —— 注入
+        doc/row/get_value/fmt/flt/max/min/round,条件表达式(如
+        =get_value("Item",doc.production_item,"classification")=="滑板")
+        归一为 static+'=' 前缀后在此通道求值;True/False 结果原样显示。"""
         if not raw:
             return ''
         expr = raw.lstrip()[1:]  # strip leading '='
@@ -1048,7 +1053,7 @@ class SuperPrintDesign(frappe.model.document.Document):
         if data_item:
             expr = self._replace_child_table_placeholders(expr, data_item)
         try:
-            result = frappe.safe_eval(expr, {}, {'flt': frappe.utils.flt})
+            result = frappe.safe_eval(expr, {}, self._build_safe_eval_locals(doc, data_item))
             return self._fmt_val(result)
         except Exception:
             frappe.log_error(
