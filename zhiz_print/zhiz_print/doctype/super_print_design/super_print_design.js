@@ -968,6 +968,116 @@ class SuperPrintDesigner {
         }, 150);
 
         this.bindPropertyEvents();
+        this._bindDatasourcePanel();
+    }
+
+    // ==================== 数据源左侧栏 (v15.23) ====================
+
+    _bindDatasourcePanel() {
+        const container = document.getElementById(this.designContainerId);
+        if (!container) return;
+        // 折叠切换
+        container.querySelector('#spd-datasource-toggle')?.addEventListener('click', () => {
+            container.querySelector('#spd-datasource')?.classList.toggle('collapsed');
+        });
+        container.querySelector('#spd-datasource-collapsed-bar')?.addEventListener('click', () => {
+            container.querySelector('#spd-datasource')?.classList.remove('collapsed');
+        });
+        // 首次加载树
+        this.loadDatasourceTree();
+    }
+
+    async loadDatasourceTree() {
+        const wrap = document.getElementById(this.designContainerId)?.querySelector('#spd-datasource-tree');
+        if (!wrap) return;
+        wrap.innerHTML = '<div class="spd-ds-empty"><i class="fa fa-spinner fa-spin"></i> ' + __('Loading...') + '</div>';
+        try {
+            const r = await frappe.call({
+                method: 'zhiz_print.api.designer_datasource.get_datasource_tree',
+                args: {
+                    design_name: (this.frm.doc.name && !this.frm.doc.__islocal) ? this.frm.doc.name : null,
+                    target_doctype: this.frm.doc.target_doctype || null,
+                    report_name: this.frm.doc.report_name || null,
+                },
+            });
+            const tree = (r.message || {}).tree || [];
+            wrap.innerHTML = '';
+            if (!tree.length) {
+                wrap.innerHTML = '<div class="spd-ds-empty">' + __('No data source available') + '</div>';
+                return;
+            }
+            this._renderDsNodes(wrap, tree, 0);
+            this._bindDsDrag(wrap);
+        } catch (e) {
+            console.error('datasource tree failed:', e);
+            wrap.innerHTML = '<div class="spd-ds-empty">' + __('Loading failed') + '</div>';
+        }
+    }
+
+    _renderDsNodes(wrap, nodes, depth) {
+        nodes.forEach(n => {
+            const el = document.createElement('div');
+            el.className = 'spd-ds-node' + (depth < 1 ? ' open' : '');
+            if (n.children && n.children.length) {
+                el.innerHTML = '<div class="spd-ds-group"><span class="spd-ds-caret"><i class="fa fa-play"></i></span>'
+                    + (n.icon ? '<i class="fa ' + n.icon + '"></i>' : '')
+                    + '<span>' + this.escapeHtml(n.label) + '</span></div>';
+                const ch = document.createElement('div');
+                ch.className = 'spd-ds-children';
+                this._renderDsNodes(ch, n.children, depth + 1);
+                el.appendChild(ch);
+            } else {
+                el.innerHTML = '<div class="spd-ds-leaf" draggable="true" data-ds-key="' + this.escapeHtml(n.key || '') + '">'
+                    + '<i class="fa fa-circle"></i><span>' + this.escapeHtml(n.label) + '</span></div>';
+            }
+            wrap.appendChild(el);
+        });
+    }
+
+    _bindDsDrag(wrap) {
+        // 叶子拖拽:dragstart 设置占位符;分组点击折叠
+        wrap.querySelectorAll('.spd-ds-leaf').forEach(leaf => {
+            leaf.addEventListener('dragstart', (e) => {
+                const key = leaf.dataset.dsKey || '';
+                e.dataTransfer.setData('text/plain', '{' + key + '}');
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+            // 双击兜底:直接写入当前选中单元格(拖拽不可用场景)
+            leaf.addEventListener('dblclick', () => {
+                const ph = '{' + (leaf.dataset.dsKey || '') + '}';
+                if (this.currentCell) {
+                    this.updateCellProperty('cell_value', ph);
+                    frappe.show_alert({ message: __('已写入') + ': ' + ph, indicator: 'blue' });
+                } else {
+                    if (navigator.clipboard) navigator.clipboard.writeText(ph);
+                    frappe.show_alert({ message: __('无选中单元格,已复制') + ': ' + ph, indicator: 'yellow' });
+                }
+            });
+        });
+        wrap.querySelectorAll('.spd-ds-group').forEach(g => {
+            g.addEventListener('click', () => g.parentElement.classList.toggle('open'));
+        });
+        // 单元格 drop 接收
+        const container = document.getElementById(this.designContainerId);
+        container.querySelectorAll('.spd-cell').forEach(cell => {
+            if (cell._dsDropBound) return;
+            cell._dsDropBound = true;
+            cell.addEventListener('dragover', (e) => {
+                if (e.dataTransfer.types.includes('text/plain')) {
+                    e.preventDefault();
+                    cell.classList.add('spd-drop-hover');
+                }
+            });
+            cell.addEventListener('dragleave', () => cell.classList.remove('spd-drop-hover'));
+            cell.addEventListener('drop', (e) => {
+                e.preventDefault();
+                cell.classList.remove('spd-drop-hover');
+                const ph = e.dataTransfer.getData('text/plain');
+                if (!ph || !ph.startsWith('{')) return;
+                this.handleCellClick(cell.dataset.cellId);
+                this.updateCellProperty('cell_value', ph);
+            });
+        });
     }
 
     _setToolbarState(mode) {
@@ -3309,6 +3419,7 @@ class SuperPrintDesigner {
                 frappe.confirm(__('Are you sure you want to delete this query?'), () => {
                     this.frm.doc.design_queries.splice(index, 1);
                     this.refreshQueryList(dialog);
+                    this.loadDatasourceTree();  // 数据源树重载
                     frappe.show_alert({ message: __('Query deleted'), indicator: 'orange' });
                 });
             });
@@ -3582,6 +3693,7 @@ class SuperPrintDesigner {
                 frappe.confirm(__('Are you sure you want to delete this query?'), () => {
                     this.frm.doc.design_queries.splice(index, 1);
                     this.refreshQueryList(dialog);
+                    this.loadDatasourceTree();  // 数据源树重载
                     frappe.show_alert({ message: __('Query deleted'), indicator: 'orange' });
                 });
             });

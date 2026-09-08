@@ -51,6 +51,16 @@
     </div>
     <div class="spd-main">
         <div class="spd-preview-overlay" id="spd-preview-overlay"><iframe id="spd-preview-iframe"></iframe></div>
+        <div class="spd-datasource" id="spd-datasource">
+            <div class="spd-datasource-header" id="spd-datasource-header">
+                <i class="fa fa-sitemap"></i> <span class="spd-datasource-title">{{ _("数据源") }}</span>
+                <button type="button" class="spd-datasource-toggle" id="spd-datasource-toggle" title="{{ _("折叠/展开") }}"><i class="fa fa-angle-double-left"></i></button>
+            </div>
+            <div class="spd-datasource-body" id="spd-datasource-tree"></div>
+            <div class="spd-datasource-collapsed-bar" id="spd-datasource-collapsed-bar" title="{{ _("数据源") }}">
+                <i class="fa fa-sitemap"></i>
+            </div>
+        </div>
         <div class="spd-grid-wrap">
             <div class="spd-paper-preview">
                 <div class="super-zprint-grid-wrapper">
