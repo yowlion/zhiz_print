@@ -479,6 +479,17 @@ def install_template(template_id, new_design_name=None, new_paper_name=None):
     design_data["print_paper"] = final_paper
     design_data["sample_doc"] = ""  # 剔除演示单据
     design_data["design_target"] = design_target
+    # v15.22.43 老模板归一:平台导出的旧版模板可能带 data_query/logic cell_type,
+    # Select 已收口为 4 类,insert 前归一(与存量 patch 同规则:logic 值前置 '=')
+    for _it in (design_data.get("design_items") or []):
+        _ct = (_it.get("cell_type") or "static").strip()
+        if _ct == "data_query":
+            _it["cell_type"] = "static"
+        elif _ct == "logic":
+            _v = (_it.get("cell_value") or "").strip()
+            if _v and not _v.startswith("="):
+                _it["cell_value"] = "=" + _v
+            _it["cell_type"] = "static"
     if design_target == "Report":
         # 报表模板:还原报表归属,清空单据专属字段
         design_data["report_name"] = report_name

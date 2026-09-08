@@ -878,6 +878,16 @@ def save_design(design_name, rows, columns, row_styles, col_styles, font_family,
     # Build flat items from cells (only non-merged cells from frontend)
     if cells:
         for cell in cells:
+            # v15.22.43 防御归一:API 层不再接受 data_query/logic(Select 已收口 4 类),
+            # 旧客户端/脚本直调时按存量 patch 同规则归一,避免 Select 校验拒绝
+            _ct = (cell.get("cell_type") or "static").strip()
+            if _ct == "data_query":
+                cell["cell_type"] = "static"
+            elif _ct == "logic":
+                _v = (cell.get("cell_value") or "").strip()
+                if _v and not _v.startswith("="):
+                    cell["cell_value"] = "=" + _v
+                cell["cell_type"] = "static"
             doc.append("design_items", {
                 "cell_id": cell.get("cell_id", ""),
                 "row": cint(cell.get("row", 0)),
