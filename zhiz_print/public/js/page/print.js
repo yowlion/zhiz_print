@@ -15,9 +15,13 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		const doctype = route[1];
 		const pd = frappe.boot.zhiz_print?.print_designer;
 
-		// 报表模式:/app/print/Report/<report_name> — Zprint Setting 启用报表打印即接管
-		// (Enable for All/Specific 的入口拦截在报表页菜单;此处只管预览页本身的接管)
-		if (doctype === 'Report' && route[2]) {
+		// 报表模式:/app/print/Report/<report_name> — 仅当请求来自**报表查询页的拦截跳转**时接管
+		// (拦截器 open_print_page 用整页跳转并带 spd_report_print=1 标记 + URL 筛选)。
+		// Report 文档表单页(/app/report/<name>)的原生打印按钮不带此标记 → 走原生单据打印,
+		// 不误入报表打印模式(v15.22.39)。
+		const isFromReportView = new URLSearchParams(window.location.search).get('spd_report_print') === '1'
+			|| (window.sessionStorage && sessionStorage.getItem('spd_report_print:' + (route[2] ? decodeURIComponent(route[2]) : '')) === '1');
+		if (doctype === 'Report' && route[2] && isFromReportView) {
 			if (pd && pd.report_enabled) {
 				this.is_super_print_mode = true;
 				this.is_report_mode = true;
