@@ -1056,10 +1056,14 @@ class SuperPrintDesign(frappe.model.document.Document):
             result = frappe.safe_eval(expr, {}, self._build_safe_eval_locals(doc, data_item))
             return self._fmt_val(result)
         except Exception:
+            # ='='前缀+纯占位符/纯文本(如 ={doc.name}):替换后已是目标文本,
+            # 求值必失败(NameError)——直接返回替换后的文本,剥掉冗余 '=' 前缀。
+            # 例: ={doc.name} → doc.name 替换 → 'MFG-WO-...' → 显示单号(而非原文)。
+            # 真正的表达式语法错误同样落入此兜底:显示替换后的可读文本优于显示带=原文。
             frappe.log_error(
                 frappe.get_traceback(),
                 'Super Print Design: expression eval failed: %s' % (raw[:120]))
-            return raw
+            return expr if expr else raw
 
     def _eval_rowsum(self, target_row, target_col, data_items, cell_map, doc, query_results, params):
         """Sum the rendered display values of column target_col across all expanded
