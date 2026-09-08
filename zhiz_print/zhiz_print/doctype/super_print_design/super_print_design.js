@@ -1188,11 +1188,19 @@ class SuperPrintDesigner {
         };
         _syncFxBtn();
 
-        // 输入 '=' 开头时自动弹
+        // 输入 '=' 开头时自动弹;正在键入的词(=后至光标的连续词字符)实时过滤方法
+        // 例:=get → 只显示 get_value;=row → rowsum/row;清空词显示全部
         ta.addEventListener('input', () => {
-            if (ta.value.startsWith('=')) show('');
-            else { pop.style.display = 'none'; _syncFxBtn(); }
             _syncFxBtn();
+            if (!ta.value.startsWith('=')) { pop.style.display = 'none'; return; }
+            const upto = ta.value.slice(0, ta.selectionStart == null ? ta.value.length : ta.selectionStart);
+            const m = upto.match(/=\s*([A-Za-z_][A-Za-z0-9_(]*)$/);
+            const word = m ? m[1] : '';
+            if (pop.style.display === 'none' && word === '') {
+                show('');
+            } else if (pop.style.display !== 'none' || word !== '') {
+                show(word);
+            }
         });
         btn.addEventListener('click', () => {
             pop.style.display = pop.style.display === 'none' ? (show(''), 'block') : 'none';
