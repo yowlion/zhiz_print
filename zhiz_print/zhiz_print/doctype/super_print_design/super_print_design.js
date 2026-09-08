@@ -2037,7 +2037,7 @@ class SuperPrintDesigner {
         const _driverCb = container.querySelector('#prop-print-count-driver');
         if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         this.togglePropertyGroups(cell.cell_type);
-        if ((cell.cell_type === 'image' || cell.cell_type === 'data_query') && cell.query_name) {
+        if (cell.cell_type === 'image' && cell.query_name) {
             this.loadDataKeyOptions(cell.query_name);
         }
     }
@@ -2048,7 +2048,7 @@ class SuperPrintDesigner {
         const queryGroup = container.querySelector('#query-group');
         const barcodeGroup = container.querySelector('#barcode-group');
         const qrcodeGroup = container.querySelector('#qrcode-group');
-        if (queryGroup) queryGroup.style.display = (cellType === 'image' || (cellType === 'data_query')) ? 'block' : 'none';
+        if (queryGroup) queryGroup.style.display = (cellType === 'image') ? 'block' : 'none';
         if (barcodeGroup) barcodeGroup.style.display = (cellType === 'barcode') ? 'block' : 'none';
         if (qrcodeGroup) qrcodeGroup.style.display = (cellType === 'qrcode') ? 'block' : 'none';
     }

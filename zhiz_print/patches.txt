@@ -1,1 +1,2 @@
 zhiz_print.zhiz_print.patches.install_batch_print_page
+zhiz_print.zhiz_print.patches.unify_cell_types

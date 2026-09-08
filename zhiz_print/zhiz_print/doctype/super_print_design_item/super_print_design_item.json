@@ -92,7 +92,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Cell Type",
-   "options": "static\nlogic\ndata_query\nbarcode\nqrcode\nimage",
+   "options": "static\nbarcode\nqrcode\nimage",
    "default": "static"
   },
   {

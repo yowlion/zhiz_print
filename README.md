@@ -26,7 +26,7 @@
 2. [安装与启用](#二安装与启用)
 3. [设计器入门](#三设计器入门)
 4. [数据绑定(占位符)](#四数据绑定占位符)
-5. [单元格值的四种语义](#五单元格值的四种语义-核心)
+5. [单元格值语义(static 统一承载)](#五单元格值语义static-统一承载)
 6. [行控制与排序](#六行控制与排序)
 7. [单元格类型](#七单元格类型)
 8. [分页与多页设计](#八分页与多页设计)
@@ -43,7 +43,7 @@
 
 ## 一、概述与架构
 
-zhiz_print 用表格式网格设计打印版面,支持单元格合并、四种取值语义(静态 / 逻辑 / 表达式 / 合计)、按列排序、自动分页、二维码条码图片,以及多引擎 PDF / Excel 导出。所有打印操作记录为持久化日志(渲染快照,不随后续设计改动而变化)。
+zhiz_print 用表格式网格设计打印版面,支持单元格合并、统一取值语义(占位符 / `=`表达式 / `=`条件 / 合计)、按列排序、自动分页、二维码条码图片,以及多引擎 PDF / Excel 导出。所有打印操作记录为持久化日志(渲染快照,不随后续设计改动而变化)。
 
 v15.22 起支持**报表打印**:设计目标可选「报表」(Report),ERPNext 报表(Query Report / Script Report,如库存余额 / 总账)同样可以用本设计器设计打印模板 —— 报表行绑定 `rep` 占位符、筛选值进页眉、合计用 `=rowsum()` 自行设计,与单据打印共用同一套渲染 / 分页 / 输出管线。
 
@@ -52,7 +52,7 @@ v15.22 起支持**报表打印**:设计目标可选「报表」(Report),ERPNext 
 | 阶段 | 说明 | 关键代码 |
 |---|---|---|
 | **1. 数据获取** | 单据模式:从目标单据(doc)读主表字段、子表(如 `items`)、自定义查询(`design_queries`)、用户参数(`param`);报表模式:以当前用户身份同步执行报表查询,报表行注入为 `__report_main__` 伪查询 | `frappe.get_doc` · `_execute_query_with_doc_context` · `zhiz_print.api.report_print._run_report` |
-| **2. 运算** | 四种单元格值语义:静态替换、logic 条件表达式、`=` 算术表达式、`=rowsum()` 合计 | `_eval_logic_code` · `_eval_expression_cell` · `_eval_rowsum` |
+| **2. 运算** | 值语义(static 统一):占位符替换、`=` 算术/条件表达式(同上下文:doc/row/get_value/fmt)、`=rowsum()` 合计 | `_eval_expression_cell` · `_eval_rowsum` |
 | **3. 渲染** | 展开数据驱动行 → 按行级 `sorts` 排序 → 列值计算 → 客户端实测分页 → 组装 HTML | `_build_expanded_rows_v2` · `_build_row_html` · `build_measurement_html` |
 | **4. 输出** | 打印预览 / PDF(wkhtmltopdf·WeasyPrint·Chromium) / Excel(openpyxl) / 批量 | `render_print_preview` · `generate_print_pdf` · `export_print_excel` |
 
@@ -172,7 +172,7 @@ bench build
 | `{rep.filters.字段}` | 当前报表筛选值 —— 任意单元格与页眉页脚均可用,常用于打印标题区(公司 / 日期区间) |
 | `{rep.items.字段}` | 报表当前行数据 —— 仅数据驱动行内生效;含此占位符的行自动按报表行展开 |
 
-> ⚠️ `rep` 是保留前缀,**数据查询名称不能命名为 rep**;报表打印会剔除报表引擎自动附加的合计行,合计请用 `=rowsum()` 自行设计(见[五、单元格值语义](#五单元格值的四种语义-核心))。
+> ⚠️ `rep` 是保留前缀,**数据查询名称不能命名为 rep**;报表打印会剔除报表引擎自动附加的合计行,合计请用 `=rowsum()` 自行设计(见[五、单元格值语义](#五单元格值语义static-统一承载))。
 
 > 💡 富文本字段(Text Editor 类型,如 `terms`)打印时自动取**纯文本**显示,不输出 HTML 标签。
 
@@ -297,7 +297,9 @@ item_code=doc.items.item_code                 ← 子表字段(数据驱动行�
 
 ---
 
-## 五、单元格值的四种语义 (核心)
+## 五、单元格值语义(static 统一承载)
+
+> v15.22.42 起单元格类型仅 静态文本/条码/二维码/图片 四类,**全部值语义由静态文本承载**:占位符、`=算术`、`=rowsum()`、`=条件表达式`(原「条件表达式」类型,改写为值前加 `=`)。旧类型 data_query/logic 已存量迁移(patch),渲染端保留遗留通道兼容旧导出模板。
 
 这是 zhiz_print 最强大的能力:`cell_value` 不只是文本替换,而是根据写法自动选择四种运算语义之一。
 
@@ -311,7 +313,7 @@ item_code=doc.items.item_code                 ← 子表字段(数据驱动行�
 备注:{doc.items.additional_notes}
 ```
 
-### ② logic — 条件表达式(Python) · cell_type = logic
+### ② = 条件表达式(Python · 原 logic 类型,v15.22.42 起为 static + `=` 前缀)
 
 把单元格类型设为 **logic**,`cell_value` 写 Python 表达式。用于跨表取值、条件判断。暴露变量与助手:
 
@@ -367,12 +369,12 @@ fmt(row.qty * row.weight_per_unit, 3)
 
 > 💡 **用法**:把 `=pagerowsum(R:C)` 单元格放在**每页都重复出现的行**(把该行的行类型设为 `Repeat Title Row` 重复标题行)里,这样每一张打印页渲染时它都会算一次,且用的是当前页的数据,正好得到「本页小计」;把 `=rowsum(R:C)` 放在数据行之后的**普通行**(只出现一次),用于「总计」。若 pagerowsum 放在普通行,它只在第一页出现、只算第一页的数据。
 
-### 四种语义对照表
+### 值语义对照表
 
 | 写法 | 触发条件 | 示例 | 结果 |
 |---|---|---|---|
 | static | 无 `=` 前缀,非 logic | `客户:{doc.customer}` | 替换占位符 |
-| logic | cell_type = logic | `get_value("Item", row.item_code, "x")` | Python 表达式求值 |
+| `=条件` | static + `=` 前缀 | `=get_value("Item", row.item_code, "x")` | Python 表达式求值(True/False) |
 | =expression | `=` 开头(非 rowsum) | `={doc.items.qty}*{doc.items.rate}` | 替换后算术求值 |
 | =rowsum | `=rowsum(R:C)` | `=rowsum(5:7)` | 第R行第C列合计 |
 | =pagerowsum | `=pagerowsum(R:C)` | `=pagerowsum(5:7)` | 第R行第C列,只合计当前打印页 |
@@ -821,8 +823,8 @@ CSS 样式转 Excel 格式(openpyxl),条码 / 二维码以图片形式嵌入单�
 
 | 写法 | 语义 | 条件 |
 |---|---|---|
-| `xxx{doc.f}xxx` | static 直接替换 | 非 = 开头,非 logic |
-| `get_value(...)` | logic Python 表达式 | cell_type = logic |
+| `xxx{doc.f}xxx` | 占位符替换 | 非 `=` 开头 |
+| `=get_value(...)` | 条件表达式 | static + `=` 前缀 |
 | `=算术` | expression 求值 | = 开头 |
 | `=rowsum(R:C)` | 合计第R行第C列 | =rowsum 开头 |
 | `=pagerowsum(R:C)` | 只合计当前打印页 | =pagerowsum 开头 |

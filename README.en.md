@@ -219,8 +219,7 @@ Notes:
 
 | cell_type | Description | Extra Config |
 |-----------|-------------|--------------|
-| static | Static text + placeholders / `=` expressions / `=rowsum` | — |
-| logic | Python conditional expression | — |
+| static | **Unified text type** (v15.22.42): placeholders / `=` arithmetic / `=rowsum` / `=` conditional expressions (former logic type, carried by the `=` prefix) | — |
 | barcode | Barcode (**22 symbologies**, v15.23) | `barcode_format` · `barcode_width` · `barcode_height` · `barcode_show_text` · `barcode_text_size` |
 | qrcode | QR code | `barcode_width` · `barcode_height` |
 | image | Image, `cell_value` holds a URL or `/files/xxx.png` | — |
