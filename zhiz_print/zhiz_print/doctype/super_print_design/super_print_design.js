@@ -1129,6 +1129,8 @@ class SuperPrintDesigner {
               example: '=flt(row.qty) * 2' },
             { name: 'fmt(v, precision)', usage: '数值定小数位格式化', snippet: 'fmt(flt(row.qty) * 2, 2)',
               example: '=fmt(flt(row.qty) * 2, 2)' },
+            { name: 'doc', usage: '目标单据对象(取字段)', snippet: 'doc.grand_total',
+              example: '=flt(doc.grand_total) > 100' },
             { name: 'row', usage: '数据驱动行当前行对象', snippet: 'row.qty',
               example: '=row.qty > 0' },
             { name: 'max(a, b)', usage: '取较大值', snippet: 'max(row.qty, 10)',
