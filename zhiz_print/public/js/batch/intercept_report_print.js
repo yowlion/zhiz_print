@@ -81,7 +81,6 @@ zhiz_print.report.open_print_page = function (query_report) {
     // 整页跳转(非 SPA set_route):确保 print 页面全新加载并携带 query;
     // spd_report_print=1 标记打印意图来自报表查询页 —— print.js 只认此标记进报表模式,
     // Report 文档表单页(/app/report/<name>)的原生打印不受影响(v15.22.39)
-    sessionStorage.setItem('spd_report_print:' + query_report.report_name, '1');
     window.location.href = '/app/print/Report/' + encodeURIComponent(query_report.report_name)
         + (qs ? '?' + qs + '&spd_report_print=1' : '?spd_report_print=1');
 };

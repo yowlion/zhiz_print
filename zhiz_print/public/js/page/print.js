@@ -19,8 +19,10 @@ frappe.ui.form.PrintView = class SuperPrintView extends frappe.ui.form.PrintView
 		// (拦截器 open_print_page 用整页跳转并带 spd_report_print=1 标记 + URL 筛选)。
 		// Report 文档表单页(/app/report/<name>)的原生打印按钮不带此标记 → 走原生单据打印,
 		// 不误入报表打印模式(v15.22.39)。
-		const isFromReportView = new URLSearchParams(window.location.search).get('spd_report_print') === '1'
-			|| (window.sessionStorage && sessionStorage.getItem('spd_report_print:' + (route[2] ? decodeURIComponent(route[2]) : '')) === '1');
+		// 只认 URL 标记:拦截器是整页 href 跳转(URL 必带 spd_report_print=1),
+		// 表单页 print_doc 是 SPA set_route(URL 不带 query)—— 两路径天然可区分;
+		// 不用 sessionStorage 兜底(残留会让后走的表单页打印误判,已删)。
+		const isFromReportView = new URLSearchParams(window.location.search).get('spd_report_print') === '1';
 		if (doctype === 'Report' && route[2] && isFromReportView) {
 			if (pd && pd.report_enabled) {
 				this.is_super_print_mode = true;
