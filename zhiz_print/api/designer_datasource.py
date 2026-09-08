@@ -50,15 +50,27 @@ def get_datasource_tree(design_name=None, target_doctype=None, report_name=None)
 
     tree = []
 
-    # ① 单据 doc
+    # ① 单据 doc(label 经 __(...) 翻译;主表字段包「主表」虚拟组,子表各组平级)
     if target_doctype:
-        children = []
-        for f in _meta_fields(target_doctype):
-            children.append({
-                "key": "doc." + f["fieldname"],
-                "label": "{0} ({1})".format(f["label"], f["fieldname"]),
-                "leaf": True,
-            })
+        main_fields = []
+        try:
+            meta = frappe.get_meta(target_doctype)
+            for df in meta.fields:
+                if df.fieldtype in SKIP_FIELDTYPES or df.fieldname.startswith("__"):
+                    continue
+                if df.fieldtype == "Table":
+                    continue
+                main_fields.append({
+                    "key": "doc." + df.fieldname,
+                    "label": "{0} ({1})".format(_(df.label or df.fieldname), df.fieldname),
+                    "leaf": True,
+                })
+        except Exception:
+            pass
+        children = [{
+            "key": "doc-main", "label": "主表",
+            "icon": "fa-table", "children": main_fields,
+        }]
         # 子表字段:doc.<child>.<field>(子表标识为 doc.<child>)
         try:
             meta = frappe.get_meta(target_doctype)
@@ -66,14 +78,14 @@ def get_datasource_tree(design_name=None, target_doctype=None, report_name=None)
                 if df.fieldtype == "Table":
                     sub = [{
                         "key": "doc.{0}.{1}".format(df.fieldname, sf.fieldname),
-                        "label": "{0} ({1})".format(sf.label or sf.fieldname, sf.fieldname),
+                        "label": "{0} ({1})".format(_(sf.label or sf.fieldname), sf.fieldname),
                         "leaf": True,
                     } for sf in frappe.get_meta(df.options).fields
                         if sf.fieldtype not in SKIP_FIELDTYPES]
                     if sub:
                         children.append({
                             "key": "doc." + df.fieldname,
-                            "label": "{0} [子表]".format(df.label or df.fieldname),
+                            "label": "{0} [子表]".format(_(df.label or df.fieldname)),
                             "children": sub,
                         })
         except Exception:
@@ -114,7 +126,7 @@ def get_datasource_tree(design_name=None, target_doctype=None, report_name=None)
             rep_children.append({
                 "key": "rep-items", "label": "报表数据列", "icon": "fa-table",
                 "children": [{"key": "rep.items." + c["fieldname"],
-                              "label": "{0} ({1})".format(c["label"], c["fieldname"]),
+                              "label": "{0} ({1})".format(_(c["label"]), c["fieldname"]),
                               "leaf": True} for c in cols],
             })
         if rep_children:

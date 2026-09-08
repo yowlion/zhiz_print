@@ -1047,6 +1047,7 @@ class SuperPrintDesigner {
                 const ph = '{' + (leaf.dataset.dsKey || '') + '}';
                 if (this.currentCell) {
                     this.updateCellProperty('cell_value', ph);
+                    this._syncPropValueInput(ph);
                     frappe.show_alert({ message: __('已写入') + ': ' + ph, indicator: 'blue' });
                 } else {
                     if (navigator.clipboard) navigator.clipboard.writeText(ph);
@@ -1057,27 +1058,42 @@ class SuperPrintDesigner {
         wrap.querySelectorAll('.spd-ds-group').forEach(g => {
             g.addEventListener('click', () => g.parentElement.classList.toggle('open'));
         });
-        // 单元格 drop 接收
+        // 单元格 drop 接收:容器级事件委托(refreshGrid 会重建单元格 DOM,
+        // 逐 cell 绑定会随重建失效 —— 委托到常驻容器一次绑好)
         const container = document.getElementById(this.designContainerId);
-        container.querySelectorAll('.spd-cell').forEach(cell => {
-            if (cell._dsDropBound) return;
-            cell._dsDropBound = true;
-            cell.addEventListener('dragover', (e) => {
-                if (e.dataTransfer.types.includes('text/plain')) {
+        if (container && !container._dsDropDelegated) {
+            container._dsDropDelegated = true;
+            container.addEventListener('dragover', (e) => {
+                const cell = e.target.closest('.spd-cell');
+                if (cell && e.dataTransfer.types.includes('text/plain')) {
                     e.preventDefault();
+                    container.querySelectorAll('.spd-cell.spd-drop-hover').forEach(c => c.classList.remove('spd-drop-hover'));
                     cell.classList.add('spd-drop-hover');
                 }
             });
-            cell.addEventListener('dragleave', () => cell.classList.remove('spd-drop-hover'));
-            cell.addEventListener('drop', (e) => {
+            container.addEventListener('dragleave', (e) => {
+                const cell = e.target.closest('.spd-cell');
+                if (cell) cell.classList.remove('spd-drop-hover');
+            });
+            container.addEventListener('drop', (e) => {
+                const cell = e.target.closest('.spd-cell');
+                container.querySelectorAll('.spd-cell.spd-drop-hover').forEach(c => c.classList.remove('spd-drop-hover'));
+                if (!cell) return;
                 e.preventDefault();
-                cell.classList.remove('spd-drop-hover');
                 const ph = e.dataTransfer.getData('text/plain');
                 if (!ph || !ph.startsWith('{')) return;
                 this.handleCellClick(cell.dataset.cellId);
                 this.updateCellProperty('cell_value', ph);
+                this._syncPropValueInput(ph);
             });
-        });
+        }
+    }
+
+    // 双击/拖拽写入后同步右侧属性面板的「值」输入框(所见即所得)
+    _syncPropValueInput(value) {
+        const container = document.getElementById(this.designContainerId);
+        const ta = container?.querySelector('#prop-cell-value');
+        if (ta && value !== undefined && value !== null) ta.value = value;
     }
 
     _setToolbarState(mode) {
