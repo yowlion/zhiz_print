@@ -1167,10 +1167,16 @@ class SuperPrintDesigner {
             pop.querySelectorAll('.spd-fx-item').forEach(el => {
                 el.addEventListener('click', () => {
                     // 引导填入:光标处插入片段(选区替换),textarea 聚焦供继续修改
-                    const snip = el.dataset.snippet || '';
+                    let snip = el.dataset.snippet || '';
                     const s = ta.selectionStart !== null ? ta.selectionStart : ta.value.length;
                     const e = ta.selectionEnd !== null ? ta.selectionEnd : s;
-                    ta.value = ta.value.slice(0, s) + snip + ta.value.slice(e);
+                    // 值已有 '=' 前缀时剥掉片段自带的 '='(合计函数片段 '=rowsum(...)'
+                    // 否则拼出 '==rowsum(...)' 双等号
+                    const before = ta.value.slice(0, s);
+                    if (before.trim().endsWith('=') && snip.startsWith('=')) {
+                        snip = snip.slice(1);
+                    }
+                    ta.value = before + snip + ta.value.slice(e);
                     const pos = s + snip.length;
                     ta.focus();
                     ta.setSelectionRange(pos, pos);
