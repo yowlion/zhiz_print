@@ -474,3 +474,14 @@
 
 /* 拖拽目标高亮 */
 .spd-cell.spd-drop-hover { outline:2px dashed #2563eb !important; outline-offset:-2px; background:rgba(37,99,235,.08) !important; }
+
+/* ==================== fx 方法助手弹层 (v15.23) ==================== */
+.spd-fx-btn { vertical-align: middle; }
+.spd-fx-popover { position:absolute; top:100%; left:0; right:0; z-index:1060; background:#fff; border:1px solid #c8d2e0; border-radius:6px; box-shadow:0 8px 24px rgba(15,23,42,.18); max-height:260px; overflow-y:auto; margin-top:4px; }
+.spd-fx-group { position:sticky; top:0; background:#f1f5f9; font-size:10px; font-weight:700; color:#475569; padding:4px 10px; border-bottom:1px solid #e2e8f0; }
+.spd-fx-item { padding:6px 10px; cursor:pointer; border-bottom:1px solid #f1f5f9; }
+.spd-fx-item:hover { background:#eef4ff; }
+.spd-fx-name { font-size:11px; font-weight:600; color:#1d4ed8; font-family:Menlo,Consolas,monospace; }
+.spd-fx-usage { font-size:10px; color:#475569; margin-top:1px; }
+.spd-fx-example { font-size:9px; color:#9ca3af; margin-top:1px; font-family:Menlo,Consolas,monospace; }
+.spd-fx-empty { padding:10px; color:#9ca3af; font-size:11px; text-align:center; }

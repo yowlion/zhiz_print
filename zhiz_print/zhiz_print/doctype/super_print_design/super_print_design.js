@@ -1110,6 +1110,105 @@ class SuperPrintDesigner {
         if (ta && value !== undefined && value !== null) ta.value = value;
     }
 
+    // ==================== = 表达式方法助手 (v15.23) ====================
+
+    // 方法库:与渲染端 _build_safe_eval_locals / 占位符 / 合计函数 一一对应
+    _fxLibrary() {
+        return [
+            { group: '占位符' },
+            { name: '{doc.field}', usage: '目标单据字段(主表)', snippet: '{doc.name}',
+              example: '单号: {doc.name}' },
+            { name: '{doc.子表.field}', usage: '子表行字段 · 行自动按子表展开', snippet: '{doc.items.qty}',
+              example: '数量 {doc.items.qty} / 单价 {doc.items.rate}' },
+            { name: '{param.name}', usage: '打印前弹窗填的参数', snippet: '{param.remark}',
+              example: '备注: {param.remark}' },
+            { name: '{查询名.列}', usage: '数据查询结果首行', snippet: '{ds01.qty}',
+              example: '{bom_list.qty}' },
+            { name: '{rep.field}', usage: '报表本身字段(报表模式)', snippet: '{rep.name}',
+              example: '报表名: {rep.name}' },
+            { name: '{rep.filters.field}', usage: '当前报表筛选值(报表模式)', snippet: '{rep.filters.company}',
+              example: '公司: {rep.filters.company}' },
+            { name: '{rep.items.field}', usage: '报表当前行 · 行自动展开(报表模式)', snippet: '{rep.items.item_code}',
+              example: '物料: {rep.items.item_code}' },
+            { group: '合计函数' },
+            { name: '=rowsum(R:C)', usage: '第 R 行(数据驱动行)展开后第 C 列显示值合计', snippet: '=rowsum(8:4)',
+              example: '合计行第4列 =rowsum(8:4)' },
+            { name: '=pagerowsum(R:C)', usage: '同上但只合计当前打印页', snippet: '=pagerowsum(8:4)',
+              example: '每页小计 =pagerowsum(8:4)' },
+            { group: '求值函数(= 表达式内)' },
+            { name: 'get_value(doctype, name, field)', usage: "跨表取单字段(SQL直查,空返回空串)", snippet: 'get_value("Item", row.item_code, "brand")',
+              example: '=get_value("Item", row.item_code, "brand")' },
+            { name: 'flt(v)', usage: '转数值(空/错回0)', snippet: 'flt(row.qty)',
+              example: '=flt(row.qty) * 2' },
+            { name: 'fmt(v, precision)', usage: '数值定小数位格式化', snippet: 'fmt(flt(row.qty) * 2, 2)',
+              example: '=fmt(flt(row.qty) * 2, 2)' },
+            { name: 'doc', usage: '目标单据对象(取字段)', snippet: 'doc.grand_total',
+              example: '=flt(doc.grand_total) > 100' },
+            { name: 'row', usage: '数据驱动行当前行对象', snippet: 'row.qty',
+              example: '=row.qty > 0' },
+            { name: 'max / min / round', usage: '内置数学函数', snippet: 'max(row.qty, 10)',
+              example: '=round(flt(row.qty) / 3, 2)' },
+            { name: 'has_native_print_format()', usage: '目标单据是否存在原生打印格式', snippet: 'has_native_print_format()',
+              example: '=not has_native_print_format()' },
+        ];
+    }
+
+    _bindFxAssistant() {
+        const container = document.getElementById(this.designContainerId);
+        const ta = container?.querySelector('#prop-cell-value');
+        const btn = container?.querySelector('#spd-fx-btn');
+        const pop = container?.querySelector('#spd-fx-popover');
+        if (!ta || !pop || !btn || ta._fxBound) return;
+        ta._fxBound = true;
+
+        const render = (filter) => {
+            const f = (filter || '').toLowerCase();
+            let html = '';
+            this._fxLibrary().forEach(item => {
+                if (item.group) {
+                    html += '<div class="spd-fx-group">' + __(item.group) + '</div>';
+                    return;
+                }
+                if (f && !(item.name + item.usage).toLowerCase().includes(f)) return;
+                html += '<div class="spd-fx-item" data-snippet="' + this.escapeHtml(item.snippet) + '">'
+                    + '<div class="spd-fx-name">' + this.escapeHtml(item.name) + '</div>'
+                    + '<div class="spd-fx-usage">' + this.escapeHtml(item.usage) + '</div>'
+                    + '<div class="spd-fx-example">' + __('e.g.') + ' ' + this.escapeHtml(item.example) + '</div>'
+                    + '</div>';
+            });
+            pop.innerHTML = html || '<div class="spd-fx-empty">' + __('No match') + '</div>';
+            pop.querySelectorAll('.spd-fx-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    // 引导填入:光标处插入片段(选区替换),textarea 聚焦供继续修改
+                    const snip = el.dataset.snippet || '';
+                    const s = ta.selectionStart !== null ? ta.selectionStart : ta.value.length;
+                    const e = ta.selectionEnd !== null ? ta.selectionEnd : s;
+                    ta.value = ta.value.slice(0, s) + snip + ta.value.slice(e);
+                    const pos = s + snip.length;
+                    ta.focus();
+                    ta.setSelectionRange(pos, pos);
+                    pop.style.display = 'none';
+                    ta.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+        };
+
+        const show = (filter) => { render(filter); pop.style.display = 'block'; };
+
+        // 输入 '=' 开头时自动弹;fx 按钮始终可开
+        ta.addEventListener('input', () => {
+            const v = ta.value;
+            if (v.startsWith('=') || /\{\w*$/.test(v.slice(0, ta.selectionStart || 0))) show('');
+        });
+        btn.addEventListener('click', () => {
+            pop.style.display = pop.style.display === 'none' ? (show(''), 'block') : 'none';
+        });
+        // 点外部关闭
+        document.addEventListener('click', (e) => {
+            if (!pop.contains(e.target) && e.target !== ta && e.target !== btn) pop.style.display = 'none';
+        });
+    }
+
     _setToolbarState(mode) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
@@ -1913,8 +2012,11 @@ class SuperPrintDesigner {
             '<div class="super-zprint-prop-tab-content' + contentTabCls + '" data-tab="content">' +
                 '<label>' + __('Type') + ':</label>' +
                 '<select id="prop-cell-type" class="form-control">' + typeOptions + '</select>' +
-                '<label>' + __('Value') + ':</label>' +
-                '<textarea id="prop-cell-value" class="form-control" rows="2"></textarea>' +
+                '<label>' + __('Value') + ': <button type="button" class="btn btn-xs btn-default spd-fx-btn" id="spd-fx-btn" title="' + __('Insert function') + '" style="margin-left:4px;padding:0 6px;font-size:10px"><i class="fa fa-magic"></i> fx</button></label>' +
+                '<div style="position:relative">' +
+                '<textarea id="prop-cell-value" class="form-control" rows="2" autocomplete="off"></textarea>' +
+                '<div class="spd-fx-popover" id="spd-fx-popover" style="display:none"></div>' +
+                '</div>' +
                 '<label style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="prop-print-count-driver"> ' + __('Set as Print Count Driver') + '</label>' +
                 '<div id="query-group" style="display:none">' +
                     '<label>' + __('Bound Query') + ':</label>' +
@@ -2132,6 +2234,7 @@ class SuperPrintDesigner {
     bindPropertyFormEvents(cell) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
+        this._bindFxAssistant();
 
         container.querySelector('#prop-cell-type')?.addEventListener('change', (e) => {
             this.updateCellProperty('cell_type', e.target.value);
