@@ -1114,22 +1114,9 @@ class SuperPrintDesigner {
 
     // 方法库:与渲染端 _build_safe_eval_locals / 占位符 / 合计函数 一一对应
     _fxLibrary() {
+        // v15.22.46:只提示函数方法(合计+求值);占位符不入列 —— 数据源侧边栏拖拽/双击
+        // 已是占位符的标准入口,此处重复提示反而混淆
         return [
-            { group: '占位符' },
-            { name: '{doc.field}', usage: '目标单据字段(主表)', snippet: '{doc.name}',
-              example: '单号: {doc.name}' },
-            { name: '{doc.子表.field}', usage: '子表行字段 · 行自动按子表展开', snippet: '{doc.items.qty}',
-              example: '数量 {doc.items.qty} / 单价 {doc.items.rate}' },
-            { name: '{param.name}', usage: '打印前弹窗填的参数', snippet: '{param.remark}',
-              example: '备注: {param.remark}' },
-            { name: '{查询名.列}', usage: '数据查询结果首行', snippet: '{ds01.qty}',
-              example: '{bom_list.qty}' },
-            { name: '{rep.field}', usage: '报表本身字段(报表模式)', snippet: '{rep.name}',
-              example: '报表名: {rep.name}' },
-            { name: '{rep.filters.field}', usage: '当前报表筛选值(报表模式)', snippet: '{rep.filters.company}',
-              example: '公司: {rep.filters.company}' },
-            { name: '{rep.items.field}', usage: '报表当前行 · 行自动展开(报表模式)', snippet: '{rep.items.item_code}',
-              example: '物料: {rep.items.item_code}' },
             { group: '合计函数' },
             { name: '=rowsum(R:C)', usage: '第 R 行(数据驱动行)展开后第 C 列显示值合计', snippet: '=rowsum(8:4)',
               example: '合计行第4列 =rowsum(8:4)' },
@@ -1195,10 +1182,17 @@ class SuperPrintDesigner {
 
         const show = (filter) => { render(filter); pop.style.display = 'block'; };
 
-        // 输入 '=' 开头时自动弹;fx 按钮始终可开
+        // fx 按钮可见性:值以 '=' 开头才显示(用户已进入表达式语境)
+        const _syncFxBtn = () => {
+            btn.style.display = ta.value.startsWith('=') ? '' : 'none';
+        };
+        _syncFxBtn();
+
+        // 输入 '=' 开头时自动弹
         ta.addEventListener('input', () => {
-            const v = ta.value;
-            if (v.startsWith('=') || /\{\w*$/.test(v.slice(0, ta.selectionStart || 0))) show('');
+            if (ta.value.startsWith('=')) show('');
+            else { pop.style.display = 'none'; _syncFxBtn(); }
+            _syncFxBtn();
         });
         btn.addEventListener('click', () => {
             pop.style.display = pop.style.display === 'none' ? (show(''), 'block') : 'none';
@@ -2130,6 +2124,8 @@ class SuperPrintDesigner {
         const setValue = (id, val) => { const el = container.querySelector('#' + id); if (el) el.value = val || ''; };
         setValue('prop-cell-type', cell.cell_type);
         setValue('prop-cell-value', cell.cell_value);
+        const _fxb = container.querySelector('#spd-fx-btn');
+        if (_fxb) _fxb.style.display = (cell.cell_value || '').startsWith('=') ? '' : 'none';
         setValue('prop-query-name', cell.query_name);
         setValue('prop-data-key', cell.data_key);
         setValue('prop-barcode-format', cell.barcode_format || 'CODE128');
