@@ -1031,7 +1031,9 @@ class SuperPrintDesigner {
     _renderDsNodes(wrap, nodes, depth) {
         nodes.forEach(n => {
             const el = document.createElement('div');
-            el.className = 'spd-ds-node' + (depth < 1 ? ' open' : '');
+            // v15.22.52:默认展开到二级(顶层「单据字段」+「主表/子表组」标题可见),
+            // 叶子字段收起 —— 侧边栏首屏有结构感,点开即选
+            el.className = 'spd-ds-node' + (depth < 2 ? ' open' : '');
             if (n.children && n.children.length) {
                 el.innerHTML = '<div class="spd-ds-group"><span class="spd-ds-caret"><i class="fa fa-play"></i></span>'
                     + (n.icon ? '<i class="fa ' + n.icon + '"></i>' : '')
