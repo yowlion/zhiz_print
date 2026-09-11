@@ -2073,6 +2073,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             return self._render_barcode_content(cell_value, cell_data, cell_w, cell_h)
         elif cell_type == 'qrcode':
             return self._render_qrcode_content(cell_value, cell_data, cell_w, cell_h)
+        elif cell_type == 'html':
+            return self._render_html_content(cell_value, cell_data, cell_w, cell_h)
         elif cell_type == 'image':
             if cell_value:
                 if cint(frappe.db.get_single_value("Zprint Setting", "explicit_image_preview")):
@@ -2133,6 +2135,123 @@ class SuperPrintDesign(frappe.model.document.Document):
         if img_src:
             return f'<img src="{img_src}" style="max-width:{qr_size}px;max-height:{qr_size}px;object-fit:contain;">'
         return frappe.utils.escape_html(value)
+
+    # html 类型:打印体系 px↔mm 换算(与条码渲染同一套语义)
+    _HTML_PX_PER_MM = 4.0
+
+    def _extract_html_docs(self, value):
+        """从字段值提取 HTML 文档列表。
+
+        兼容两种形态:
+        - JSON 数组(如 SF Waybill print_html):[{"waybill_no": "...", "html": "<!DOCTYPE..."}]
+          → 逐元素取 html 键,多包裹全部保留(渲染时纵向堆叠);
+        - 纯 HTML 字符串 → 单元素列表。"""
+        if not value:
+            return []
+        text = str(value).strip()
+        if not text:
+            return []
+        if text.startswith('['):
+            try:
+                arr = json.loads(text)
+            except Exception:
+                return [text]
+            docs = []
+            for el in (arr if isinstance(arr, list) else [arr]):
+                if isinstance(el, dict):
+                    html = el.get('html') or el.get('print_html') or ''
+                    if html:
+                        docs.append(str(html))
+                elif el:
+                    docs.append(str(el))
+            return docs
+        return [text]
+
+    def _read_html_doc_size(self, doc_html):
+        """读 HTML 文档外层容器的物理尺寸(width/height,mm),px 语义返回。
+
+        顺丰面单外层 div style 形如 `height:130mm;width:76mm`(顺序不定)。
+        先定位含 height:mm 的 div,再从**同一段** style 里取 width,避免两正则
+        各自命中不同 div 配错对。取不到 mm 尺寸返回 None(渲染端退化为 100% 填充)。"""
+        m = re.search(
+            r'<div[^>]+style\s*=\s*(["\'])(?P<style>[^"\']*?height\s*:\s*(?P<h>\d+(?:\.\d+)?)mm[^"\']*?)\1',
+            doc_html, re.I)
+        if not m:
+            return None
+        h_mm = float(m.group('h'))
+        w_m = re.search(r'width\s*:\s*(\d+(?:\.\d+)?)mm', m.group('style'), re.I)
+        if not w_m:
+            return None
+        w_mm = float(w_m.group(1))
+        if w_mm <= 0 or h_mm <= 0:
+            return None
+        return (round(w_mm * self._HTML_PX_PER_MM), round(h_mm * self._HTML_PX_PER_MM))
+
+    def _render_html_content(self, cell_value, cell_data, cell_w=100, cell_h=40):
+        """网页代码(html)类型:值按 HTML 文档解析渲染。
+
+        - JSON 数组自动解包(多包裹纵向堆叠),纯 HTML 字符串直接渲染;
+        - 每个文档经 iframe srcdoc 隔离 —— 文档自带全局 <style>(如 *{margin:0}、
+          @page{margin:0})直接内联会污染整个打印页(print.js 渲染原生 Print Format
+          同款做法);sandbox="" 禁脚本收敛 XSS;
+        - 缩放:以文档原始 mm 尺寸为 1:1 基准,按单元格可用区(减内边距+边框,
+          与条码同口径)等比 scale,居中显示 —— 单元格尺寸调整,显示跟着调整;
+        - 取不到文档 mm 尺寸时退化为 iframe 100%×100% 填充(不缩放)。
+
+        PDF 引擎(wkhtmltopdf 不支持 srcdoc / WeasyPrint 不支持 iframe)在
+        batch_print 准备阶段把 iframe 展开为内联容器,见 _expand_html_iframes。"""
+        docs = self._extract_html_docs(cell_value)
+        if not docs:
+            return ''
+
+        # 单元格内边距(css padding,四向最大值,无则默认 2px;与条码渲染同口径)
+        pad = 2
+        css = cell_data.get('css_style') or ''
+        pm = re.search(r'padding\s*:\s*(\d+(?:\.\d+)?)px', css)
+        if pm:
+            pad = float(pm.group(1))
+        avail_w = max(20, int(cell_w) - 2 * int(pad + 1))
+        avail_h = max(20, int(cell_h) - 2 * int(pad + 1))
+
+        blocks = []
+        n = len(docs)
+        # 多包裹纵向堆叠:每片高度配额 = 可用高/n(宽度共用)
+        slot_h = avail_h // n if n > 1 else avail_h
+
+        for doc in docs:
+            srcdoc = frappe.utils.escape_html(doc)
+            size = self._read_html_doc_size(doc)
+            if size:
+                w0, h0 = size
+                scale = min(avail_w / w0, slot_h / h0)
+                scale = min(max(scale, 0.05), 4.0)
+                inner = (
+                    f'<iframe srcdoc="{srcdoc}" sandbox="" data-sp-html-doc="1" '
+                    f'style="width:{w0}px;height:{h0}px;border:0;'
+                    f'transform:scale({scale:.4f});transform-origin:top left;"></iframe>'
+                )
+                # 缩放后的实际视口宽高 = 原始×scale,供外层 flex 居中
+                vw, vh = int(round(w0 * scale)), int(round(h0 * scale))
+                blocks.append(
+                    f'<div style="width:{vw}px;height:{vh}px;overflow:hidden;flex:none;">{inner}</div>'
+                )
+            else:
+                blocks.append(
+                    f'<div style="width:100%;height:100%;overflow:hidden;flex:none;">'
+                    f'<iframe srcdoc="{srcdoc}" sandbox="" data-sp-html-doc="1" '
+                    f'style="width:100%;height:100%;border:0;"></iframe></div>'
+                )
+
+        if n == 1:
+            body = blocks[0]
+        else:
+            body = ''.join(b for b in blocks)
+
+        return (
+            f'<div style="width:100%;height:100%;display:flex;'
+            f'flex-direction:column;align-items:center;justify-content:center;'
+            f'overflow:hidden;line-height:0;">{body}</div>'
+        )
 
     def _parse_css(self, css_string):
         """Parse CSS string"""

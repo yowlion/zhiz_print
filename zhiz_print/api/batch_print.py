@@ -238,6 +238,7 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
         _check_license, _check_draft_no_print, _is_draft_blocked,
         _render_print_html, _pdf_response,
         _fix_merged_cell_borders_for_pdf, _prepare_html_for_wkhtmltopdf,
+        _expand_html_iframes, _resolve_image_urls_for_pdf,
     )
 
     _check_license()
@@ -351,12 +352,17 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
     if engine_mode == "WeasyPrint":
         from weasyprint import HTML as WeasyHTML
         combined_html = _fix_merged_cell_borders_for_pdf(combined_html)
+        # WeasyPrint 不支持 iframe:html 类型单元格展开为内联容器 + 图片转 file://
+        combined_html = _expand_html_iframes(combined_html)
+        combined_html = _resolve_image_urls_for_pdf(combined_html)
         pdf_bytes = WeasyHTML(string=combined_html).write_pdf()
     elif engine_mode == "Chromium":
         pdf_bytes = _generate_chromium_pdf(combined_html, design)
     else:
         import pdfkit
         combined_html = _prepare_html_for_wkhtmltopdf(combined_html)
+        # html 类型展开(在 _prepare 内已做)出的 /files/ 相对路径图片统一转 file://
+        combined_html = _resolve_image_urls_for_pdf(combined_html)
         options = {
             "quiet": "", "encoding": "UTF-8", "print-media-type": "",
             "background": "", "images": "", "disable-smart-shrinking": "",
@@ -674,6 +680,7 @@ def batch_generate_native_pdf(doctype, docnames, print_format):
     from zhiz_print.api.print_designer import (
         _check_license, _pdf_response,
         _fix_merged_cell_borders_for_pdf, _prepare_html_for_wkhtmltopdf,
+        _expand_html_iframes, _resolve_image_urls_for_pdf,
     )
 
     _check_license()
@@ -720,10 +727,15 @@ def batch_generate_native_pdf(doctype, docnames, print_format):
     if engine_mode == "WeasyPrint":
         from weasyprint import HTML as WeasyHTML
         combined_html = _fix_merged_cell_borders_for_pdf(combined_html)
+        # WeasyPrint 不支持 iframe:html 类型单元格展开为内联容器 + 图片转 file://
+        combined_html = _expand_html_iframes(combined_html)
+        combined_html = _resolve_image_urls_for_pdf(combined_html)
         pdf_bytes = WeasyHTML(string=combined_html).write_pdf()
     else:
         import pdfkit
         combined_html = _prepare_html_for_wkhtmltopdf(combined_html)
+        # html 类型展开(在 _prepare 内已做)出的 /files/ 相对路径图片统一转 file://
+        combined_html = _resolve_image_urls_for_pdf(combined_html)
         options = {
             "quiet": "", "encoding": "UTF-8", "print-media-type": "",
             "background": "", "images": "", "disable-smart-shrinking": "",

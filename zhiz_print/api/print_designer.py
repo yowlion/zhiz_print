@@ -401,6 +401,99 @@ def _fix_merged_cell_borders_for_pdf(html):
     return str(soup)
 
 
+def _expand_html_iframes(html):
+    """把 html 类型单元格的 iframe srcdoc 展开为内联容器(仅 PDF 引擎路径调用)。
+
+    渲染端(_render_html_content)输出 iframe srcdoc 隔离文档自带的全局 <style>
+    (如顺丰面单 *{margin:0}、@page{margin:0});浏览器/Chromium 支持 srcdoc 原样
+    渲染,但 wkhtmltopdf(老 WebKit)不支持 srcdoc、WeasyPrint 不支持 iframe ——
+    这两条引擎路径在送渲染前把 iframe 展开为内联容器:
+    - 提取 <body> 内容;
+    - <style> 规则用 cssutils 逐条加 .sp-html-doc-<N> 作用域前缀(*{x} → 容器自身
+      + 容器后代;body/html → 容器自身;其余 → 前缀加后代),@page/@media 丢弃,
+      杜绝面单全局样式污染打印主文档;cssutils 解析异常时丢弃该 style(保守防泄漏);
+    - 容器沿用原 iframe 的原始尺寸 + transform:scale(缩放语义与浏览器路径一致)。
+
+    展开后的内联 <img src="/files/..."> 由随后的 _resolve_image_urls_for_pdf 统一
+    转 file://,故本函数必须在其之前调用。"""
+    import html as _html_mod
+
+    pattern = re.compile(
+        r'<iframe srcdoc="([^"]*)" sandbox="" data-sp-html-doc="1" style="([^"]*)"></iframe>',
+        re.S)
+    if not pattern.search(html):
+        return html
+
+    counter = [0]
+
+    def _scope_css(css_text, cls):
+        """CSS 规则逐条加作用域前缀;@page/@media 丢弃;异常返回空串。"""
+        try:
+            import cssutils
+            cssutils.ser.prefs.useMinified = True
+            sheet = cssutils.parseString(css_text)
+        except Exception:
+            return ''
+        out = []
+        try:
+            for rule in sheet:
+                if rule.type != rule.STYLE_RULE:
+                    continue  # @page/@media/comment 等全部丢弃
+                sels = []
+                for sel in rule.selectorList:
+                    t = (sel.selectorText or '').strip()
+                    if not t:
+                        continue
+                    if t == '*':
+                        sels.append(cls)
+                        sels.append(cls + ' *')
+                    elif t in ('body', 'html'):
+                        sels.append(cls)
+                    else:
+                        sels.append(cls + ' ' + t)
+                if sels:
+                    out.append('{0}{{{1}}}'.format(', '.join(sels), rule.style.cssText))
+        except Exception:
+            return ''
+        return '\n'.join(out)
+
+    def _extract_body(doc):
+        m = re.search(r'<body[^>]*>(.*)</body>', doc, re.I | re.S)
+        return m.group(1) if m else doc
+
+    def _extract_styles(doc):
+        return re.findall(r'<style[^>]*>(.*?)</style>', doc, re.I | re.S)
+
+    def _replace(m):
+        srcdoc_escaped, iframe_style = m.group(1), m.group(2)
+        doc = _html_mod.unescape(srcdoc_escaped)
+        counter[0] += 1
+        cls = 'sp-html-doc-{0}'.format(counter[0])
+
+        body_html = _extract_body(doc)
+        scoped_css = '\n'.join(
+            _scope_css(css_text, cls) for css_text in _extract_styles(doc))
+
+        # 容器样式沿用原 iframe:原始尺寸 + scale(有 px 尺寸),否则 100% 填充
+        wm = re.search(r'width:(\d+(?:\.\d+)?)px', iframe_style)
+        hm = re.search(r'height:(\d+(?:\.\d+)?)px', iframe_style)
+        sm = re.search(r'transform:scale\(([\d.]+)\)', iframe_style)
+        if wm and hm:
+            box_style = ('width:{0}px;height:{1}px;overflow:hidden;position:relative;'
+                         'margin:0 auto;'.format(wm.group(1), hm.group(1)))
+            if sm:
+                box_style += 'transform:scale({0});transform-origin:top left;'.format(sm.group(1))
+        else:
+            box_style = 'width:100%;height:100%;overflow:hidden;position:relative;'
+
+        inner = body_html
+        if scoped_css:
+            inner += '<style>{0}</style>'.format(scoped_css)
+        return '<div class="{0}" style="{1}">{2}</div>'.format(cls, box_style, inner)
+
+    return pattern.sub(_replace, html)
+
+
 def _resolve_image_urls_for_pdf(html):
     """Convert relative image URLs to file:// absolute paths for PDF engines.
     Handles /private/files/... and /files/... paths."""
@@ -546,6 +639,9 @@ def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, p
     # PDF-specific: fix ghost borders of merged cells
     html = _fix_merged_cell_borders_for_pdf(html)
 
+    # PDF-specific: WeasyPrint 不支持 iframe,html 类型单元格先展开为内联容器
+    html = _expand_html_iframes(html)
+
     # PDF-specific: convert relative image URLs to file:// paths
     html = _resolve_image_urls_for_pdf(html)
 
@@ -569,9 +665,14 @@ def _prepare_html_for_wkhtmltopdf(html):
     1. SVG data URL -> PNG data URL
     2. background shorthand /size -> split background-size
     3. footer flex -> table
-    4. border < 1px -> 1px"""
+    4. border < 1px -> 1px
+    5. html 类型单元格 iframe srcdoc -> 内联容器展开(老 WebKit 不支持 srcdoc)"""
     import base64
     import cairosvg
+
+    # 0. html 类型 iframe 展开(必须在 _resolve_image_urls_for_pdf 之前,
+    # 展开出的 /files/ 相对路径图片才能被后续统一转 file://)
+    html = _expand_html_iframes(html)
 
     # 1. SVG -> PNG
     def _replace_svg(m):

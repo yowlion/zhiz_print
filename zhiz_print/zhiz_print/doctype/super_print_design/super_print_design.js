@@ -54,7 +54,10 @@ class SuperPrintDesigner {
             // 统一由 static 承载;老模板加载时归一化(见 loadExistingDesign)
             { value: 'barcode', label: __('Barcode'), icon: 'fa-barcode' },
             { value: 'qrcode', label: __('QR Code'), icon: 'fa-qrcode' },
-            { value: 'image', label: __('Image'), icon: 'fa-image' }
+            { value: 'image', label: __('Image'), icon: 'fa-image' },
+            // v15.22.53: 网页代码 — 值(含 JSON 数组包 HTML,如 SF Waybill print_html)
+            // 按 HTML 文档 iframe 隔离渲染,PDF 引擎侧展开为内联容器
+            { value: 'html', label: __('HTML Code'), icon: 'fa-code' }
         ];
 
         // 22 种码制(python-barcode),group 用于下拉分组展示
@@ -712,6 +715,10 @@ class SuperPrintDesigner {
                         const bTxt = (cell.barcode_show_text === undefined || parseInt(cell.barcode_show_text)) ? ' · 文本' : '';
                         const valHint = hasValue ? this.escapeHtml(cell_value.length > 14 ? cell_value.slice(0, 14) + '…' : cell_value) : '';
                         content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + bFmt + bTxt + '</span>' + (valHint ? '<span style="color:#999;font-size:10px">' + valHint + '</span>' : '') + '</div>';
+                    } else if (cell_type === 'html') {
+                        // 网页代码:图标+值摘要占位(实际渲染走后端 iframe 隔离,画布不嵌文档)
+                        const valHint = hasValue ? this.escapeHtml(cell_value.length > 20 ? cell_value.slice(0, 20) + '…' : cell_value) : '';
+                        content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + __('HTML Code') + '</span>' + (valHint ? '<span style="color:#999;font-size:10px">' + valHint + '</span>' : '') + '</div>';
                     } else if (!hasValue) {
                         content = '';
                     } else {
