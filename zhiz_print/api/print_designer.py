@@ -468,7 +468,8 @@ def _expand_html_iframes(html):
         srcdoc_escaped, iframe_style = m.group(1), m.group(2)
         doc = _html_mod.unescape(srcdoc_escaped)
         counter[0] += 1
-        cls = 'sp-html-doc-{0}'.format(counter[0])
+        cls_name = 'sp-html-doc-{0}'.format(counter[0])
+        cls = '.' + cls_name  # 选择器前缀必须带 class 点,否则成元素选择器匹配不到
 
         body_html = _extract_body(doc)
         scoped_css = '\n'.join(
@@ -489,7 +490,7 @@ def _expand_html_iframes(html):
         inner = body_html
         if scoped_css:
             inner += '<style>{0}</style>'.format(scoped_css)
-        return '<div class="{0}" style="{1}">{2}</div>'.format(cls, box_style, inner)
+        return '<div class="{0}" style="{1}">{2}</div>'.format(cls_name, box_style, inner)
 
     return pattern.sub(_replace, html)
 
