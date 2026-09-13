@@ -315,7 +315,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                   </div>
                   <div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>
                   ${tpl.is_mine ? `<div id="pts-desens-bar" style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
-                      <i class="fa fa-eye-slash" style="color:#28a745;"></i>
+                      <i class="fa fa-eye-slash" style="color:#e6a700;"></i>
                       <span style="font-size:12px;color:#86868b;">${__('切到「设计效果」页签,点击单元格切换脱敏(绿色高亮 = 其他人看到的打印效果该格显示为 ***')}</span>
                       <button class="btn btn-primary btn-xs" id="pts-desens-save">${__('保存脱敏设置')}</button>
                       <span id="pts-desens-status" style="font-size:12px;color:#28a745;"></span>
@@ -366,7 +366,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             try {
                 const st = d.createElement('style');
                 // iframe(html类型单元格)铺满单元格会吃掉点击、事件进不到td —— picker 模式下禁其鼠标事件,点击穿透到td;仅注入在设计预览(打印效果页签不注入,不影响浏览)
-                st.textContent = 'td[data-cell-id]{cursor:pointer;} td[data-cell-id] iframe{pointer-events:none;} .pts-desens-on{outline:2px solid #28a745 !important;outline-offset:-2px;background:rgba(40,167,69,.14) !important;}';
+                st.textContent = 'td[data-cell-id]{cursor:pointer;} td[data-cell-id] iframe{pointer-events:none;} .pts-desens-on{outline:2px solid #ffc107 !important;outline-offset:-2px;background:rgba(255,193,7,.25) !important;}';
                 (d.head || d.documentElement).appendChild(st);
                 d.querySelectorAll('td[data-cell-id]').forEach(td => {
                     if (desensCells.has(td.getAttribute('data-cell-id'))) td.classList.add('pts-desens-on');
