@@ -394,13 +394,27 @@ def _desensitize_cells(html, cells_raw):
         soup = BeautifulSoup(html, "html.parser")
     except Exception:
         return html
+    def _mask(text):
+        return "".join(ch if ch.isspace() else "*" for ch in str(text))
+
     hit = 0
     for td in soup.find_all(attrs={"data-cell-id": True}):
         if td.get("data-cell-id") not in cellset:
             continue
+        # 文本节点逐字符转 *
         for text_node in td.find_all(string=True):
-            masked = "".join(ch if ch.isspace() else "*" for ch in str(text_node))
-            text_node.replace_with(masked)
+            text_node.replace_with(_mask(text_node))
+        # 内容承载属性(html 单元格的 iframe srcdoc 是转义 HTML 文档,
+        # 真实数据全在里面 — 文本节点脱敏够不到):属性值同样逐字符转 *,
+        # 标记后整格星化;style 等布局属性不动
+        for attr in ("srcdoc", "src", "alt", "title"):
+            if td.get(attr):
+                td[attr] = _mask(td[attr])
+        # 嵌套 img 的 src(data: URI 编码的是条码/图片,同样星化断内容)
+        for el in td.find_all(True):
+            for attr in ("srcdoc", "src", "alt", "title"):
+                if el.get(attr):
+                    el[attr] = _mask(el[attr])
         hit += 1
     if not hit:
         return html
