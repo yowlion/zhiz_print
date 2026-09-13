@@ -26,9 +26,9 @@
 2. [安装与启用](#二安装与启用)
 3. [设计器入门](#三设计器入门)
 4. [数据绑定(占位符)](#四数据绑定占位符)
-5. [单元格值语义(static 统一承载)](#五单元格值语义static-统一承载)
+5. [单元格值语义(两种)](#五单元格值语义两种)
 6. [行控制与排序](#六行控制与排序)
-7. [单元格类型](#七单元格类型)
+7. [内容显示方式(cell_type)](#七内容显示方式cell_type)
 8. [分页与多页设计](#八分页与多页设计)
 9. [页眉/页脚/左眉/右脚](#九页眉页脚左眉右脚)
 10. [启用条件](#十启用条件-enable_condition)
@@ -325,15 +325,22 @@ item_code=doc.items.item_code                 ← 子表字段(数据驱动行�
 
 ---
 
-## 五、单元格值语义(static 统一承载)
+## 五、单元格值语义(两种)
 
-> v15.22.42 起单元格类型仅 静态文本/条码/二维码/图片 四类,**全部值语义由静态文本承载**:占位符、`=算术`、`=rowsum()`、`=条件表达式`(原「条件表达式」类型,改写为值前加 `=`)。旧类型 data_query/logic 已存量迁移(patch),渲染端保留遗留通道兼容旧导出模板。
+> 单元格的**值语义只有两种**:文本、`=` 表达式。解析后的结果按**显示方式**(文本/条形码/二维码/图片/网页代码)呈现,见[七、内容显示方式](#七内容显示方式cell_type)。
+>
+> v15.22.42 起全部值语义由文本统一承载:占位符、`=`算术、`=rowsum()`、`=`条件表达式(原「条件表达式」类型,改写为值前加 `=`)。旧类型 data_query/logic 已存量迁移(patch),渲染端保留遗留通道兼容旧导出模板。
 
-这是 zhiz_print 最强大的能力:`cell_value` 不只是文本替换,而是根据写法自动选择四种运算语义之一。
+### ① 文本语义(默认)
 
-### ① static — 直接替换(默认)
+纯文本 + `{占位符}`,逐一替换。占位符内部按前缀分**四种数据来源**(详见[四、数据绑定](#四数据绑定占位符)):
 
-普通文本 + `{占位符}`,逐一替换。无 `=` 前缀、cell_type 非 logic。
+| 前缀 | 数据来源 | 示例 |
+|---|---|---|
+| `doc.` | 目标单据主表 / 子表字段 | `{doc.customer}` · `{doc.items.qty}` |
+| `rep.` | 报表字段 / 筛选值 / 数据行(报表模式) | `{rep.filters.company}` · `{rep.items.bal_qty}` |
+| `查询名.` | 自定义数据查询结果列 | `{bom_list.qty}` |
+| `param.` | 打印前弹窗填写 | `{param.remark}` |
 
 ```
 客户:{doc.customer}
@@ -341,9 +348,11 @@ item_code=doc.items.item_code                 ← 子表字段(数据驱动行�
 备注:{doc.items.additional_notes}
 ```
 
-### ② = 条件表达式(Python · 原 logic 类型,v15.22.42 起为 static + `=` 前缀)
+### ② = 表达式语义
 
-把单元格类型设为 **logic**,`cell_value` 写 Python 表达式。用于跨表取值、条件判断。暴露变量与助手:
+`cell_value` 以 **`=`** 开头:`=` 号后是**计算公式**,公式中可混用 `{}` 占位符取值与 `get_value` 等方法。渲染时先做占位符替换,再对整个公式 `safe_eval` 求值。
+
+**可用变量与助手**:
 
 | 可用 | 说明 |
 |---|---|
@@ -352,17 +361,7 @@ item_code=doc.items.item_code                 ← 子表字段(数据驱动行�
 | `fmt(value, precision=2)` | 数字格式化(`str.format` 被 safe_eval 禁,必须用 `fmt`) |
 | `flt` · `max` · `min` · `round` | 数值与内置函数(safe_eval 默认禁内置,需显式暴露) |
 
-```
-get_value("Item", row.item_code, "classification")     ← 取物料的"分类"字段
-"滑板" if get_value("Item", row.item_code, "classification") == "滑板" else "其他"
-fmt(row.qty * row.weight_per_unit, 3)
-```
-
-> ⚠️ **注意**:safe_eval 禁用 `str.format`、`frappe.utils.*` 属性访问、内置函数。务必用上表的 `fmt`/`flt`/`get_value`,不要写 `frappe.utils.flt(x)`。
-
-### ③ =expression — 算术表达式 (新)
-
-`cell_value` 以 **`=`** 开头:先做占位符替换,再对整个表达式 `safe_eval` 求值。用于行内运算。
+**算术运算**(行内计算):
 
 ```
 ={doc.items.qty}*{doc.items.weight_per_unit}     ← 总重 = 数量 × 件重
@@ -370,42 +369,41 @@ fmt(row.qty * row.weight_per_unit, 3)
 =round({doc.items.weight_per_unit}, 4)          ← 件重保留 4 位
 ```
 
-求值结果用 `_fmt_val` 格式化(去尾零:`50.0 → "50"`、`5.10 → "5.1"`)。字段为空导致表达式非法时(如 `100*`)记录错误日志并显示原式,便于发现缺数据。
-
-### ④ =rowsum(R:C) — 合计函数 (新)
-
-对**第 R 行(数据驱动行)所有展开项的第 C 列**显示值求和。用于合计行。兼容中英文括号 `()` / `()`。
+**条件表达式**(Python):
 
 ```
-=rowsum(5:5)     ← 第5行第5列(数量)合计
-=rowsum(5:7)     ← 第5行第7列(总重)合计 —— 第7列本身是 =round(...) 表达式也能正确累加
-=rowsum(5:9)     ← 第5行第9列(金额)合计
+get_value("Item", row.item_code, "classification")     ← 取物料的"分类"字段
+"滑板" if get_value("Item", row.item_code, "classification") == "滑板" else "其他"
+fmt(row.qty * row.weight_per_unit, 3)
 ```
 
-> 💡 **关键**:rowsum 复用列值计算逻辑,所以合计对象即使是 `=` 表达式列、logic 列,都能算对。非数字单元格自动跳过。
+**合计函数**:
+
+- `=rowsum(R:C)` — 对**第 R 行(数据驱动行)所有展开项的第 C 列**显示值求和,用于总计。兼容中英文括号。
+- `=pagerowsum(R:C)` — 用法完全相同(R=数据驱动行号、C=列号),区别只在**合计范围**:数据跨多张打印页时,只合计**当前这一张打印页**上显示的数据(本页小计)。
+
+```
+=rowsum(5:7)      ← 第5行第7列总计 —— 该列本身是 =round(...) 表达式也能正确累加
+=pagerowsum(5:7)  ← 第5行第7列,只合计本页显示的数据(本页小计)
+```
+
+> 💡 **pagerowsum 用法**:放在**每页都重复出现的行**(行类型设 `Repeat Title Row`)里,每张打印页各算一次、用的当前页数据,正好得到「本页小计」;`=rowsum` 放数据行之后的普通行(只出现一次)作「总计」。若 pagerowsum 放在普通行,只在第一页出现、只算第一页数据。
 >
-> 📊 **报表打印(v15.22)**:报表引擎自动附加的合计行**不会**带入打印 —— 报表合计请用 `=rowsum()` 在模板里自行设计(如数据驱动行为第 8 行、数量在第 4 列,合计行单元格填 `=rowsum(8:4)`;每页小计用 `=pagerowsum(8:4)`)。
+> 📊 **报表打印(v15.22)**:报表引擎自动附加的合计行**不会**带入打印 —— 合计请用 `=rowsum()` 自行设计(如数据驱动行为第 8 行、数量在第 4 列,合计单元格填 `=rowsum(8:4)`)。
 
-### ⑤ =pagerowsum(R:C) — 当前打印页合计函数 (新)
+> ⚠️ **注意**:safe_eval 禁用 `str.format`、`frappe.utils.*` 属性访问、内置函数。务必用上表的 `fmt`/`flt`/`get_value`,不要写 `frappe.utils.flt(x)`。
 
-与 `=rowsum(R:C)` 用法完全相同(R=数据驱动行号、C=列号),区别只在**合计范围**:当数据驱动行的数据多到**跨多张打印页**时,`=pagerowsum(R:C)` 只合计**当前这一张打印页**上显示的数据,而 `=rowsum(R:C)` 合计当前逻辑页的**全部**数据。兼容中英文括号。
-
-```
-=pagerowsum(5:7)   ← 第5行第7列,只合计本页显示的数据(本页小计)
-=rowsum(5:7)       ← 第5行第7列,合计全部数据(总计)
-```
-
-> 💡 **用法**:把 `=pagerowsum(R:C)` 单元格放在**每页都重复出现的行**(把该行的行类型设为 `Repeat Title Row` 重复标题行)里,这样每一张打印页渲染时它都会算一次,且用的是当前页的数据,正好得到「本页小计」;把 `=rowsum(R:C)` 放在数据行之后的**普通行**(只出现一次),用于「总计」。若 pagerowsum 放在普通行,它只在第一页出现、只算第一页的数据。
+求值结果用 `_fmt_val` 格式化(去尾零:`50.0 → "50"`、`5.10 → "5.1"`)。字段为空导致公式非法时(如 `100*`)记录错误日志并显示原式,便于发现缺数据。
 
 ### 值语义对照表
 
 | 写法 | 触发条件 | 示例 | 结果 |
 |---|---|---|---|
-| static | 无 `=` 前缀,非 logic | `客户:{doc.customer}` | 替换占位符 |
-| `=条件` | static + `=` 前缀 | `=get_value("Item", row.item_code, "x")` | Python 表达式求值(True/False) |
-| =expression | `=` 开头(非 rowsum) | `={doc.items.qty}*{doc.items.rate}` | 替换后算术求值 |
-| =rowsum | `=rowsum(R:C)` | `=rowsum(5:7)` | 第R行第C列合计 |
-| =pagerowsum | `=pagerowsum(R:C)` | `=pagerowsum(5:7)` | 第R行第C列,只合计当前打印页 |
+| 文本语义 | 无 `=` 前缀 | `客户:{doc.customer}` | 占位符替换 |
+| `=` 表达式 | `=` 开头(公式运算) | `={doc.items.qty}*{doc.items.rate}` | 替换后算术求值 |
+| `=` 条件 | `=` 开头(Python 表达式) | `=get_value("Item", row.item_code, "x")` | 条件判断 / 跨表取值 |
+| `=rowsum(R:C)` | `=rowsum` 开头 | `=rowsum(5:7)` | 第 R 行第 C 列总计 |
+| `=pagerowsum(R:C)` | `=pagerowsum` 开头 | `=pagerowsum(5:7)` | 第 R 行第 C 列本页小计 |
 
 ---
 
@@ -478,11 +476,13 @@ row.1                   ← 方向可省略,默认 ASC
 
 ---
 
-## 七、单元格类型
+## 七、内容显示方式(cell_type)
 
-| cell_type | 说明 | 额外配置 |
+> 单元格内容**解析后的呈现方式**,与值语义([五、单元格值语义](#五单元格值语义两种))自由组合 —— 例如值 `=rowsum(5:5)` 配条形码显示,即把合计值输出成条码。
+
+| cell_type | 显示方式 | 额外配置 |
 |---|---|---|
-| static | **统一文本类型**(v15.22.41):占位符 / `=`算术表达式 / `=rowsum` / `=`条件表达式(原 logic 语义,前缀 `=` 承载) | — |
+| static | **文本**(默认):解析结果直接显示(占位符 / `=`公式均适用) | — |
 | barcode | 条形码(**22 种码制**,见下) | `barcode_format` · `barcode_width` · `barcode_height` · `barcode_show_text` · `barcode_text_size` |
 | qrcode | 二维码 | `barcode_width` · `barcode_height` |
 | image | 图片,`cell_value` 填 URL 或 `/files/xxx.png` | — |
@@ -888,10 +888,9 @@ CSS 样式转 Excel 格式(openpyxl),条码 / 二维码以图片形式嵌入单�
 
 | 写法 | 语义 | 条件 |
 |---|---|---|
-| `xxx{doc.f}xxx` | 占位符替换 | 非 `=` 开头 |
-| `=get_value(...)` | 条件表达式 | static + `=` 前缀 |
-| `=算术` | expression 求值 | = 开头 |
-| `=rowsum(R:C)` | 合计第R行第C列 | =rowsum 开头 |
+| `xxx{doc.f}xxx` | 文本语义(占位符替换) | 非 `=` 开头 |
+| `=公式` | = 表达式(占位符 + 方法取值运算) | = 开头 |
+| `=rowsum(R:C)` | 合计第 R 行第 C 列 | =rowsum 开头 |
 | `=pagerowsum(R:C)` | 只合计当前打印页 | =pagerowsum 开头 |
 | `row.N ASC` | 行排序(写 row_styles.sorts) | 数据驱动行属性面板 |
 

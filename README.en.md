@@ -26,9 +26,9 @@
 2. [Install & Enable](#2-install--enable)
 3. [Designer Basics](#3-designer-basics)
 4. [Data Binding (Placeholders)](#4-data-binding-placeholders)
-5. [Cell Value Semantics (unified on static)](#5-cell-value-semantics-unified-on-static)
+5. [Cell Value Semantics (two kinds)](#5-cell-value-semantics-two-kinds)
 6. [Row Control & Sorting](#6-row-control--sorting)
-7. [Cell Types](#7-cell-types)
+7. [Display Types (cell_type)](#7-display-types-cell_type)
 8. [Pagination & Multi-Page Design](#8-pagination--multi-page-design)
 9. [Header / Footer / Side Strips](#9-header--footer--side-strips)
 10. [Enable Condition](#10-enable-condition)
@@ -325,15 +325,22 @@ This month:    {summary.total_amount}
 
 ---
 
-## 5. Cell Value Semantics (unified on static)
+## 5. Cell Value Semantics (two kinds)
 
-> Since v15.22.42 there are only four cell types — static text / barcode / QR / image — and **all value semantics live on static text**: placeholders, `=arithmetic`, `=rowsum()`, `=conditional expressions` (the former "logic" type, rewritten as an `=` prefix). Legacy types data_query/logic were migrated by patch; the renderer keeps legacy channels for old exported templates.
+> A cell value has only **two semantics**: plain text and `=` expression. The resolved result is then presented by a **display type** (text / barcode / QR / image / HTML) — see [7. Display Types](#7-display-types-cell_type).
+>
+> Since v15.22.42 all value semantics are carried by plain text: placeholders, `=` arithmetic, `=rowsum()`, `=` conditional expressions (the former "logic" type, rewritten as an `=` prefix). Legacy types data_query/logic were migrated by patch; the renderer keeps legacy channels for old exported templates.
 
-This is the most powerful capability of zhiz_print: `cell_value` is not just text substitution — the writing style picks one of four evaluation semantics automatically.
+### ① Text semantics (default)
 
-### ① static — plain replacement (default)
+Plain text + `{placeholders}`, replaced one by one. The inside of a placeholder picks one of **four data sources by prefix** (see [4. Data Binding](#4-data-binding-placeholders)):
 
-Plain text + `{placeholders}`, replaced one by one. No `=` prefix.
+| Prefix | Data source | Examples |
+|---|---|---|
+| `doc.` | main-table / child-table fields of the target document | `{doc.customer}` · `{doc.items.qty}` |
+| `rep.` | report fields / filters / data rows (report mode) | `{rep.filters.company}` · `{rep.items.bal_qty}` |
+| `query.` | result columns of a custom data query | `{bom_list.qty}` |
+| `param.` | filled by the user in the pre-print dialog | `{param.remark}` |
 
 ```
 Customer: {doc.customer}
@@ -341,28 +348,20 @@ Amount:  {doc.grand_total}
 Remark:  {doc.items.additional_notes}
 ```
 
-### ② = conditional expression (Python · formerly the logic type; since v15.22.42 it is static + `=` prefix)
+### ② = expression semantics
 
-Write a Python expression in `cell_value`. For cross-table lookups and conditional logic. Exposed variables and helpers:
+`cell_value` starting with **`=`**: everything after `=` is a **formula** that freely mixes `{}` placeholders with methods like `get_value`. Placeholders are replaced first, then the whole formula is evaluated with `safe_eval`.
+
+**Variables & helpers**:
 
 | Available | Description |
 |---|---|
 | `doc` / `row` | target document / current child-table row (inside data-driven rows) |
 | `get_value(doctype, name, field)` | cross-table single-field lookup (returns a string, '' when empty) |
-| `fmt(value, precision=2)` | number formatting (`str.format` is banned by safe_eval — you must use `fmt`) |
+| `fmt(value, precision=2)` | number formatting (`str.format` is banned by safe_eval — use `fmt`) |
 | `flt` · `max` · `min` · `round` | numeric helpers and builtins (safe_eval disables builtins by default; these are exposed explicitly) |
 
-```
-get_value("Item", row.item_code, "classification")     ← "classification" of the item
-"Slide" if get_value("Item", row.item_code, "classification") == "Slide" else "Other"
-fmt(row.qty * row.weight_per_unit, 3)
-```
-
-> ⚠️ safe_eval bans `str.format`, attribute access on `frappe.utils.*`, and builtins. Always use `fmt`/`flt`/`get_value` above; never write `frappe.utils.flt(x)`.
-
-### ③ =expression — arithmetic (new)
-
-`cell_value` starting with **`=`**: placeholders are replaced first, then the whole expression is evaluated with `safe_eval`. For in-row calculations.
+**Arithmetic** (in-row calculations):
 
 ```
 ={doc.items.qty}*{doc.items.weight_per_unit}     ← total weight = qty × unit weight
@@ -370,42 +369,41 @@ fmt(row.qty * row.weight_per_unit, 3)
 =round({doc.items.weight_per_unit}, 4)          ← unit weight, 4 decimals
 ```
 
-Results are formatted by `_fmt_val` (trailing zeros stripped: `50.0 → "50"`, `5.10 → "5.1"`). If an empty field makes the expression invalid (e.g. `100*`), the error is logged and the original text is shown so missing data is easy to spot.
-
-### ④ =rowsum(R:C) — total (new)
-
-Sums the **displayed values of column C across all expanded items of data-driven row R**. For total rows. Both ASCII and full-width parentheses are accepted.
+**Conditional expressions** (Python):
 
 ```
-=rowsum(5:5)     ← total of column 5 (qty) of row 5
-=rowsum(5:7)     ← total of column 7 (weight) — works even if column 7 is itself a =round(...) expression
-=rowsum(5:9)     ← total of column 9 (amount)
+get_value("Item", row.item_code, "classification")     ← "classification" of the item
+"Slide" if get_value("Item", row.item_code, "classification") == "Slide" else "Other"
+fmt(row.qty * row.weight_per_unit, 3)
 ```
 
-> 💡 **Key point**: rowsum reuses the column-value pipeline, so total targets that are `=` expressions or logic cells still sum correctly. Non-numeric cells are skipped automatically.
+**Aggregate functions**:
+
+- `=rowsum(R:C)` — sums the displayed values of column C across all expanded items of data-driven row R, for grand totals. Both ASCII and full-width parentheses are accepted.
+- `=pagerowsum(R:C)` — identical usage (R = data-driven row, C = column); the only difference is the **scope**: when data spans multiple printed pages it sums only the rows shown on **the current printed page** (page subtotal).
+
+```
+=rowsum(5:7)      ← grand total of column 7 of row 5 — works even if that column is itself a =round(...) expression
+=pagerowsum(5:7)  ← column 7 of row 5, current page only (page subtotal)
+```
+
+> 💡 **pagerowsum placement**: put it in a row that **repeats on every page** (row type `Repeat Title Row`) so each page evaluates its own subtotal; put `=rowsum` in a normal row after the data (appears once) for the grand total. pagerowsum in a normal row only appears (and only sums) on the first page.
 >
-> 📊 **Report printing (v15.22)**: the engine-appended total row is **not** included — design totals yourself with `=rowsum()` (e.g. data rows on row 8, qty in column 4 → total cell `=rowsum(8:4)`; per-page subtotal `=pagerowsum(8:4)`).
+> 📊 **Report printing (v15.22)**: the engine-appended total row is **not** included — design totals yourself with `=rowsum()` (e.g. data rows on row 8, qty in column 4 → total cell `=rowsum(8:4)`).
 
-### ⑤ =pagerowsum(R:C) — current printed page subtotal (new)
+> ⚠️ safe_eval bans `str.format`, attribute access on `frappe.utils.*`, and builtins. Always use `fmt`/`flt`/`get_value`; never write `frappe.utils.flt(x)`.
 
-Identical usage to `=rowsum(R:C)` (R = data-driven row number, C = column); the only difference is the **summation scope**: when data-driven rows span multiple printed pages, `=pagerowsum(R:C)` sums only the rows shown on **the current printed page**, while `=rowsum(R:C)` sums **all** rows of the logical page.
+Results are formatted by `_fmt_val` (trailing zeros stripped: `50.0 → "50"`, `5.10 → "5.1"`). If an empty field makes the formula invalid (e.g. `100*`), the error is logged and the original text is shown so missing data is easy to spot.
 
-```
-=pagerowsum(5:7)   ← column 7 of row 5, only the current page (page subtotal)
-=rowsum(5:7)       ← column 7 of row 5, all data (grand total)
-```
-
-> 💡 **Usage**: put `=pagerowsum(R:C)` in a row that **repeats on every page** (set that row's type to `Repeat Title Row`) so it evaluates per page with that page's data — a page subtotal; put `=rowsum(R:C)` in a normal row after the data (appears once) for the grand total. pagerowsum placed in a normal row only appears (and only sums) on the first page.
-
-### Semantics Reference
+### Semantics reference
 
 | Style | Trigger | Example | Result |
 |---|---|---|---|
-| static | no `=` prefix | `Customer: {doc.customer}` | placeholder replacement |
-| `=conditional` | static + `=` prefix | `=get_value("Item", row.item_code, "x")` | Python expression evaluated |
-| =expression | starts with `=` (not rowsum) | `={doc.items.qty}*{doc.items.rate}` | arithmetic after replacement |
-| =rowsum | `=rowsum(R:C)` | `=rowsum(5:7)` | total of row R column C |
-| =pagerowsum | `=pagerowsum(R:C)` | `=pagerowsum(5:7)` | subtotal of row R column C, current page only |
+| Text semantics | no `=` prefix | `Customer: {doc.customer}` | placeholder replacement |
+| `=` expression | starts with `=` (formula) | `={doc.items.qty}*{doc.items.rate}` | arithmetic after replacement |
+| `=` conditional | starts with `=` (Python expression) | `=get_value("Item", row.item_code, "x")` | condition / cross-table lookup |
+| `=rowsum(R:C)` | starts with `=rowsum` | `=rowsum(5:7)` | grand total of row R column C |
+| `=pagerowsum(R:C)` | starts with `=pagerowsum` | `=pagerowsum(5:7)` | page subtotal of row R column C |
 
 ---
 
@@ -478,11 +476,13 @@ Sorting is stored under the `sorts` key of the `row_styles` JSON:
 
 ---
 
-## 7. Cell Types
+## 7. Display Types (cell_type)
 
-| cell_type | Description | Extra config |
+> How the **resolved** cell content is presented — freely combinable with the value semantics ([5. Cell Value Semantics](#5-cell-value-semantics-two-kinds)); e.g. value `=rowsum(5:5)` with the barcode type outputs the total as a barcode.
+
+| cell_type | Display | Extra config |
 |---|---|---|
-| static | **unified text type** (v15.22.41): placeholders / `=` arithmetic / `=rowsum` / `=` conditional (former logic semantics, carried by the `=` prefix) | — |
+| static | **Text** (default): resolved result shown as-is (works with placeholders and `=` formulas) | — |
 | barcode | barcode (**22 symbologies**, below) | `barcode_format` · `barcode_width` · `barcode_height` · `barcode_show_text` · `barcode_text_size` |
 | qrcode | QR code | `barcode_width` · `barcode_height` |
 | image | image; `cell_value` holds a URL or `/files/xxx.png` | — |
@@ -888,9 +888,8 @@ Every template detail page has a comment box (stored centrally, visible to all u
 
 | Style | Semantics | Condition |
 |---|---|---|
-| `xxx{doc.f}xxx` | placeholder replacement | not starting with `=` |
-| `=get_value(...)` | conditional expression | static + `=` prefix |
-| `=arithmetic` | expression evaluation | starts with `=` |
+| `xxx{doc.f}xxx` | text semantics (placeholder replacement) | not starting with `=` |
+| `=formula` | = expression (placeholders + methods) | starts with `=` |
 | `=rowsum(R:C)` | total of row R column C | starts with `=rowsum` |
 | `=pagerowsum(R:C)` | subtotal of the current printed page | starts with `=pagerowsum` |
 | `row.N ASC` | row sorting (stored in row_styles.sorts) | data-driven row property panel |
