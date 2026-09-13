@@ -316,7 +316,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                   <div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>
                   ${tpl.is_mine ? `<div id="pts-desens-bar" style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
                       <i class="fa fa-eye-slash" style="color:#e6a700;"></i>
-                      <span style="font-size:12px;color:#86868b;">${__('切到「设计效果」页签,点击单元格切换脱敏(绿色高亮 = 其他人看到的打印效果该格显示为 ***')}</span>
+                      <span style="font-size:12px;color:#86868b;">${__('切到「设计效果」页签,点击单元格切换脱敏(黄色高亮 = 其他人看到的打印效果该格显示为 ***')}</span>
                       <button class="btn btn-primary btn-xs" id="pts-desens-save">${__('保存脱敏设置')}</button>
                       <span id="pts-desens-status" style="font-size:12px;color:#28a745;"></span>
                   </div>` : ''}` },
