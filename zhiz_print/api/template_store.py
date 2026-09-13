@@ -364,12 +364,10 @@ def get_template(template_id):
                 tpl[_k] = _desensitize_preview(tpl[_k])
         # URL/二维码脱敏:install_template 也走 get_template,故安装下来的设计一并脱敏
         tpl = _desensitize_template_urls(tpl)
-        # 单元格脱敏(读时):非作者浏览者 → 打印效果中作者标记的单元格逐字符转 *
-        # install_template 也走本函数,但安装的是"设计结构"(design_data),
-        # 渲染的是安装者自己的数据,desensitize_cells 对安装产物无意义,顺带剔除。
+        # 单元格脱敏已下沉服务端(licser get_template/list_templates 返回前做,老客户端
+        # 同样受保护;中心本机白名单也在服务端判)—— 客户端不再重复做,避免服务端本机
+        # 白名单视角被新版客户端脱回去。_desensitize_cells 保留仅作单元测试/参考。
         if not tpl.get("is_mine"):
-            tpl["preview_html"] = _desensitize_cells(
-                tpl.get("preview_html") or "", tpl.get("desensitize_cells"))
             tpl.pop("desensitize_cells", None)  # 清单只归作者;非作者无需感知
     return tpl
 
