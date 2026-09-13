@@ -24,7 +24,7 @@ A custom print template designer built on the Frappe/ERPNext framework, providin
 - **Excel Export** — CSS styles converted to Excel formats, including barcode/QR code images
 - **Print Log** — Records every print/export operation for preview追溯
 - **Parameterized Templates** — Custom print parameters with pre-print dialog
-- **Template Platform** — Share designs to a central platform; per-template visibility (Everyone / Specific Companies / Private), quick view filters, one-click install; company names & QR/URL desensitized
+- **Template Platform** — Share designs to a central platform; per-template visibility (Everyone / Specific Companies / Private), quick view filters, one-click install; company names & QR/URL desensitized, plus per-cell masking (v15.22.55+): the author marks cells in the Design tab, non-author viewers see `***` in the print preview (server-side masking protects old clients; legacy templates auto-injected with cell ids)
 - **Report Printing** (v15.22) — Design print templates for ERPNext reports (Query / Script Reports, e.g. Stock Balance, General Ledger): `rep` placeholders (`{rep.name}` / `{rep.filters.field}` / `{rep.items.field}`), three data-key categories in the designer, report page menu takeover (filters carried via URL), dedicated preview badge & print logs
 
 ## DocType List
