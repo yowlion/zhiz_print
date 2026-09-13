@@ -189,6 +189,7 @@ When a cell value starts with `=`, an **fx button** appears next to the "Value" 
 - Each item shows **name + purpose + example**; clicking inserts a guided snippet at the cursor and keeps focus for editing
 - **Live filtering**: the word being typed after `=` filters the list — `=get` shows only get_value, `=row` matches rowsum / row; clearing the word restores the full list
 - Smart dedup: if the value already has an `=` prefix, inserting an `=rowsum(...)` snippet strips the duplicate equals sign
+- Method results mix freely with literal text via `+`: `="Brand: " + get_value("Item", row.item_code, "brand")` (see [5. Cell Value Semantics](#5-cell-value-semantics-two-kinds))
 
 ### rep Placeholders (v15.22)
 
@@ -376,6 +377,16 @@ get_value("Item", row.item_code, "classification")     ← "classification" of t
 "Slide" if get_value("Item", row.item_code, "classification") == "Slide" else "Other"
 fmt(row.qty * row.weight_per_unit, 3)
 ```
+
+**Mixing literal text with lookups** (fixed labels + values/method results, freely combined):
+
+```
+="Brand: " + get_value("Item", row.item_code, "brand")
+="Qty: " + fmt(flt({doc.items.qty}),2) + " pcs Group: " + get_value("Item", {doc.items.item_code}, "item_group")
+="Brand: " + (get_value("Item", row.item_code, "brand") or "-")     ← default when the lookup misses
+```
+
+> ⚠️ Text constants must be quoted and joined with `+`; `{doc.field}` placeholders can be mixed into the formula (replaced before evaluation); **f-strings (`f"..."`) and `str.format` are banned by safe_eval**.
 
 **Aggregate functions**:
 

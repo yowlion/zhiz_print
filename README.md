@@ -189,6 +189,7 @@ bench build
 - 每项含**名称 + 用途 + 示例**,点击按引导片段插入光标处并保持焦点供继续修改
 - **实时过滤**:`=` 后正在键入的词自动筛选 —— 如 `=get` 只显示 get_value,`=row` 匹配 rowsum / row;词清空恢复全部
 - 智能去重:值已有 `=` 前缀时插入 `=rowsum(...)` 片段自动剥掉重复等号
+- 方法结果可与固定文字 `+` 拼接混用:`="品牌:" + get_value("Item", row.item_code, "brand")`(详见[五、单元格值语义](#五单元格值语义两种))
 
 ### rep 报表占位符 (v15.22 新)
 
@@ -376,6 +377,16 @@ get_value("Item", row.item_code, "classification")     ← 取物料的"分类"�
 "滑板" if get_value("Item", row.item_code, "classification") == "滑板" else "其他"
 fmt(row.qty * row.weight_per_unit, 3)
 ```
+
+**文本拼接混用**(固定文字 + 取值/方法结果自由组合):
+
+```
+="品牌:" + get_value("Item", row.item_code, "brand")
+="数量:" + fmt(flt({doc.items.qty}),2) + " 件 组别:" + get_value("Item", {doc.items.item_code}, "item_group")
+="品牌:" + (get_value("Item", row.item_code, "brand") or "-")     ← 取不到值时给默认占位
+```
+
+> ⚠️ 文本常量须带引号、用 `+` 连接;`{doc.字段}` 占位符可混在表达式里(求值前先替换);**f-string(`f"..."`)与 `str.format` 被 safe_eval 禁用**。
 
 **合计函数**:
 
