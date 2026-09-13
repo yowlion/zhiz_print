@@ -365,7 +365,8 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             if (!d || !d.body) { setTimeout(injectCellPicker, 100); return; }
             try {
                 const st = d.createElement('style');
-                st.textContent = 'td[data-cell-id]{cursor:pointer;} .pts-desens-on{outline:2px solid #28a745 !important;outline-offset:-2px;background:rgba(40,167,69,.14) !important;}';
+                // iframe(html类型单元格)铺满单元格会吃掉点击、事件进不到td —— picker 模式下禁其鼠标事件,点击穿透到td;仅注入在设计预览(打印效果页签不注入,不影响浏览)
+                st.textContent = 'td[data-cell-id]{cursor:pointer;} td[data-cell-id] iframe{pointer-events:none;} .pts-desens-on{outline:2px solid #28a745 !important;outline-offset:-2px;background:rgba(40,167,69,.14) !important;}';
                 (d.head || d.documentElement).appendChild(st);
                 d.querySelectorAll('td[data-cell-id]').forEach(td => {
                     if (desensCells.has(td.getAttribute('data-cell-id'))) td.classList.add('pts-desens-on');
