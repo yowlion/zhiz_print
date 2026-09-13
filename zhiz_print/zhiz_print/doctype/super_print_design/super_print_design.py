@@ -1054,6 +1054,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             expr = self._replace_child_table_placeholders(expr, data_item)
         try:
             result = frappe.safe_eval(expr, {}, self._build_safe_eval_locals(doc, data_item))
+            if isinstance(result, str):
+                # 表达式返回字符串 = 用户显式格式化的最终展示意图(fmt(x,2) 的
+                # "12.00" 定长精度必须保留),不得再经 _fmt_val 剥尾零;
+                # float/int 结果(如 ={a}*{b} 的 50.0)仍走 _fmt_val 去多余 .0。
+                return result
             return self._fmt_val(result)
         except Exception:
             # ='='前缀+纯占位符/纯文本(如 ={doc.name}):替换后已是目标文本,
