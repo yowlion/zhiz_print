@@ -10,12 +10,12 @@
 
 ## About Zhiz Print
 
-**Zhiz Print** is built and actively maintained by **Guangde Zhizhao Technology Co., Ltd.**, with developer **Zhizhao.Huang** (Gitee [@gdzhiz](https://gitee.com/gdzhiz)) iterating full-time.
+**Zhiz Print** is a limited open-source app carved out of real production projects and maintained long-term by **Guangde Zhizhao Technology Co., Ltd.**, with developer **Zhizhao.Huang** (Gitee [@gdzhiz](https://gitee.com/gdzhiz)) iterating full-time.
 
 - **Positioning**: a dedicated app for **complex print layouts** on ERPNext / Frappe — WYSIWYG grid design focused on multi-page layouts, cell merging, expression evaluation, barcodes/QR codes, and multi-engine PDF export
 - **Official repo**: <https://gitee.com/gdzhiz/zhiz_print> (the only official source; all others are community forks)
 - **GitHub mirror**: <https://github.com/yowlion/zhiz_print> (auto-synced from the Gitee official source)
-- **Release discussion**: <https://discuss.frappe.io/t/zhiz-print-a-wysiwyg-print-designer-for-frappe-erpnext/163832>
+- **The open-source edition shares the same codebase as the commercial edition of Guangde Zhizhao Technology Co., Ltd. — installing on any server automatically grants a 10-year license key**
 - **License**: Copyright © 2026 Guangde Zhizhao Technology Co., Ltd. All rights reserved — see [LICENSE](LICENSE)
 
 ---

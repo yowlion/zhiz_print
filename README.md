@@ -10,12 +10,12 @@
 
 ## 关于 Zhiz Print
 
-**Zhiz Print** 由 **广德智兆科技有限公司**（Guangde Zhizhao Technology Co., Ltd.）出品并长期维护，开发人员 **智兆.黄**（Gitee [@gdzhiz](https://gitee.com/gdzhiz)）全力迭代更新。
+**Zhiz Print** 由 **广德智兆科技有限公司**（Guangde Zhizhao Technology Co., Ltd.）从实际生产项目中剥离并长期维护的有限开源 APP，开发人员 **智兆.黄**（Gitee [@gdzhiz](https://gitee.com/gdzhiz)）全力迭代更新。
 
 - **定位**：适用于 ERPNext / Frappe 的**复杂格式打印设计专用 App** —— 表格网格所见即所得设计，专攻多页版面、单元格合并、表达式运算、条码/二维码、多引擎 PDF 导出等复杂打印格式
 - **官方仓库**：<https://gitee.com/gdzhiz/zhiz_print>（唯一官方源，其余均为社区 fork）
 - **GitHub 镜像**：<https://github.com/yowlion/zhiz_print>（自动同步自 Gitee 官方源）
-- **发布讨论**：<https://discuss.frappe.io/t/zhiz-print-a-wysiwyg-print-designer-for-frappe-erpnext/163832>
+- **开源版本与广德智兆科技有限公司商用同源，任意服务器安装即自动分配 10 年授权码**
 - **版权**：Copyright © 2026 广德智兆科技有限公司（Guangde Zhizhao Technology Co., Ltd.），保留所有权利，见 [LICENSE](LICENSE)
 
 ---
