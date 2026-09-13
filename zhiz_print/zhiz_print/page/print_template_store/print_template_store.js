@@ -313,7 +313,13 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
                       <span class="pts-tab active" data-tab="actual">${__('打印效果')}</span>
                       <span class="pts-tab" data-tab="design">${__('设计效果')}</span>
                   </div>
-                  <div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>` },
+                  <div style="height:40vh;overflow:auto;background:#f0f0f0;border-radius:8px;"><iframe id="pts-dlg-iframe" class="pts-dlg-preview"></iframe></div>
+                  ${tpl.is_mine ? `<div id="pts-desens-bar" style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
+                      <i class="fa fa-eye-slash" style="color:#28a745;"></i>
+                      <span style="font-size:12px;color:#86868b;">${__('切到「设计效果」页签,点击单元格切换脱敏(绿色高亮 = 其他人看到的打印效果该格显示为 ***')}</span>
+                      <button class="btn btn-primary btn-xs" id="pts-desens-save">${__('保存脱敏设置')}</button>
+                      <span id="pts-desens-status" style="font-size:12px;color:#28a745;"></span>
+                  </div>` : ''}` },
                 { fieldtype: 'HTML', fieldname: 'paper',
                   options: `<div class="pts-paper-info" id="pts-paper-info">${__('加载中...')}</div>` },
                 { fieldtype: 'HTML', fieldname: 'actions_comments',
@@ -347,6 +353,34 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             const resize = () => { try { const cd = ifr.contentWindow.document; const h = Math.max(cd.body.scrollHeight, cd.documentElement.scrollHeight, cd.body.offsetHeight); if (h > 0) ifr.style.height = (h + 16) + 'px'; } catch (e2) {} };
             [100, 500, 1500].forEach(ms => setTimeout(resize, ms));
         };
+        // ---- 脱敏设置(仅作者):设计效果页签点击单元格切换,保存到中心 ----
+        const desensCells = new Set();
+        try { (JSON.parse(tpl.desensitize_cells || '[]') || []).forEach(c => desensCells.add(c)); } catch (e) {}
+        let desensDirty = false;
+        const injectCellPicker = () => {
+            const ifr = dlg.$wrapper.find('#pts-dlg-iframe')[0];
+            if (!ifr) return;
+            let d;
+            try { d = ifr.contentWindow.document; } catch (e) { return; }
+            if (!d || !d.body) { setTimeout(injectCellPicker, 100); return; }
+            try {
+                const st = d.createElement('style');
+                st.textContent = 'td[data-cell-id]{cursor:pointer;} .pts-desens-on{outline:2px solid #28a745 !important;outline-offset:-2px;background:rgba(40,167,69,.14) !important;}';
+                (d.head || d.documentElement).appendChild(st);
+                d.querySelectorAll('td[data-cell-id]').forEach(td => {
+                    if (desensCells.has(td.getAttribute('data-cell-id'))) td.classList.add('pts-desens-on');
+                    td.addEventListener('click', () => {
+                        td.classList.toggle('pts-desens-on');
+                        const cid = td.getAttribute('data-cell-id');
+                        if (td.classList.contains('pts-desens-on')) desensCells.add(cid);
+                        else desensCells.delete(cid);
+                        desensDirty = true;
+                        dlg.$wrapper.find('#pts-desens-status').text(desensDirty ? __('有未保存的修改') : '');
+                    });
+                });
+            } catch (e) {}
+        };
+
         dlg.show();
         dlg.$wrapper.on('shown.bs.modal', () => writePreview(tpl.preview_html || ''));
         setTimeout(() => writePreview(tpl.preview_html || ''), 100);
@@ -357,6 +391,7 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
             dlg.$wrapper.find('.pts-tab').removeClass('active');
             $(e.currentTarget).addClass('active');
             writePreview(tab === 'design' ? (tpl.preview_html_design || '') : (tpl.preview_html || ''));
+            if (tab === 'design' && tpl.is_mine) setTimeout(injectCellPicker, 150);
         });
 
         loadPaperInfo(tpl, dlg.$wrapper);
@@ -366,6 +401,21 @@ frappe.pages['print-template-store'].on_page_load = function (wrapper) {
         // 事件绑定限定本 dialog(事件委托,避免全局 id 冲突)
         dlg.$wrapper.on('click', '#pts-install-btn', () => openInstallDialog(tpl));
         dlg.$wrapper.on('click', '#pts-share-btn', () => openShareDialog(tpl));
+        dlg.$wrapper.on('click', '#pts-desens-save', () => {
+            frappe.call({
+                method: 'zhiz_print.api.template_store.set_template_desensitize',
+                args: { template_id: tpl.name, cells: JSON.stringify([...desensCells]) },
+                callback: (r) => {
+                    const m = r.message || {};
+                    if (m.success) {
+                        desensDirty = false;
+                        dlg.$wrapper.find('#pts-desens-status').text(__('已保存') + ' (' + (desensCells.size) + ')');
+                    } else {
+                        frappe.msgprint(__('保存失败') + ': ' + frappe.utils.escape_html(m.error || ''));
+                    }
+                }
+            });
+        });
         const submitComment = () => {
             const $ta = dlg.$wrapper.find('#pts-new-comment');
             const content = $ta.val().trim();

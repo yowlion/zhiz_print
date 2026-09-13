@@ -2005,7 +2005,12 @@ class SuperPrintDesign(frappe.model.document.Document):
                             border_suppress += 'border-top:none;'
                     style_attr += border_suppress
 
-                html += f'<td {rowspan_attr} {colspan_attr}{shrink_attr} style="{style_attr}">{content}</td>'
+                # data-cell-id:模板平台分享预览定位单元格用(脱敏设置/读时脱敏按此匹配;
+                # 自定义属性浏览器/打印引擎忽略,对本地打印无副作用。数据驱动行展开时
+                # 同一模板格多份数据行共享同一 cell_id,脱敏按"列"语义生效)
+                _cid = cell_data.get('cell_id') or ''
+                _cid_attr = f' data-cell-id="{_cid}"' if _cid else ''
+                html += f'<td{_cid_attr} {rowspan_attr} {colspan_attr}{shrink_attr} style="{style_attr}">{content}</td>'
             else:
                 # Empty cell - also needs merge border suppression
                 empty_style = cell_h_constraint + 'line-height:inherit;'

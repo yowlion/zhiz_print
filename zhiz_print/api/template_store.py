@@ -364,7 +364,62 @@ def get_template(template_id):
                 tpl[_k] = _desensitize_preview(tpl[_k])
         # URL/二维码脱敏:install_template 也走 get_template,故安装下来的设计一并脱敏
         tpl = _desensitize_template_urls(tpl)
+        # 单元格脱敏(读时):非作者浏览者 → 打印效果中作者标记的单元格逐字符转 *
+        # install_template 也走本函数,但安装的是"设计结构"(design_data),
+        # 渲染的是安装者自己的数据,desensitize_cells 对安装产物无意义,顺带剔除。
+        if not tpl.get("is_mine"):
+            tpl["preview_html"] = _desensitize_cells(
+                tpl.get("preview_html") or "", tpl.get("desensitize_cells"))
+            tpl.pop("desensitize_cells", None)  # 清单只归作者;非作者无需感知
     return tpl
+
+
+def _desensitize_cells(html, cells_raw):
+    """模板平台打印预览按作者标记的单元格逐字符脱敏(非作者视角)。
+
+    命中 data-cell-id 的 <td>:文本节点逐字符转 *(空白字符保留,维持排版);
+    标签结构不动;图片类内容(barcode/qrcode/image/html 单元格)数据在图/文档里,
+    文本替换不适用,保持原样。中心与作者本地数据不变 — 仅改返回客户端的预览。"""
+    if not html or not cells_raw:
+        return html
+    try:
+        cells = json.loads(cells_raw)
+    except (ValueError, TypeError):
+        return html
+    if not isinstance(cells, list) or not cells:
+        return html
+    cellset = {str(c) for c in cells}
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+    except Exception:
+        return html
+    hit = 0
+    for td in soup.find_all(attrs={"data-cell-id": True}):
+        if td.get("data-cell-id") not in cellset:
+            continue
+        for text_node in td.find_all(string=True):
+            masked = "".join(ch if ch.isspace() else "*" for ch in str(text_node))
+            text_node.replace_with(masked)
+        hit += 1
+    if not hit:
+        return html
+    return str(soup)
+
+
+@frappe.whitelist()
+def set_template_desensitize(template_id, cells):
+    """作者设置模板预览的脱敏单元格清单(存中心;读时对非作者浏览者生效)。
+
+    cells: JSON 数组字符串或逗号分隔(元素=渲染 HTML 的 data-cell-id,如 P1_R2C3)。"""
+    result = _call_license_api("set_desensitize", {
+        "template_id": template_id,
+        "company_name": _my_company(),
+        "cells": cells or "",
+    }, module="template_api")
+    if not result or not result.get("success"):
+        return {"success": False, "error": (result or {}).get("error", "Save failed")}
+    return {"success": True, "cells": result.get("cells")}
 
 
 @frappe.whitelist()
