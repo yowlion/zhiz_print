@@ -393,7 +393,7 @@ fmt(row.qty * row.weight_per_unit, 3)
 
 > ⚠️ safe_eval bans `str.format`, attribute access on `frappe.utils.*`, and builtins. Always use `fmt`/`flt`/`get_value`; never write `frappe.utils.flt(x)`.
 
-Results are formatted by `_fmt_val` (trailing zeros stripped: `50.0 → "50"`, `5.10 → "5.1"`). If an empty field makes the formula invalid (e.g. `100*`), the error is logged and the original text is shown so missing data is easy to spot.
+**float / int results** are formatted by `_fmt_val` (trailing zeros stripped: `50.0 → "50"`, `5.10 → "5.1"`); **string results are shown as-is** — the fixed precision of `fmt(x, 2)` (e.g. `12.00`) is never stripped. If an empty field makes the formula invalid (e.g. `100*`), the error is logged and the original text is shown so missing data is easy to spot.
 
 ### Semantics reference
 
