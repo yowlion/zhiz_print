@@ -45,6 +45,9 @@
         <button class="btn btn-default btn-xs" id="spd-add-page-btn" title="{{ _('Add Blank Page') }}"><i class="fa fa-plus" style="color:#28a745"></i></button>
         <button class="btn btn-default btn-xs" id="spd-duplicate-page-btn" title="{{ _('Duplicate Current Page') }}"><i class="fa fa-copy" style="color:#17a2b8"></i></button>
         <button class="btn btn-default btn-xs" id="spd-paper-setting-btn" title="{{ _('Paper Setting') }}"><i class="fa fa-cog" style="color:#6c757d"></i> {{ _("纸张设置") }}</button>
+        <button class="btn btn-default btn-xs" id="spd-fit-width-btn" title="{{ _('Scale the canvas so the paper width fits the preview area (for low-resolution screens)') }}"><i class="fa fa-arrows-h" style="color:#0d5c63"></i> {{ _("适配宽度") }}</button>
+        <button class="btn btn-default btn-xs" id="spd-fit-page-btn" title="{{ _('Scale the canvas so the whole paper fits the preview area (for low-resolution screens)') }}"><i class="fa fa-compress" style="color:#0d5c63"></i> {{ _("适配整页") }}</button>
+        <button class="btn btn-default btn-xs" id="spd-zoom-reset-btn" style="display:none" title="{{ _('Reset zoom to 100%') }}"><i class="fa fa-undo"></i> <span id="spd-zoom-label">100%</span></button>
         <button class="btn btn-default btn-xs" id="spd-remove-page-btn" style="display:none" title="{{ _('Remove Current Page') }}"><i class="fa fa-minus" style="color:#dc3545"></i></button>
         <button class="btn btn-default btn-xs" id="spd-sample-doc-btn" style="margin-left:auto" title="{{ _('Set sample document') }}">{% if sample_doc %}<i class="fa fa-pencil"></i> {{ _("修改模板关联单据") }}{% else %}<i class="fa fa-plus"></i> {{ _("添加模板关联单据") }}{% endif %}</button>
         <button class="btn btn-info btn-xs" id="spd-preview-sample-btn" style="{% if not sample_doc %}display:none;{% endif %}" title="{{ _('Preview with sample doc') }}"><i class="fa fa-eye"></i> {{ _("演示预览") }}</button>
@@ -55,6 +58,9 @@
             <div class="spd-datasource-header" id="spd-datasource-header">
                 <i class="fa fa-sitemap"></i> <span class="spd-datasource-title">{{ _("数据源") }}</span>
                 <button type="button" class="spd-datasource-toggle" id="spd-datasource-toggle" title="{{ _("折叠/展开") }}"><i class="fa fa-angle-double-left"></i></button>
+            </div>
+            <div class="spd-ds-search" id="spd-ds-search">
+                <input type="text" id="spd-ds-search-input" class="form-control" placeholder="{{ _('搜索字段…') }}" style="font-size:11px;height:26px;border-radius:3px;">
             </div>
             <div class="spd-datasource-body" id="spd-datasource-tree"></div>
             <div class="spd-datasource-collapsed-bar" id="spd-datasource-collapsed-bar" title="{{ _("数据源") }}">

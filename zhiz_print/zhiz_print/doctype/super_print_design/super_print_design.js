@@ -871,6 +871,9 @@ class SuperPrintDesigner {
             dlg.$wrapper.find('.modal-dialog').css('max-width', '900px');
             dlg.show();
         });
+        container.querySelector('#spd-fit-width-btn')?.addEventListener('click', () => this._fitCanvas('width'));
+        container.querySelector('#spd-fit-page-btn')?.addEventListener('click', () => this._fitCanvas('page'));
+        container.querySelector('#spd-zoom-reset-btn')?.addEventListener('click', () => this._fitCanvas('reset'));
         container.querySelector('#spd-remove-page-btn')?.addEventListener('click', () => this.removePage(this.currentPageNo));
         const tabsEl = container.querySelector('#spd-page-tabs');
         if (tabsEl) {
@@ -1004,8 +1007,48 @@ class SuperPrintDesigner {
         container.querySelector('#spd-datasource-collapsed-bar')?.addEventListener('click', () => {
             container.querySelector('#spd-datasource')?.classList.remove('collapsed');
         });
+        // 数据源搜索框:关键字过滤树(命中叶及其祖先链展开,其余隐藏)
+        const searchInput = container.querySelector('#spd-ds-search-input');
+        searchInput?.addEventListener('input', () => {
+            const wrap = container.querySelector('#spd-datasource-tree');
+            this._filterDsTree(wrap, searchInput.value);
+        });
         // 首次加载树
         this.loadDatasourceTree();
+    }
+
+    _filterDsTree(wrap, keyword) {
+        if (!wrap) return;
+        const kw = (keyword || '').trim().toLowerCase();
+        const allNodes = wrap.querySelectorAll('.spd-ds-node');
+        if (!kw) {
+            allNodes.forEach(n => n.classList.remove('spd-ds-hidden'));
+            return;
+        }
+        allNodes.forEach(n => n.classList.add('spd-ds-hidden'));
+        const reveal = (el) => {
+            let cur = el;
+            while (cur && cur !== wrap) {
+                if (cur.classList && cur.classList.contains('spd-ds-node')) {
+                    cur.classList.remove('spd-ds-hidden');
+                    cur.classList.add('open');
+                }
+                cur = cur.parentElement;
+            }
+        };
+        // 叶子命中:标签或占位符 key(doc.items.item_code)模糊匹配
+        wrap.querySelectorAll('.spd-ds-leaf').forEach(leaf => {
+            const text = ((leaf.textContent || '') + ' ' + (leaf.dataset.dsKey || '')).toLowerCase();
+            if (text.includes(kw)) reveal(leaf.closest('.spd-ds-node'));
+        });
+        // 分组标题命中:整棵子树显示
+        wrap.querySelectorAll('.spd-ds-group').forEach(g => {
+            if ((g.textContent || '').toLowerCase().includes(kw)) {
+                const node = g.closest('.spd-ds-node');
+                reveal(node);
+                node?.querySelectorAll('.spd-ds-node').forEach(c => c.classList.remove('spd-ds-hidden'));
+            }
+        });
     }
 
     async loadDatasourceTree() {
@@ -1029,6 +1072,9 @@ class SuperPrintDesigner {
             }
             this._renderDsNodes(wrap, tree, 0);
             this._bindDsDrag(wrap);
+            // 树重载后按当前搜索关键字重新过滤(切换目标单据等场景不丢搜索态)
+            const searchInput = wrap.closest('.spd-datasource')?.querySelector('#spd-ds-search-input');
+            if (searchInput && (searchInput.value || '').trim()) this._filterDsTree(wrap, searchInput.value);
         } catch (e) {
             console.error('datasource tree failed:', e);
             wrap.innerHTML = '<div class="spd-ds-empty">' + __('Loading failed') + '</div>';
@@ -2579,6 +2625,55 @@ class SuperPrintDesigner {
     }
 
     // 列宽自由拖动:鼠标移到列签右边界(6px 内)自动变 col-resize,按住左右拖动改该列宽
+    // ===== 画布缩放(v15.22.70):低分辨率屏适配 —— 纸张超出预览区时一键缩放 =====
+    _applyCanvasZoom(scale) {
+        const container = document.getElementById(this.designContainerId);
+        const wrap = container?.querySelector('.super-zprint-grid-wrapper');
+        if (!wrap) return;
+        const s = Math.min(2, Math.max(0.1, Number(scale) || 1));
+        if (Math.abs(s - 1) < 0.001) {
+            wrap.style.transform = '';
+            wrap.style.marginRight = '';
+            wrap.style.marginBottom = '';
+            wrap.classList.remove('spd-zoomed');
+        } else {
+            // transform 不改布局尺寸:负 margin 把占位收成视觉尺寸,滚动范围才正确
+            const w = wrap.offsetWidth, h = wrap.offsetHeight;
+            wrap.style.transformOrigin = 'top left';
+            wrap.style.transform = 'scale(' + s + ')';
+            wrap.style.marginRight = Math.round(-(1 - s) * w) + 'px';
+            wrap.style.marginBottom = Math.round(-(1 - s) * h) + 'px';
+            wrap.classList.add('spd-zoomed');
+        }
+        const btn = container?.querySelector('#spd-zoom-reset-btn');
+        const label = container?.querySelector('#spd-zoom-label');
+        if (btn) btn.style.display = Math.abs(s - 1) < 0.001 ? 'none' : '';
+        if (label) label.textContent = Math.round(s * 100) + '%';
+    }
+
+    _fitCanvas(mode) {
+        const container = document.getElementById(this.designContainerId);
+        const wrap = container?.querySelector('.super-zprint-grid-wrapper');
+        const viewport = container?.querySelector('.spd-grid-wrap');
+        if (!wrap || !viewport) return;
+        if (mode === 'reset') { this._applyCanvasZoom(1); return; }
+        const w = wrap.offsetWidth, h = wrap.offsetHeight;
+        if (!w || !h) return;
+        const availW = viewport.clientWidth - 48;   // 容器左右 padding 20×2 + 余量
+        const availH = viewport.clientHeight - 48;
+        let s = (mode === 'width') ? (availW / w) : Math.min(availW / w, availH / h);
+        if (s >= 1) {
+            // 当前已放得下:复位并提示(用户在低分屏拖大窗口后的预期行为)
+            this._applyCanvasZoom(1);
+            frappe.show_alert({ message: __('当前窗口已可完整显示,无需缩放'), indicator: 'blue' });
+            return;
+        }
+        this._applyCanvasZoom(s);
+        viewport.scrollLeft = 0;
+        viewport.scrollTop = 0;
+        frappe.show_alert({ message: __('已缩放至') + ' ' + Math.round(s * 100) + '%', indicator: 'green' });
+    }
+
     _bindColumnResize() {
         const container = document.getElementById(this.designContainerId);
         if (!container || container._colResizeBound) return;

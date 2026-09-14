@@ -171,8 +171,7 @@
    "label": "Sample Document",
    "options": "target_doctype",
    "description": "Used for query preview to resolve doc.field parameters and demo preview.",
-   "depends_on": "eval:doc.design_target !== 'Report'",
-   "mandatory_depends_on": "eval:doc.design_target !== 'Report'"
+   "depends_on": "eval:doc.design_target !== 'Report'"
   },
   {
    "fieldname": "report_name",

@@ -247,7 +247,14 @@ def share_template(design_name):
                 inject_query_results={REPORT_MAIN_KEY: {'data': rows[:30]}},
                 report_filters=r_filters) or ""
         else:
-            preview_html = design.get_preview_for_document(doc_name=design.sample_doc) or ""
+            # v15.22.70 sample_doc 已非必填:未填时取该单据类型最近一张已提交单据
+            # 做演示数据(分享预览有真实感);无任何单据则预览为空,下方用设计稿顶上
+            preview_doc = design.sample_doc
+            if not preview_doc and design.target_doctype:
+                preview_doc = frappe.db.get_value(design.target_doctype, {"docstatus": 1},
+                    "name", order_by="modified desc")
+            if preview_doc:
+                preview_html = design.get_preview_for_document(doc_name=preview_doc) or ""
     except Exception:
         preview_html = ""
     # 设计渲染(None 占位符原样,纯模板结构)
@@ -256,6 +263,9 @@ def share_template(design_name):
         preview_html_design = design.get_preview_for_document(doc_name=None) or ""
     except Exception:
         preview_html_design = ""
+    # 无打印稿(sample_doc 未填且无任何已提交单据):设计稿顶上,保证平台卡片/详情有预览
+    if not preview_html:
+        preview_html = preview_html_design or ""
 
     # 纸张配置
     paper_config = {}

@@ -485,3 +485,9 @@
 .spd-fx-usage { font-size:10px; color:#475569; margin-top:1px; }
 .spd-fx-example { font-size:9px; color:#9ca3af; margin-top:1px; font-family:Menlo,Consolas,monospace; }
 .spd-fx-empty { padding:10px; color:#9ca3af; font-size:11px; text-align:center; }
+
+/* v15.22.70 数据源搜索框 + 树过滤隐藏 */
+.spd-ds-search { padding: 4px 6px; border-bottom: 1px solid #e2e2e2; background: #fafafa; }
+.spd-ds-node.spd-ds-hidden { display: none !important; }
+/* v15.22.70 画布缩放(适配宽度/整页):wrapper transform + margin 补偿占位,保证滚动范围与视觉一致 */
+.super-zprint-grid-wrapper.spd-zoomed { box-shadow: 0 2px 14px rgba(0,0,0,.18); border-radius: 4px; }
