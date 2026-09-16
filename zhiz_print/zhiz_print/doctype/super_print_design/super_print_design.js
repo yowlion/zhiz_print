@@ -2867,6 +2867,9 @@ class SuperPrintDesigner {
                         }
                     }
                     this.renderSeals();
+                    // 拖动结束=焦点仍在该章上 → 同步弹电子章设置
+                    // (renderSeals 重建了 DOM,click 不会自然派发,须主动触发)
+                    this._renderSealSettings(sl);
                 };
                 document.addEventListener('mousemove', move);
                 document.addEventListener('mouseup', up);
