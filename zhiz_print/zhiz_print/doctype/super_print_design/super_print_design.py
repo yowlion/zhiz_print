@@ -2128,9 +2128,13 @@ class SuperPrintDesign(frappe.model.document.Document):
         text = str(value or '').strip()
         if not text:
             return ''
-        # none = 原样显示:不做任何数字解析/格式化,等同静态文本处理(含实体还原)
-        # (值已是目标格式/混合文本/精度保留时使用;后续想格式化再切其他方式)
-        if (cell_data.get('number_format') or '').strip() == 'none':
+        # fmt 前置:none(原样显示,默认)不做任何数字解析/格式化,直接走静态文本
+        # 处理(含实体还原)—— 须在 float 之前:混合文本/精度值 float 失败会掉进
+        # 无实体还原的 fallback,且"值已是目标格式"场景根本不该过 float
+        fmt = (cell_data.get('number_format') or 'none').strip()
+        if fmt not in self._NUMBER_FORMATS:
+            fmt = 'none'
+        if fmt == 'none':
             return self._render_text_content(value)
         # 解析:去千分位逗号/空格/¥ 后 float;失败(纯文本)原样返回
         cleaned = text.replace(',', '').replace('\u00a0', '').replace(' ', '').lstrip('¥￥')
@@ -2138,9 +2142,6 @@ class SuperPrintDesign(frappe.model.document.Document):
             num = float(cleaned)
         except (ValueError, TypeError):
             return frappe.utils.escape_html(text)
-        fmt = (cell_data.get('number_format') or 'none').strip()
-        if fmt not in self._NUMBER_FORMATS:
-            fmt = 'none'
         if fmt == 'cn-upper':
             return self._cn_upper_amount(num)
         if fmt == 'cny':
