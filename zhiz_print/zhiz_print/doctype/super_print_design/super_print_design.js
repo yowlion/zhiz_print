@@ -762,7 +762,6 @@ class SuperPrintDesigner {
             html += '</tr>';
         }
         return html;
-        this.renderSeals();
     }
 
     // ===== 客户端实测分页(与 print.js render_preview 一致;演示预览用,避免后端估算遮挡) =====
@@ -4883,6 +4882,7 @@ frappe.ui.form.on('Super Print Design', {
             setTimeout(() => {
                 if (spd_designer) {
                     spd_designer.bindEvents();
+                    spd_designer.renderSeals();
                     // 报表模式:隐藏单据专用按钮(模板关联单据/演示预览 — 依赖 sample doc,
                     // 报表无单据概念;验证走"保存后到报表页菜单→超级打印")
                     if (isReportTarget) {
@@ -4909,7 +4909,7 @@ frappe.ui.form.on('Super Print Design', {
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {
-                if (spd_designer) { spd_designer.bindEvents(); }
+                if (spd_designer) { spd_designer.bindEvents(); spd_designer.renderSeals(); }
             }, 100);
         }
     },
@@ -4923,7 +4923,7 @@ frappe.ui.form.on('Super Print Design', {
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {
-                if (spd_designer) { spd_designer.bindEvents(); }
+                if (spd_designer) { spd_designer.bindEvents(); spd_designer.renderSeals(); }
             }, 100);
         }
     },
@@ -4934,7 +4934,7 @@ frappe.ui.form.on('Super Print Design', {
             frm.set_df_property('design_html', 'options', html);
             refresh_field('design_html');
             setTimeout(() => {
-                if (spd_designer) { spd_designer.bindEvents(); }
+                if (spd_designer) { spd_designer.bindEvents(); spd_designer.renderSeals(); }
             }, 100);
         }
     },
