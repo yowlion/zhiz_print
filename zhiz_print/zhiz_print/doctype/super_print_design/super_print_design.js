@@ -2108,6 +2108,7 @@ class SuperPrintDesigner {
                 '<div id="number-group" style="display:none">' +
                     '<label>' + __('Number Format') + ':</label>' +
                     '<select id="prop-number-format" class="form-control">' +
+                        '<option value="none">' + __('原样显示 (不格式化)') + '</option>' +
                         '<option value="comma-2">' + __('千分位两位 (50,000,000.00)') + '</option>' +
                         '<option value="comma-int">' + __('千分位整数 (50,000,000)') + '</option>' +
                         '<option value="plain-int">' + __('原样整数 (50000000)') + '</option>' +

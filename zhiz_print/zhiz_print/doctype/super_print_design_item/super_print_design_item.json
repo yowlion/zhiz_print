@@ -100,10 +100,10 @@
    "fieldname": "number_format",
    "fieldtype": "Select",
    "label": "Number Format",
-   "options": "comma-2\ncomma-int\nplain-int\nplain-2\ncny\ncn-upper",
+   "options": "none\ncomma-2\ncomma-int\nplain-int\nplain-2\ncny\ncn-upper",
    "default": "comma-2",
    "depends_on": "eval:doc.cell_type === 'number'",
-   "description": "comma-2=50,000,000.00 · comma-int=50,000,000 · comma-3 · plain-int=50000000 · plain-2=50000000.00 · cny=¥50,000,000.00 · cn-upper=Chinese uppercase amount"
+   "description": "none=show as-is (no formatting) · comma-2=50,000,000.00 · comma-int=50,000,000 · comma-3 · plain-int=50000000 · plain-2=50000000.00 · cny=¥50,000,000.00 · cn-upper=Chinese uppercase amount"
   },
   {
    "fieldname": "cell_value",

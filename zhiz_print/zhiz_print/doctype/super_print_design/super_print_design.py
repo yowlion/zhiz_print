@@ -2097,19 +2097,23 @@ class SuperPrintDesign(frappe.model.document.Document):
                 return f'<img src="{img_src}" style="max-width:100%;max-height:100%;object-fit:contain;">'
             return ''
         else:
-            escaped = frappe.utils.escape_html(cell_value)
-            if not escaped:
-                return escaped
-            # 字段值中原有的 HTML 实体(&nbsp; &lt; &#160; 等)还原为实体形式正常解析:
-            # escape_html 会把 &nbsp; 转成 &amp;nbsp; 显示成字面 —— 仅放行实体
-            # (标签仍被转义拦截,不引入 XSS 面)。多空格排版场景常见(经纬度栏等)。
-            escaped = re.sub(r'&amp;(nbsp|lt|gt|amp|quot|apos|#\d{1,5}|#x[0-9a-fA-F]{1,5});',
-                             r'&\1;', escaped, flags=re.I)
-            escaped = re.sub(r' {2,}', lambda m: '&nbsp;' * len(m.group()), escaped)
-            return re.sub(r'\r\n|\r|\n', '<br>', escaped)
+            return self._render_text_content(cell_value)
+
+    def _render_text_content(self, value):
+        """静态文本处理(escape + 实体还原 + 多空格 + 换行),static 与 number/none 共用。"""
+        escaped = frappe.utils.escape_html(value)
+        if not escaped:
+            return escaped
+        # 字段值中原有的 HTML 实体(&nbsp; &lt; &#160; 等)还原为实体形式正常解析:
+        # escape_html 会把 &nbsp; 转成 &amp;nbsp; 显示成字面 —— 仅放行实体
+        # (标签仍被转义拦截,不引入 XSS 面)。多空格排版场景常见(经纬度栏等)。
+        escaped = re.sub(r'&amp;(nbsp|lt|gt|amp|quot|apos|#\d{1,5}|#x[0-9a-fA-F]{1,5});',
+                         r'&\1;', escaped, flags=re.I)
+        escaped = re.sub(r' {2,}', lambda m: '&nbsp;' * len(m.group()), escaped)
+        return re.sub(r'\r\n|\r|\n', '<br>', escaped)
 
     # 数字类型格式化方式(存库 key → 行为)
-    _NUMBER_FORMATS = ('comma-2', 'comma-int', 'plain-int', 'plain-2', 'cny', 'cn-upper')
+    _NUMBER_FORMATS = ('none', 'comma-2', 'comma-int', 'plain-int', 'plain-2', 'cny', 'cn-upper')
 
     def _render_number_content(self, value, cell_data):
         """数字(number)类型:对解析后的值套格式化(v15.22.71)。
@@ -2133,6 +2137,10 @@ class SuperPrintDesign(frappe.model.document.Document):
         fmt = (cell_data.get('number_format') or 'comma-2').strip()
         if fmt not in self._NUMBER_FORMATS:
             fmt = 'comma-2'
+        # none = 原样显示:不做任何数字格式化,等同静态文本处理
+        # (值已是目标格式/混合文本时使用;后续想格式化再切其他方式)
+        if fmt == 'none':
+            return self._render_text_content(value)
         if fmt == 'cn-upper':
             return self._cn_upper_amount(num)
         if fmt == 'cny':
