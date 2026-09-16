@@ -2772,10 +2772,13 @@ class SuperPrintDesigner {
             img.style.cssText = 'width:' + w + 'px;height:' + h + 'px;object-fit:contain;position:absolute;pointer-events:auto;cursor:move;'
                 + ((sl.opacity && sl.opacity < 1) ? 'opacity:' + sl.opacity + ';' : '');
             if (td) {
-                // 章中心=锚定格中心(视口坐标差 → paper 内坐标;paper position:relative)
+                // 章中心=锚定格中心。getBoundingClientRect 是 transform scale 后的
+                // 视觉坐标,而 img.style.left 是 paper 内未缩放布局坐标 —— 视口差
+                // 必须除以画布缩放比换算回布局系,否则适配宽度/整页后章错位
+                const sc = this._canvasScale || 1;
                 const tdR = td.getBoundingClientRect(), pR = paper.getBoundingClientRect();
-                img.style.left = (tdR.left + tdR.width / 2 - pR.left - w / 2) + 'px';
-                img.style.top = (tdR.top + tdR.height / 2 - pR.top - h / 2) + 'px';
+                img.style.left = ((tdR.left + tdR.width / 2 - pR.left) / sc - w / 2) + 'px';
+                img.style.top = ((tdR.top + tdR.height / 2 - pR.top) / sc - h / 2) + 'px';
             } else {
                 // 锚定格无 DOM(合并覆盖区/越界):与后端渲染同式计算 ——
                 // x = 左边距 + 列宽累计 + 格宽/2;y = 上边距 + 行高累计 + 行高/2
@@ -2877,6 +2880,7 @@ class SuperPrintDesigner {
         const label = container?.querySelector('#spd-zoom-label');
         if (btn) btn.style.display = Math.abs(s - 1) < 0.001 ? 'none' : '';
         if (label) label.textContent = Math.round(s * 100) + '%';
+        this._canvasScale = s;  // 供章定位等视口→paper内坐标换算
     }
 
     _fitCanvas(mode) {
