@@ -2394,6 +2394,64 @@ class SuperPrintDesigner {
         container.querySelector('#prop-number-format')?.addEventListener('change', (e) => {
             this.updateCellProperty('number_format', e.target.value);
         });
+        // 电子章属性面板:应用条件 / 删除 / Delete 键
+        container.querySelector('#seal-prop-apply')?.addEventListener('click', () => {
+            const sl = (this.seals || []).find(x => x._uid === this.selectedSeal);
+            const ta = container.querySelector('#seal-prop-cond');
+            if (sl && ta) {
+                sl.condition = ta.value || '';
+                frappe.show_alert({ message: __('章条件已更新'), indicator: 'green' });
+            }
+        });
+        container.querySelector('#seal-prop-del')?.addEventListener('click', () => {
+            this.deleteSelectedSeal();
+        });
+        if (!this._sealKeydownBound) {
+            this._sealKeydownBound = true;
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Delete') return;
+                const t = e.target;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+                if (this.selectedSeal && this.deleteSelectedSeal()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        }
+        container.querySelector('#prop-font-size')?.addEventListener('change', (e) => {
+            this.applyFontSize(parseInt(e.target.value) || 12);
+        });
+        container.querySelector('#prop-padding')?.addEventListener('change', (e) => {
+            this.applyPadding(parseInt(e.target.value) || 0);
+        });
+
+        this.bindCssQuickButtons(cell);
+        this.bindBorderButtons();
+        this.bindSpinnerButtons();
+
+        // Cell vertical alignment buttons
+        container.querySelectorAll('.cell-valign-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const newCss = this.setCssProperty(cell.css_style || '', 'vertical-align', btn.dataset.valign);
+                this.updateCellProperty('css_style', newCss);
+            });
+        });
+
+        // Tab switching
+        container.querySelectorAll('.super-zprint-prop-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                container.querySelectorAll('.super-zprint-prop-tab').forEach(t => t.classList.remove('active'));
+                container.querySelectorAll('.super-zprint-prop-tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                const target = container.querySelector('.super-zprint-prop-tab-content[data-tab="' + tab.dataset.tab + '"]');
+                if (target) target.classList.add('active');
+                this.lastActiveTab = tab.dataset.tab;
+            });
+        });
+    }
+
+    onPrintCountDriverToggle(checked) {
         this.updateCellProperty('is_print_count_driver', checked ? 1 : 0);
     }
 
