@@ -1599,6 +1599,12 @@ class SuperPrintDesigner {
     // ==================== Page Properties (header/footer) ====================
 
     showPageProperties(preferTab) {
+        // 离开电子章选中态:清焦点 + 去外框(与单元格/行/列入口同款)
+        if (this.selectedSeal) {
+            this.selectedSeal = null;
+            const c0 = document.getElementById(this.designContainerId);
+            c0?.querySelectorAll('#spd-seal-layer img').forEach(im => im.style.outline = '');
+        }
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
         this.selectionMode = 'page';
@@ -2795,7 +2801,7 @@ class SuperPrintDesigner {
             const img = document.createElement('img');
             img.src = sl.image || '';
             const w = (sl.width_mm || 40) * 4, h = (sl.height_mm || 40) * 4;
-            img.style.cssText = 'width:' + w + 'px;height:' + h + 'px;object-fit:contain;position:absolute;pointer-events:auto;cursor:move;'
+            img.style.cssText = 'width:' + w + 'px;height:' + h + 'px;object-fit:contain;position:absolute;pointer-events:auto;cursor:move;z-index:8;'
                 + ((sl.opacity && sl.opacity < 1) ? 'opacity:' + sl.opacity + ';' : '');
             if (sl.pos_x !== null && sl.pos_x !== undefined) {
                 // 自由位置:章中心=存档坐标

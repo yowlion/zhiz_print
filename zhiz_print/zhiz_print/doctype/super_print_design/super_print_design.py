@@ -1784,6 +1784,31 @@ class SuperPrintDesign(frappe.model.document.Document):
                 _rva = {'Top':'flex-start','Center':'center','Bottom':'flex-end'}.get(getattr(self,'page_right_footer_v_align','') or 'Center','center')
                 page_html += f'<div style="position:absolute;right:0;top:{header_area_h:.1f}px;bottom:{footer_area_h:.1f}px;width:{margin_right * PX_PER_MM:.1f}px;overflow:hidden;display:flex;flex-direction:column;justify-content:{_rva};align-items:{_rha};"><div style="writing-mode:vertical-rl;white-space:pre-wrap;font-size:12px;color:#666;">{right_footer}</div></div>'
 
+            # 电子章输出(v15.22.95):必须在 print-page-content(overflow:hidden,
+            # top/bottom 只覆盖页眉页脚之间的内容区)之外 —— 章放页眉/页脚/左右眉区
+            # 时在 content 内会被裁剪;页眉页脚 DOM 后输出也会盖住。统一在页尾
+            # (所有区域之后、print-page close 前)输出,z-index:8 浮于全页之上
+            for _fs in _seals_free:
+                _op = _fs['opacity']
+                _op_s = ('opacity:%s;' % _op) if (_op is not None and float(_op) < 1) else ''
+                page_html += (
+                    '<img src="{img}" class="spd-seal-img" data-seal="{name}" '
+                    'style="position:absolute;left:{l:.1f}px;top:{t:.1f}px;'
+                    'width:{w:.1f}px;height:{h:.1f}px;{op}z-index:8;pointer-events:none;">'.format(
+                        img=frappe.utils.escape_html(_fs['img']), name=frappe.utils.escape_html(_fs['name']),
+                        l=float(_fs['pos_x']) - _fs['w_px'] / 2, t=float(_fs['pos_y']) - _fs['h_px'] / 2,
+                        w=_fs['w_px'], h=_fs['h_px'], op=_op_s))
+            # anchor 模式章(存量兼容):按行循环走位结果输出
+            for _cx, _cy, _sl in _seal_placed.values():
+                _op = _sl['opacity']
+                _op_s = ('opacity:%s;' % _op) if (_op is not None and float(_op) < 1) else ''
+                page_html += (
+                    '<img src="{img}" class="spd-seal-img" data-seal="{name}" '
+                    'style="position:absolute;left:{l:.1f}px;top:{t:.1f}px;'
+                    'width:{w:.1f}px;height:{h:.1f}px;{op}z-index:8;pointer-events:none;">'.format(
+                        img=frappe.utils.escape_html(_sl['img']), name=frappe.utils.escape_html(_sl['name']),
+                        l=_cx - _sl['w_px'] / 2, t=_cy - _sl['h_px'] / 2,
+                        w=_sl['w_px'], h=_sl['h_px'], op=_op_s))
             page_html += '</div>'
             pages_html.append(page_html)
 
