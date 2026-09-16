@@ -2100,6 +2100,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             escaped = frappe.utils.escape_html(cell_value)
             if not escaped:
                 return escaped
+            # 字段值中原有的 HTML 实体(&nbsp; &lt; &#160; 等)还原为实体形式正常解析:
+            # escape_html 会把 &nbsp; 转成 &amp;nbsp; 显示成字面 —— 仅放行实体
+            # (标签仍被转义拦截,不引入 XSS 面)。多空格排版场景常见(经纬度栏等)。
+            escaped = re.sub(r'&amp;(nbsp|lt|gt|amp|quot|apos|#\d{1,5}|#x[0-9a-fA-F]{1,5});',
+                             r'&\1;', escaped, flags=re.I)
             escaped = re.sub(r' {2,}', lambda m: '&nbsp;' * len(m.group()), escaped)
             return re.sub(r'\r\n|\r|\n', '<br>', escaped)
 
