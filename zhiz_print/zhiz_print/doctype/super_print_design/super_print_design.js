@@ -2878,17 +2878,31 @@ class SuperPrintDesigner {
         });
     }
 
-    // 点击章:右侧属性面板切换为「电子章设置」(条件编辑 + 右下角删除按钮)
+    // 点击章:右侧属性面板切换为「电子章设置」(条件编辑 + 右下角删除按钮)。
+    // 保持 .spd-props 的 h4 + #spd-prop-form 结构(与 renderCellProperties 同构,
+    // 毁结构会让后续单元格/页面设置的内容更新静默报错残留章设置内容)。
+    // 同页多枚章用序号 + 位置区分(章名可能相同)。
     _renderSealSettings(sl) {
         const container = document.getElementById(this.designContainerId);
         const props = container?.querySelector('#spd-props');
         if (!props) return;
-        props.innerHTML =
-            '<h4><i class="fa fa-stamp" style="color:#c0392b"></i> ' + __('电子章设置') + '</h4>' +
+        const seq = ((this.seals || []).filter(x => (x.page_no || 1) === (this.currentPageNo || 1)).indexOf(sl) + 1) || 1;
+        const titleElement = props.querySelector('h4');
+        if (titleElement) {
+            titleElement.innerHTML = '<i class="fa fa-stamp" style="color:#c0392b"></i> ' + __('电子章设置') +
+                ' <small style="color:#6c757d;font-weight:normal">(' + this.escapeHtml(sl.seal || '') + ' · ' + __('第') + seq + __('枚') + ')</small>';
+        }
+        let form = props.querySelector('#spd-prop-form');
+        if (!form) {
+            form = document.createElement('div');
+            form.id = 'spd-prop-form';
+            props.appendChild(form);
+        }
+        form.innerHTML =
             '<div style="font-size:12px;margin:6px 0;"><b>' + this.escapeHtml(sl.seal || '') + '</b></div>' +
             '<div style="font-size:11px;color:#888;margin-bottom:8px;">' +
                 __('尺寸') + ': ' + (sl.width_mm || 40) + '×' + (sl.height_mm || 40) + 'mm · ' +
-                __('位置') + ': (' + Math.round(sl.pos_x) + ', ' + Math.round(sl.pos_y) + ') · ' +
+                __('位置') + ': (' + Math.round(sl.pos_x || 0) + ', ' + Math.round(sl.pos_y || 0) + ') · ' +
                 __('透明度') + ': ' + (sl.opacity || 1) +
             '</div>' +
             '<p style="font-size:10px;color:#888;">' + __('拖动章可移动位置;点击单元格返回单元格属性') + '</p>' +
@@ -2899,11 +2913,11 @@ class SuperPrintDesigner {
                 '<button type="button" class="btn btn-primary btn-sm" id="spd-seal-save-cond"><i class="fa fa-check"></i> ' + __('保存条件') + '</button>' +
                 '<button type="button" class="btn btn-danger btn-sm" id="spd-seal-delete"><i class="fa fa-trash"></i> ' + __('删除电子章') + '</button>' +
             '</div>';
-        props.querySelector('#spd-seal-save-cond')?.addEventListener('click', () => {
-            sl.condition = (props.querySelector('#spd-seal-cond')?.value || '').trim();
+        form.querySelector('#spd-seal-save-cond')?.addEventListener('click', () => {
+            sl.condition = (form.querySelector('#spd-seal-cond')?.value || '').trim();
             frappe.show_alert({ message: __('条件已保存(随设计保存生效)'), indicator: 'green' });
         });
-        props.querySelector('#spd-seal-delete')?.addEventListener('click', () => {
+        form.querySelector('#spd-seal-delete')?.addEventListener('click', () => {
             this.seals = (this.seals || []).filter(x => x._uid !== sl._uid);
             this.selectedSeal = null;
             this.renderSeals();
