@@ -264,7 +264,7 @@ class SuperPrintDesigner {
                             barcode_height: parseInt(cell.barcode_height) || 40,
                             barcode_show_text: (cell.barcode_show_text === undefined || cell.barcode_show_text === null) ? 1 : (parseInt(cell.barcode_show_text) || 0),
                             barcode_text_size: parseInt(cell.barcode_text_size) || 10,
-                            number_format: cell.number_format || 'comma-2',
+                            number_format: cell.number_format || 'none',
                             row_type: cell.row_type || '',
                             row_display: cell.row_display || '',
                             is_print_count_driver: parseInt(cell.is_print_count_driver) || 0,
@@ -355,7 +355,7 @@ class SuperPrintDesigner {
                                 rowspan: parseInt(item.rowspan) || 1,
                                 colspan: parseInt(item.colspan) || 1,
                                 cell_type: item.cell_type || 'static',
-                                number_format: item.number_format || 'comma-2',
+                                number_format: item.number_format || 'none',
                                 cell_value: item.cell_value || '',
                                 css_style: item.css_style || '',
                                 data_key: item.data_key || '',
@@ -721,7 +721,7 @@ class SuperPrintDesigner {
                     } else if (cell_type === 'number') {
                         // 数字:图标+值摘要+格式 key 提示(实际格式化在渲染端)
                         const valHint = hasValue ? this.escapeHtml(cell_value.length > 14 ? cell_value.slice(0, 14) + '…' : cell_value) : '';
-                        content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + __('Number') + ' · ' + (cell.number_format || 'comma-2') + '</span>' + (valHint ? '<span style="color:#999;font-size:10px">' + valHint + '</span>' : '') + '</div>';
+                        content = '<div class="super-zprint-cell-preview"><i class="fa ' + typeInfo.icon + '" style="font-size:16px;color:#666"></i><span>' + __('Number') + ' · ' + (cell.number_format || 'none') + '</span>' + (valHint ? '<span style="color:#999;font-size:10px">' + valHint + '</span>' : '') + '</div>';
                     } else if (cell_type === 'html') {
                         // 网页代码:图标+值摘要占位(实际渲染走后端 iframe 隔离,画布不嵌文档)
                         const valHint = hasValue ? this.escapeHtml(cell_value.length > 20 ? cell_value.slice(0, 20) + '…' : cell_value) : '';
@@ -2223,7 +2223,7 @@ class SuperPrintDesigner {
         setValue('prop-query-name', cell.query_name);
         setValue('prop-data-key', cell.data_key);
         setValue('prop-barcode-format', cell.barcode_format || 'CODE128');
-        setValue('prop-number-format', cell.number_format || 'comma-2');
+        setValue('prop-number-format', cell.number_format || 'none');
         const showTextCb = container.querySelector('#prop-barcode-show-text');
         if (showTextCb) showTextCb.checked = (cell.barcode_show_text === undefined) ? true : !!parseInt(cell.barcode_show_text);
         setValue('prop-barcode-text-size', cell.barcode_text_size || 10);
@@ -3205,7 +3205,7 @@ class SuperPrintDesigner {
                             barcode_width: cell.barcode_width || 100, barcode_height: cell.barcode_height || 40,
                             barcode_show_text: cell.barcode_show_text === undefined ? 1 : (parseInt(cell.barcode_show_text) || 0),
                             barcode_text_size: cell.barcode_text_size || 10,
-                            number_format: cell.number_format || 'comma-2',
+                            number_format: cell.number_format || 'none',
                             row_type: cell.row_type || '', row_display: cell.row_display || '',
                             is_print_count_driver: parseInt(cell.is_print_count_driver) || 0,
                         });

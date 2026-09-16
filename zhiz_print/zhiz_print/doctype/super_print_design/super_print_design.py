@@ -1484,7 +1484,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                     'barcode_height': item.barcode_height or 40,
                     'barcode_show_text': cint(item.barcode_show_text) if item.barcode_show_text is not None else 1,
                     'barcode_text_size': cint(item.barcode_text_size) or 10,
-                    'number_format': item.number_format or 'comma-2',
+                    'number_format': item.number_format or 'none',
                     'is_print_count_driver': cint(item.is_print_count_driver),
                 }
         return cell_map
@@ -2138,9 +2138,9 @@ class SuperPrintDesign(frappe.model.document.Document):
             num = float(cleaned)
         except (ValueError, TypeError):
             return frappe.utils.escape_html(text)
-        fmt = (cell_data.get('number_format') or 'comma-2').strip()
+        fmt = (cell_data.get('number_format') or 'none').strip()
         if fmt not in self._NUMBER_FORMATS:
-            fmt = 'comma-2'
+            fmt = 'none'
         if fmt == 'cn-upper':
             return self._cn_upper_amount(num)
         if fmt == 'cny':
