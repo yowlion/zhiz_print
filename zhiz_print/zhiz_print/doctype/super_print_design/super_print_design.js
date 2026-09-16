@@ -2776,6 +2776,17 @@ class SuperPrintDesigner {
                 const tdR = td.getBoundingClientRect(), pR = paper.getBoundingClientRect();
                 img.style.left = (tdR.left + tdR.width / 2 - pR.left - w / 2) + 'px';
                 img.style.top = (tdR.top + tdR.height / 2 - pR.top - h / 2) + 'px';
+            } else {
+                // 锚定格无 DOM(合并覆盖区/越界):与后端渲染同式计算 ——
+                // x = 左边距 + 列宽累计 + 格宽/2;y = 上边距 + 行高累计 + 行高/2
+                const PX = 4;
+                let cx = (this.marginLeft || 0) * PX, cy = (this.marginTop || 0) * PX;
+                for (let c = 1; c < sl.anchor_col; c++) cx += (this.colStyles[String(c)] || {}).width || 60;
+                cx += ((this.colStyles[String(sl.anchor_col)] || {}).width || 60) / 2;
+                for (let r = 1; r < sl.anchor_row; r++) cy += (this.rowStyles[String(r)] || {}).height || 20;
+                cy += ((this.rowStyles[String(sl.anchor_row)] || {}).height || 20) / 2;
+                img.style.left = (cx - w / 2) + 'px';
+                img.style.top = (cy - h / 2) + 'px';
             }
             if (this.selectedSeal && sl._uid === this.selectedSeal) {
                 img.style.outline = '2px solid #0d5c63';
