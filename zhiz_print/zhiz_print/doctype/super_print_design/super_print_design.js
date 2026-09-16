@@ -2828,20 +2828,29 @@ class SuperPrintDesigner {
                 img.style.outlineOffset = '2px';
                 this._renderSealSettings(sl);
             });
-            // 拖动:自由移动(pos 模式)或换格(anchor 模式)
+            // 拖动(带 5px 阈值):微小移动视为纯点击 —— 不建 ghost、不重建 DOM,
+            // 让 click 事件自然派发(电子章设置面板靠 click;旧版 mousedown 即启动拖动,
+            // mouseup 时 renderSeals 重建 DOM 把 click 吞掉,面板永远不出现)
             img.addEventListener('mousedown', (e) => {
                 e.preventDefault();
-                const ghost = img.cloneNode(true);
-                ghost.style.opacity = '0.5';
-                ghost.style.pointerEvents = 'none';
-                layer.appendChild(ghost);
+                const startX = e.clientX, startY = e.clientY;
+                let dragging = false, ghost = null;
                 const move = (ev) => {
-                    ghost.style.left = (parseFloat(img.style.left) + ev.clientX - e.clientX) + 'px';
-                    ghost.style.top = (parseFloat(img.style.top) + ev.clientY - e.clientY) + 'px';
+                    if (!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return;
+                    if (!dragging) {
+                        dragging = true;
+                        ghost = img.cloneNode(true);
+                        ghost.style.opacity = '0.5';
+                        ghost.style.pointerEvents = 'none';
+                        layer.appendChild(ghost);
+                    }
+                    ghost.style.left = (parseFloat(img.style.left) + ev.clientX - startX) + 'px';
+                    ghost.style.top = (parseFloat(img.style.top) + ev.clientY - startY) + 'px';
                 };
                 const up = (ev) => {
                     document.removeEventListener('mousemove', move);
                     document.removeEventListener('mouseup', up);
+                    if (!dragging) return;  // 纯点击:交还 click 事件(弹电子章设置)
                     ghost.remove();
                     const sc = this._canvasScale || 1;
                     if (sl.pos_x !== null && sl.pos_x !== undefined) {
