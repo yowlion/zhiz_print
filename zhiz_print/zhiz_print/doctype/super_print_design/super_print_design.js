@@ -2761,7 +2761,7 @@ class SuperPrintDesigner {
                 img.style.outlineOffset = '2px';
             }
             img.dataset.sealUid = sl._uid || '';
-            // 单击:选中(不重建 DOM,避免打断;高亮 + 右侧面板切「公章设置」)
+            // 单击:选中(不重建 DOM,避免打断;高亮 + 右侧面板切「电子章设置」)
             img.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.selectedSeal = sl._uid;
@@ -2808,13 +2808,13 @@ class SuperPrintDesigner {
         });
     }
 
-    // 点击章:右侧属性面板切换为「公章设置」(条件编辑 + 右下角删除按钮)
+    // 点击章:右侧属性面板切换为「电子章设置」(条件编辑 + 右下角删除按钮)
     _renderSealSettings(sl) {
         const container = document.getElementById(this.designContainerId);
         const props = container?.querySelector('#spd-props');
         if (!props) return;
         props.innerHTML =
-            '<h4><i class="fa fa-stamp" style="color:#c0392b"></i> ' + __('公章设置') + '</h4>' +
+            '<h4><i class="fa fa-stamp" style="color:#c0392b"></i> ' + __('电子章设置') + '</h4>' +
             '<div style="font-size:12px;margin:6px 0;"><b>' + this.escapeHtml(sl.seal || '') + '</b></div>' +
             '<div style="font-size:11px;color:#888;margin-bottom:8px;">' +
                 __('尺寸') + ': ' + (sl.width_mm || 40) + '×' + (sl.height_mm || 40) + 'mm · ' +
@@ -2827,7 +2827,7 @@ class SuperPrintDesigner {
             '<div style="font-size:10px;color:#999;margin-top:2px;">' + __("示例: doc.company == '广德' && doc.docstatus == 1") + '</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">' +
                 '<button type="button" class="btn btn-primary btn-sm" id="spd-seal-save-cond"><i class="fa fa-check"></i> ' + __('保存条件') + '</button>' +
-                '<button type="button" class="btn btn-danger btn-sm" id="spd-seal-delete"><i class="fa fa-trash"></i> ' + __('删除公章') + '</button>' +
+                '<button type="button" class="btn btn-danger btn-sm" id="spd-seal-delete"><i class="fa fa-trash"></i> ' + __('删除电子章') + '</button>' +
             '</div>';
         props.querySelector('#spd-seal-save-cond')?.addEventListener('click', () => {
             sl.condition = (props.querySelector('#spd-seal-cond')?.value || '').trim();
@@ -2837,7 +2837,7 @@ class SuperPrintDesigner {
             this.seals = (this.seals || []).filter(x => x._uid !== sl._uid);
             this.selectedSeal = null;
             this.renderSeals();
-            frappe.show_alert({ message: __('公章已删除(随设计保存生效)'), indicator: 'orange' });
+            frappe.show_alert({ message: __('电子章已删除(随设计保存生效)'), indicator: 'orange' });
         });
     }
 
