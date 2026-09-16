@@ -1185,6 +1185,8 @@ def load_design_data(design_name):
             "page_no": cint(item.page_no) if item.page_no else 1,
             "anchor_row": cint(item.anchor_row) or 1,
             "anchor_col": cint(item.anchor_col) or 1,
+            "pos_x": item.pos_x,
+            "pos_y": item.pos_y,
             "condition": item.condition or "",
             "image": (sd.image if sd else "") or "",
             "width_mm": (sd.width if sd else 40) or 40,

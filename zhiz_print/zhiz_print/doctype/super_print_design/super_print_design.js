@@ -2716,6 +2716,7 @@ class SuperPrintDesigner {
                     frappe.msgprint(__('尚未创建电子章') + ' — ' + __('请先在 Electronic Seal(电子章)列表新建:章图片(建议透明底PNG)+ 尺寸(mm)+ 透明度'));
                     return;
                 }
+                let picked = null;
                 const d = new frappe.ui.Dialog({
                     title: __('选择电子章'),
                     fields: [{
@@ -2726,35 +2727,83 @@ class SuperPrintDesigner {
                             + '<div style="font-size:11px;margin-top:4px;">' + this.escapeHtml(r.name) + '</div>'
                             + '<div style="font-size:10px;color:#888;">' + (r.width || 40) + '×' + (r.height || 40) + 'mm</div></div>').join('') + '</div>'
                     }],
-                    primary_action_label: __('进入放置'),
-                    primary_action: () => { d.hide(); }
+                    primary_action_label: __('确认'),
+                    primary_action: () => {
+                        if (!picked) { frappe.show_alert({ message: __('请先点选一个章'), indicator: 'yellow' }); return; }
+                        d.hide();
+                        this._startSealFollow(picked);
+                    }
                 });
                 d.$wrapper.on('click', '.spd-seal-pick', (e) => {
                     d.$wrapper.find('.spd-seal-pick').css('border-color', 'transparent');
                     const el = $(e.currentTarget);
                     el.css('border-color', '#0d5c63');
-                    const name = el.data('name');
-                    this._placingSeal = rows.find(r => r.name === name) || null;
+                    picked = rows.find(r => r.name === el.data('name')) || null;
                 });
                 d.show();
-                frappe.show_alert({ message: __('选择章后点「进入放置」,再点击设计网格的目标单元格 — 章将以该格正中摆放'), indicator: 'blue' });
             });
     }
 
-    _placeSeal(row, col) {
-        const sd = this._placingSeal;
-        if (!sd) return;
-        this.seals.push({
-            _uid: 'seal_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-            seal: sd.name, page_no: this.currentPageNo || 1,
-            anchor_row: row, anchor_col: col, condition: '',
-            image: sd.image, width_mm: sd.width || 40, height_mm: sd.height || 40,
-            opacity: (sd.opacity === 0 || sd.opacity) ? sd.opacity : 1,
-        });
+    // 跟随模式:半透明章在整个预览界面跟随鼠标,点击落章(章中心=点击点)
+    _startSealFollow(sd) {
+        this._stopSealFollow();
+        const container = document.getElementById(this.designContainerId);
+        const paper = container?.querySelector('#spd-paper');
+        const layer = container?.querySelector('#spd-seal-layer');
+        if (!paper || !layer) return;
+        const w = (sd.width || 40) * 4, h = (sd.height || 40) * 4;
+        const ghost = document.createElement('img');
+        ghost.src = sd.image || '';
+        ghost.style.cssText = 'width:' + w + 'px;height:' + h + 'px;object-fit:contain;position:absolute;'
+            + 'opacity:0.55;pointer-events:none;z-index:99;display:none;';
+        layer.appendChild(ghost);
+        this._placingSeal = sd;
+        this._sealFollow = {
+            ghost, paper, layer,
+            move: (e) => {
+                const sc = this._canvasScale || 1;
+                const pR = paper.getBoundingClientRect();
+                ghost.style.display = 'block';
+                ghost.style.left = ((e.clientX - pR.left) / sc - w / 2) + 'px';
+                ghost.style.top = ((e.clientY - pR.top) / sc - h / 2) + 'px';
+            },
+            click: (e) => {
+                // 仅纸面内落章
+                const pR = paper.getBoundingClientRect();
+                if (e.clientX < pR.left || e.clientX > pR.right || e.clientY < pR.top || e.clientY > pR.bottom) return;
+                const sc = this._canvasScale || 1;
+                this.seals.push({
+                    _uid: 'seal_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                    seal: sd.name, page_no: this.currentPageNo || 1,
+                    anchor_row: 1, anchor_col: 1,
+                    pos_x: (e.clientX - pR.left) / sc,
+                    pos_y: (e.clientY - pR.top) / sc,
+                    condition: '',
+                    image: sd.image, width_mm: sd.width || 40, height_mm: sd.height || 40,
+                    opacity: (sd.opacity === 0 || sd.opacity) ? sd.opacity : 1,
+                });
+                this._stopSealFollow();
+                this.selectedSeal = null;
+                this.renderSeals();
+                frappe.show_alert({ message: __('已放置电子章,可拖动调整;双击设置显示条件;Delete 删除'), indicator: 'green' });
+            },
+            key: (e) => { if (e.key === 'Escape') this._stopSealFollow(); }
+        };
+        document.addEventListener('mousemove', this._sealFollow.move);
+        document.addEventListener('click', this._sealFollow.click, true);
+        document.addEventListener('keydown', this._sealFollow.key);
+        frappe.show_alert({ message: __('章跟随鼠标移动 — 在纸面上点击放置(Esc 取消)'), indicator: 'blue' });
+    }
+
+    _stopSealFollow() {
+        if (this._sealFollow) {
+            document.removeEventListener('mousemove', this._sealFollow.move);
+            document.removeEventListener('click', this._sealFollow.click, true);
+            document.removeEventListener('keydown', this._sealFollow.key);
+            this._sealFollow.ghost?.remove();
+            this._sealFollow = null;
+        }
         this._placingSeal = null;
-        this.selectedSeal = null;
-        this.renderSeals();
-        frappe.show_alert({ message: __('已放置') + ': ' + sd.name + ' → R' + row + 'C' + col, indicator: 'green' });
     }
 
     renderSeals() {
@@ -2765,45 +2814,51 @@ class SuperPrintDesigner {
         layer.innerHTML = '';
         (this.seals || []).forEach(sl => {
             if ((sl.page_no || 1) !== (this.currentPageNo || 1)) return;
-            const td = paper.querySelector('.spd-cell[data-row="' + sl.anchor_row + '"][data-col="' + sl.anchor_col + '"]');
             const img = document.createElement('img');
             img.src = sl.image || '';
             const w = (sl.width_mm || 40) * 4, h = (sl.height_mm || 40) * 4;
             img.style.cssText = 'width:' + w + 'px;height:' + h + 'px;object-fit:contain;position:absolute;pointer-events:auto;cursor:move;'
                 + ((sl.opacity && sl.opacity < 1) ? 'opacity:' + sl.opacity + ';' : '');
-            if (td) {
-                // 章中心=锚定格中心。getBoundingClientRect 是 transform scale 后的
-                // 视觉坐标,而 img.style.left 是 paper 内未缩放布局坐标 —— 视口差
-                // 必须除以画布缩放比换算回布局系,否则适配宽度/整页后章错位
-                const sc = this._canvasScale || 1;
-                const tdR = td.getBoundingClientRect(), pR = paper.getBoundingClientRect();
-                img.style.left = ((tdR.left + tdR.width / 2 - pR.left) / sc - w / 2) + 'px';
-                img.style.top = ((tdR.top + tdR.height / 2 - pR.top) / sc - h / 2) + 'px';
+            if (sl.pos_x !== null && sl.pos_x !== undefined) {
+                // 自由位置:章中心=存档坐标
+                img.style.left = (parseFloat(sl.pos_x) - w / 2) + 'px';
+                img.style.top = (parseFloat(sl.pos_y) - h / 2) + 'px';
             } else {
-                // 锚定格无 DOM(合并覆盖区/越界):与后端渲染同式计算 ——
-                // x = 左边距 + 列宽累计 + 格宽/2;y = 上边距 + 行高累计 + 行高/2
-                const PX = 4;
-                let cx = (this.marginLeft || 0) * PX, cy = (this.marginTop || 0) * PX;
-                for (let c = 1; c < sl.anchor_col; c++) cx += (this.colStyles[String(c)] || {}).width || 60;
-                cx += ((this.colStyles[String(sl.anchor_col)] || {}).width || 60) / 2;
-                for (let r = 1; r < sl.anchor_row; r++) cy += (this.rowStyles[String(r)] || {}).height || 20;
-                cy += ((this.rowStyles[String(sl.anchor_row)] || {}).height || 20) / 2;
-                img.style.left = (cx - w / 2) + 'px';
-                img.style.top = (cy - h / 2) + 'px';
+                const td = paper.querySelector('.spd-cell[data-row="' + sl.anchor_row + '"][data-col="' + sl.anchor_col + '"]');
+                if (td) {
+                    const sc = this._canvasScale || 1;
+                    const tdR = td.getBoundingClientRect(), pR = paper.getBoundingClientRect();
+                    img.style.left = ((tdR.left + tdR.width / 2 - pR.left) / sc - w / 2) + 'px';
+                    img.style.top = ((tdR.top + tdR.height / 2 - pR.top) / sc - h / 2) + 'px';
+                } else {
+                    const PX = 4;
+                    let cx = (this.marginLeft || 0) * PX, cy = (this.marginTop || 0) * PX;
+                    for (let c = 1; c < sl.anchor_col; c++) cx += (this.colStyles[String(c)] || {}).width || 60;
+                    cx += ((this.colStyles[String(sl.anchor_col)] || {}).width || 60) / 2;
+                    for (let r = 1; r < sl.anchor_row; r++) cy += (this.rowStyles[String(r)] || {}).height || 20;
+                    cy += ((this.rowStyles[String(sl.anchor_row)] || {}).height || 20) / 2;
+                    img.style.left = (cx - w / 2) + 'px';
+                    img.style.top = (cy - h / 2) + 'px';
+                }
             }
             if (this.selectedSeal && sl._uid === this.selectedSeal) {
                 img.style.outline = '2px solid #0d5c63';
                 img.style.outlineOffset = '2px';
             }
             img.dataset.sealUid = sl._uid || '';
-            // 选中
+            // 单击选中
             img.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.selectedSeal = sl._uid;
                 this._syncSealPropPanel(sl);
                 this.renderSeals();
             });
-            // 拖动换锚定格
+            // 双击:显示条件设置弹窗
+            img.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                this._showSealCondDialog(sl);
+            });
+            // 拖动:自由移动(pos 模式)或换格(anchor 模式)
             img.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 const ghost = img.cloneNode(true);
@@ -2818,12 +2873,19 @@ class SuperPrintDesigner {
                     document.removeEventListener('mousemove', move);
                     document.removeEventListener('mouseup', up);
                     ghost.remove();
-                    const el = document.elementFromPoint(ev.clientX, ev.clientY);
-                    const td2 = el && el.closest ? el.closest('.spd-cell') : null;
-                    if (td2) {
-                        sl.anchor_row = parseInt(td2.dataset.row);
-                        sl.anchor_col = parseInt(td2.dataset.col);
-                        frappe.show_alert({ message: __('已重新锚定') + ' R' + sl.anchor_row + 'C' + sl.anchor_col, indicator: 'blue' });
+                    const sc = this._canvasScale || 1;
+                    if (sl.pos_x !== null && sl.pos_x !== undefined) {
+                        // 自由位置:章中心=释放点(paper 内坐标)
+                        const pR = paper.getBoundingClientRect();
+                        sl.pos_x = (ev.clientX - pR.left) / sc;
+                        sl.pos_y = (ev.clientY - pR.top) / sc;
+                    } else {
+                        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+                        const td2 = el && el.closest ? el.closest('.spd-cell') : null;
+                        if (td2) {
+                            sl.anchor_row = parseInt(td2.dataset.row);
+                            sl.anchor_col = parseInt(td2.dataset.col);
+                        }
                     }
                     this.renderSeals();
                 };
@@ -2832,6 +2894,25 @@ class SuperPrintDesigner {
             });
             layer.appendChild(img);
         });
+    }
+
+    _showSealCondDialog(sl) {
+        const d = new frappe.ui.Dialog({
+            title: __('电子章显示条件') + ' — ' + (sl.seal || ''),
+            fields: [
+                { fieldname: 'cond', fieldtype: 'Text', label: __('条件(同启用条件语法,留空=始终显示)'),
+                  default: sl.condition || '',
+                  description: __("示例: doc.company == '广德' && doc.docstatus == 1") },
+            ],
+            primary_action_label: __('确定'),
+            primary_action: (v) => {
+                sl.condition = (v.cond || '').trim();
+                d.hide();
+                this._syncSealPropPanel(sl);
+                frappe.show_alert({ message: __('条件已保存(随设计保存生效)'), indicator: 'green' });
+            }
+        });
+        d.show();
     }
 
     _syncSealPropPanel(sl) {
@@ -3444,6 +3525,8 @@ class SuperPrintDesigner {
         this.frm.set_value('design_seals', (this.seals || []).map(sl => ({
             seal: sl.seal, page_no: sl.page_no || 1,
             anchor_row: sl.anchor_row || 1, anchor_col: sl.anchor_col || 1,
+            pos_x: (sl.pos_x === undefined || sl.pos_x === null) ? null : parseFloat(sl.pos_x),
+            pos_y: (sl.pos_y === undefined || sl.pos_y === null) ? null : parseFloat(sl.pos_y),
             condition: sl.condition || '',
         })));
         return { cells: designItems.length, pages: pageNumbers.length };

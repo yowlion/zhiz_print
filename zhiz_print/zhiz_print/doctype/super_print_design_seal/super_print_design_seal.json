@@ -4,7 +4,15 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": ["seal", "page_no", "anchor_row", "anchor_col", "condition"],
+ "field_order": [
+  "seal",
+  "page_no",
+  "anchor_row",
+  "anchor_col",
+  "pos_x",
+  "pos_y",
+  "condition"
+ ],
  "fields": [
   {
    "fieldname": "seal",
@@ -32,6 +40,18 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Anchor Col"
+  },
+  {
+   "fieldname": "pos_x",
+   "fieldtype": "Float",
+   "label": "Pos X (px, seal center, paper-relative)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "pos_y",
+   "fieldtype": "Float",
+   "label": "Pos Y (px)",
+   "in_list_view": 1
   },
   {
    "description": "Same syntax as Enable Condition (doc/user/get_value/fmt/flt, JS-style && ||). Empty = always show. Seal center aligns to the anchor cell center; on data-driven rows it follows the LAST expanded instance of each physical page.",

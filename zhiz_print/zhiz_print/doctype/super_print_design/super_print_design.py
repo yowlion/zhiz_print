@@ -1623,9 +1623,22 @@ class SuperPrintDesign(frappe.model.document.Document):
             cell_map = cell_maps_by_page.get(page_no, {})
             cell_grid = cell_grids_by_page.get(page_no)
 
-            # 电子章(v15.22.80):本逻辑页的章(条件已过滤);锚定格 x 坐标预计算
-            _seals_here = _seal_defs.get(page_no) or []
+            # 电子章(v15.22.80):本逻辑页的章(条件已过滤);锚定格 x 坐标预计算。
+            # v15.22.86:pos 自由位置章直接输出(每物理页同位置,多页单据每页盖);
+            # anchor 模型章走行循环走位(存量兼容)
+            _seals_here = [x for x in (_seal_defs.get(page_no) or []) if x.get('pos_x') is None]
+            _seals_free = [x for x in (_seal_defs.get(page_no) or []) if x.get('pos_x') is not None]
             _seal_placed = {}
+            for _fs in _seals_free:
+                _op = _fs['opacity']
+                _op_s = ('opacity:%s;' % _op) if (_op is not None and float(_op) < 1) else ''
+                page_html += (
+                    '<img src="{img}" class="spd-seal-img" data-seal="{name}" '
+                    'style="position:absolute;left:{l:.1f}px;top:{t:.1f}px;'
+                    'width:{w:.1f}px;height:{h:.1f}px;{op}z-index:5;pointer-events:none;">'.format(
+                        img=frappe.utils.escape_html(_fs['img']), name=frappe.utils.escape_html(_fs['name']),
+                        l=float(_fs['pos_x']) - _fs['w_px'] / 2, t=float(_fs['pos_y']) - _fs['h_px'] / 2,
+                        w=_fs['w_px'], h=_fs['h_px'], op=_op_s))
             if _seals_here:
                 _total_tbl_w = 0
                 _col_x = {}
