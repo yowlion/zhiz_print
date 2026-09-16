@@ -2113,14 +2113,14 @@ class SuperPrintDesign(frappe.model.document.Document):
         return re.sub(r'\r\n|\r|\n', '<br>', escaped)
 
     # 数字类型格式化方式(存库 key → 行为)
-    _NUMBER_FORMATS = ('none', 'comma-2', 'comma-int', 'plain-int', 'plain-2', 'cny', 'cn-upper')
+    _NUMBER_FORMATS = ('none', 'comma-2', 'comma-int', 'comma-keep', 'plain-int', 'plain-2', 'cny', 'cn-upper')
 
     def _render_number_content(self, value, cell_data):
         """数字(number)类型:对解析后的值套格式化(v15.22.71)。
 
         值照常写占位符/表达式(进入本函数前已替换/求值为显示文本),本类型再解析
         为数字并按 number_format 输出:
-          comma-2  50,000,000.00(默认)   comma-int 50,000,000
+          comma-2  50,000,000.00(默认)   comma-int 50,000,000   comma-keep 1,234,567.8945(整数千分位,小数位原样)
           plain-int 50000000(去尾零)     plain-2  50000000.00
           cny      ¥50,000,000.00        cn-upper 伍仟万元整(人民币大写)
         值为空/非数字时原样显示(不出空白);千分位逗号只进显示文本 ——
@@ -2147,6 +2147,16 @@ class SuperPrintDesign(frappe.model.document.Document):
             return '¥{:,.2f}'.format(num)
         if fmt == 'comma-int':
             return '{:,.0f}'.format(num)
+        if fmt == 'comma-keep':
+            # 整数千分位、小数位原样保留:小数部分取自原文本(位数/尾零都不动,
+            # 不经 float 避免精度尾巴),如 1234567.8945 → 1,234,567.8945、
+            # 3525.60 → 3,525.60;无小数则仅整数千分位
+            dec = ''
+            body = cleaned.lstrip('-').lstrip('+')
+            if '.' in body:
+                dec = body.split('.', 1)[1]
+            int_part = '{:,}'.format(int(abs(num)))
+            return ('-' if num < 0 else '') + int_part + (('.' + dec) if dec else '')
         if fmt == 'plain-int':
             return self._fmt_val(num)
         if fmt == 'plain-2':

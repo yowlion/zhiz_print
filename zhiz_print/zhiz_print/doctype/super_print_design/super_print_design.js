@@ -2111,6 +2111,7 @@ class SuperPrintDesigner {
                         '<option value="none">' + __('原样显示 (不格式化)') + '</option>' +
                         '<option value="comma-2">' + __('千分位两位 (50,000,000.00)') + '</option>' +
                         '<option value="comma-int">' + __('千分位整数 (50,000,000)') + '</option>' +
+                        '<option value="comma-keep">' + __('千分位·小数原样 (1,234,567.8945)') + '</option>' +
                         '<option value="plain-int">' + __('原样整数 (50000000)') + '</option>' +
                         '<option value="plain-2">' + __('原样两位 (50000000.00)') + '</option>' +
                         '<option value="cny">' + __('金额 (¥50,000,000.00)') + '</option>' +
