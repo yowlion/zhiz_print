@@ -1541,7 +1541,7 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         返回 {page_no: [ {row, col, img, w_px, h_px, opacity, name}, ... ]}。"""
         out = {}
-        for item in (getattr(self, 'design_seals', None) or []):
+        for _idx, item in enumerate(getattr(self, 'design_seals', None) or []):
             try:
                 if not self._eval_seal_condition(item.condition, doc):
                     continue
@@ -1550,6 +1550,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                 if not sd or not sd.image:
                     continue
                 out.setdefault(cint(item.page_no) or 1, []).append({
+                    'idx': _idx,
                     'row': cint(item.anchor_row) or 1,
                     'col': cint(item.anchor_col) or 1,
                     'img': sd.image,
@@ -1706,7 +1707,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                     for _sl in _seals_here:
                         if _sl['row'] == _srow:
                             _cw = col_styles.get(str(_sl['col']), {}).get('width', 60)
-                            _seal_placed[_sl['name']] = (
+                            _seal_placed[_sl['idx']] = (
                                 _sl['_cx0'] + _cw / 2, _seal_y + _rh / 2, _sl)
                     _seal_y += _rh
             page_html += '</table>'
