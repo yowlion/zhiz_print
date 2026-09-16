@@ -762,6 +762,7 @@ class SuperPrintDesigner {
             html += '</tr>';
         }
         return html;
+        this.renderSeals();
     }
 
     // ===== 客户端实测分页(与 print.js render_preview 一致;演示预览用,避免后端估算遮挡) =====
