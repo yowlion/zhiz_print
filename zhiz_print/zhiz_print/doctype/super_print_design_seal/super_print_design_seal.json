@@ -11,6 +11,9 @@
   "anchor_col",
   "pos_x",
   "pos_y",
+  "position_mode",
+  "offset_x",
+  "offset_y",
   "condition"
  ],
  "fields": [
@@ -52,6 +55,25 @@
    "fieldtype": "Float",
    "label": "Pos Y (px)",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "position_mode",
+   "fieldtype": "Select",
+   "label": "Position Mode",
+   "options": "paper\ncell",
+   "default": "paper",
+   "in_list_view": 1,
+   "description": "paper=固定 to paper (pos_x/pos_y); cell=relative to anchor cell's top-left corner + offset (follows data-driven row expansion)"
+  },
+  {
+   "fieldname": "offset_x",
+   "fieldtype": "Float",
+   "label": "Offset X (px, seal center from anchor cell top-left)"
+  },
+  {
+   "fieldname": "offset_y",
+   "fieldtype": "Float",
+   "label": "Offset Y (px)"
   },
   {
    "description": "Same syntax as Enable Condition (doc/user/get_value/fmt/flt, JS-style && ||). Empty = always show. Seal center aligns to the anchor cell center; on data-driven rows it follows the LAST expanded instance of each physical page.",

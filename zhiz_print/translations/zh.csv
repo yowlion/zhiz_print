@@ -453,3 +453,8 @@ Page No,页码
 电子章设置,电子章设置
 删除电子章,删除电子章
 保存条件,保存条件
+Position Mode,位置方式
+Pick Anchor Cell,拾取单元格
+paper,纸张固定
+Offset X (px, seal center from anchor cell top-left),偏移X(章中心相对参考格左上)
+Offset Y (px),偏移Y(px)

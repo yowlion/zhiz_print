@@ -888,6 +888,32 @@ class SuperPrintDesigner {
             dlg.show();
         });
         container.querySelector('#spd-insert-seal-btn')?.addEventListener('click', () => this._showSealPicker());
+        // 参考格拾取模式:点击格子设为章的参考单元格(偏移=章当前位-格左上,章不动)
+        const pickArea = container.querySelector('.spd-grid-wrap');
+        pickArea?.addEventListener('click', (e) => {
+            if (!this._pickingSealForCell) return;
+            const td = e.target.closest('.spd-cell');
+            if (!td) return;
+            const row = parseInt(td.dataset.row), col = parseInt(td.dataset.col);
+            if (!row || !col) return;
+            const sl = this._pickingSealForCell;
+            this._pickingSealForCell = null;
+            sl.anchor_row = row; sl.anchor_col = col;
+            sl.position_mode = 'cell';
+            // 偏移 = 章当前显示位置 - 参考格左上(视觉不动)
+            const paper2 = container.querySelector('#spd-paper');
+            const img2 = container.querySelector('#spd-seal-layer img[data-seal-uid="' + sl._uid + '"]');
+            const sc = this._canvasScale || 1;
+            if (paper2 && img2 && td.getBoundingClientRect) {
+                const pR = paper2.getBoundingClientRect(), iR = img2.getBoundingClientRect(), tR = td.getBoundingClientRect();
+                sl.offset_x = (iR.left + iR.width / 2 - tR.left) / sc;
+                sl.offset_y = (iR.top + iR.height / 2 - tR.top) / sc;
+            } else { sl.offset_x = 0; sl.offset_y = 0; }
+            this.renderSeals();
+            this._renderSealSettings(sl);
+            frappe.show_alert({ message: __('参考格已设为') + ' R' + row + 'C' + col, indicator: 'green' });
+            e.stopPropagation();
+        }, true);  // capture:先于格子自身 click
         // 放置模式:点击格子锚定章(容器级委托,refreshGrid 重建不失效)
         const sealPaperArea = container.querySelector('.spd-grid-wrap');
         sealPaperArea?.addEventListener('click', (e) => {
@@ -2803,8 +2829,26 @@ class SuperPrintDesigner {
             const w = (sl.width_mm || 40) * 4, h = (sl.height_mm || 40) * 4;
             img.style.cssText = 'width:' + w + 'px;height:' + h + 'px;object-fit:contain;position:absolute;pointer-events:auto;cursor:move;z-index:8;'
                 + ((sl.opacity && sl.opacity < 1) ? 'opacity:' + sl.opacity + ';' : '');
-            if (sl.pos_x !== null && sl.pos_x !== undefined) {
-                // 自由位置:章中心=存档坐标
+            if (sl.position_mode === 'cell') {
+                // 参考单元格模式:章中心 = 参考格左上 + 偏移(数据行展开由渲染端同公式走)
+                const tdA = paper.querySelector('.spd-cell[data-row="' + sl.anchor_row + '"][data-col="' + sl.anchor_col + '"]');
+                const scA = this._canvasScale || 1;
+                const ox = parseFloat(sl.offset_x) || 0, oy = parseFloat(sl.offset_y) || 0;
+                if (tdA) {
+                    const tR = tdA.getBoundingClientRect(), pR0 = paper.getBoundingClientRect();
+                    img.style.left = ((tR.left - pR0.left) / scA + ox - w / 2) + 'px';
+                    img.style.top = ((tR.top - pR0.top) / scA + oy - h / 2) + 'px';
+                } else {
+                    // 参考格无 DOM(合并覆盖区):计算式(边距+列宽/行高累计)
+                    const PX = 4;
+                    let ax = (this.marginLeft || 0) * PX, ay = (this.marginTop || 0) * PX;
+                    for (let c = 1; c < sl.anchor_col; c++) ax += (this.colStyles[String(c)] || {}).width || 60;
+                    for (let r = 1; r < sl.anchor_row; r++) ay += (this.rowStyles[String(r)] || {}).height || 20;
+                    img.style.left = (ax + ox - w / 2) + 'px';
+                    img.style.top = (ay + oy - h / 2) + 'px';
+                }
+            } else if (sl.pos_x !== null && sl.pos_x !== undefined) {
+                // 自由位置(纸张固定):章中心=存档坐标
                 img.style.left = (parseFloat(sl.pos_x) - w / 2) + 'px';
                 img.style.top = (parseFloat(sl.pos_y) - h / 2) + 'px';
             } else {
@@ -2864,7 +2908,15 @@ class SuperPrintDesigner {
                     if (!dragging) return;  // 纯点击:交还 click 事件(弹电子章设置)
                     ghost.remove();
                     const sc = this._canvasScale || 1;
-                    if (sl.pos_x !== null && sl.pos_x !== undefined) {
+                    if (sl.position_mode === 'cell') {
+                        // 参考格模式:拖动=调偏移(参考格不变;章中心=释放点换算回格左上偏移)
+                        const tdA2 = paper.querySelector('.spd-cell[data-row="' + sl.anchor_row + '"][data-col="' + sl.anchor_col + '"]');
+                        if (tdA2) {
+                            const tR2 = tdA2.getBoundingClientRect();
+                            sl.offset_x = (ev.clientX - tR2.left) / sc;
+                            sl.offset_y = (ev.clientY - tR2.top) / sc;
+                        }
+                    } else if (sl.pos_x !== null && sl.pos_x !== undefined) {
                         // 自由位置:章中心=释放点(paper 内坐标)
                         const pR = paper.getBoundingClientRect();
                         sl.pos_x = (ev.clientX - pR.left) / sc;
@@ -2913,8 +2965,17 @@ class SuperPrintDesigner {
             '<div style="font-size:12px;margin:6px 0;"><b>' + this.escapeHtml(sl.seal || '') + '</b></div>' +
             '<div style="font-size:11px;color:#888;margin-bottom:8px;">' +
                 __('尺寸') + ': ' + (sl.width_mm || 40) + '×' + (sl.height_mm || 40) + 'mm · ' +
-                __('位置') + ': (' + Math.round(sl.pos_x || 0) + ', ' + Math.round(sl.pos_y || 0) + ') · ' +
                 __('透明度') + ': ' + (sl.opacity || 1) +
+            '</div>' +
+            '<label style="font-size:11px;">' + __('位置方式') + ':</label>' +
+            '<select id="spd-seal-mode" class="form-control">' +
+                '<option value="paper"' + (sl.position_mode !== 'cell' ? ' selected' : '') + '>' + __('纸张固定') + '</option>' +
+                '<option value="cell"' + (sl.position_mode === 'cell' ? ' selected' : '') + '>' + __('参考单元格') + '</option>' +
+            '</select>' +
+            '<div id="spd-seal-cell-row" style="display:' + (sl.position_mode === 'cell' ? 'block' : 'none') + ';margin-top:4px;">' +
+                '<div style="font-size:11px;color:#555;">' + __('参考格') + ': <b id="spd-seal-anchor-label">R' + (sl.anchor_row || 1) + 'C' + (sl.anchor_col || 1) + '</b></div>' +
+                '<button type="button" class="btn btn-default btn-xs" id="spd-seal-pick-cell" style="margin-top:3px;"><i class="fa fa-crosshairs"></i> ' + __('拾取单元格') + '</button>' +
+                '<div style="font-size:10px;color:#999;margin-top:2px;">' + __('拾取后拖动章=调偏移;数据行展开时以参考格左上角+偏移定位') + '</div>' +
             '</div>' +
             '<p style="font-size:10px;color:#888;">' + __('拖动章可移动位置;点击单元格返回单元格属性') + '</p>' +
             '<label style="font-size:11px;">' + __('显示条件(同启用条件语法,留空=始终显示)') + ':</label>' +
@@ -2924,6 +2985,28 @@ class SuperPrintDesigner {
                 '<button type="button" class="btn btn-primary btn-sm" id="spd-seal-save-cond"><i class="fa fa-check"></i> ' + __('保存条件') + '</button>' +
                 '<button type="button" class="btn btn-danger btn-sm" id="spd-seal-delete"><i class="fa fa-trash"></i> ' + __('删除电子章') + '</button>' +
             '</div>';
+        form.querySelector('#spd-seal-mode')?.addEventListener('change', (e) => {
+            sl.position_mode = e.target.value;
+            if (sl.position_mode === 'cell' && (sl.offset_x === undefined || sl.offset_x === null)) {
+                // 切到参考格:以章当前显示位置 - 参考格左上 初始化偏移(章视觉不动)
+                const container2 = document.getElementById(this.designContainerId);
+                const paper2 = container2?.querySelector('#spd-paper');
+                const img2 = container2?.querySelector('#spd-seal-layer img[data-seal-uid="' + sl._uid + '"]');
+                const td2 = paper2?.querySelector('.spd-cell[data-row="' + (sl.anchor_row || 1) + '"][data-col="' + (sl.anchor_col || 1) + '"]');
+                if (paper2 && img2 && td2) {
+                    const sc = this._canvasScale || 1;
+                    const pR = paper2.getBoundingClientRect(), iR = img2.getBoundingClientRect(), tR = td2.getBoundingClientRect();
+                    sl.offset_x = (iR.left + iR.width / 2 - tR.left) / sc;
+                    sl.offset_y = (iR.top + iR.height / 2 - tR.top) / sc;
+                } else { sl.offset_x = 0; sl.offset_y = 0; }
+            }
+            this._renderSealSettings(sl);  // 刷新面板显隐
+            this.renderSeals();
+        });
+        form.querySelector('#spd-seal-pick-cell')?.addEventListener('click', () => {
+            this._pickingSealForCell = sl;
+            frappe.show_alert({ message: __('请在画布上点击参考单元格'), indicator: 'blue' });
+        });
         form.querySelector('#spd-seal-save-cond')?.addEventListener('click', () => {
             sl.condition = (form.querySelector('#spd-seal-cond')?.value || '').trim();
             frappe.show_alert({ message: __('条件已保存(随设计保存生效)'), indicator: 'green' });
@@ -3526,6 +3609,9 @@ class SuperPrintDesigner {
             anchor_row: sl.anchor_row || 1, anchor_col: sl.anchor_col || 1,
             pos_x: (sl.pos_x === undefined || sl.pos_x === null) ? null : parseFloat(sl.pos_x),
             pos_y: (sl.pos_y === undefined || sl.pos_y === null) ? null : parseFloat(sl.pos_y),
+            position_mode: sl.position_mode === 'cell' ? 'cell' : 'paper',
+            offset_x: (sl.offset_x === undefined || sl.offset_x === null) ? 0 : parseFloat(sl.offset_x),
+            offset_y: (sl.offset_y === undefined || sl.offset_y === null) ? 0 : parseFloat(sl.offset_y),
             condition: sl.condition || '',
         })));
         return { cells: designItems.length, pages: pageNumbers.length };

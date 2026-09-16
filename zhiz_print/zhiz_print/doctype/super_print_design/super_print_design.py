@@ -1557,6 +1557,11 @@ class SuperPrintDesign(frappe.model.document.Document):
                     # 字符串,统一 flt;无值回落锚定格模型)
                     'pos_x': flt(item.pos_x) if item.pos_x is not None else None,
                     'pos_y': flt(item.pos_y) if item.pos_y is not None else None,
+                    # v15.22.98 位置方式:paper=纸张固定(pos)/cell=参考单元格
+                    # (anchor 格左上 + offset 偏移,数据行展开跟随)
+                    'mode': 'cell' if (item.position_mode == 'cell') else 'paper',
+                    'offset_x': flt(item.offset_x) if item.offset_x is not None else 0.0,
+                    'offset_y': flt(item.offset_y) if item.offset_y is not None else 0.0,
                     'img': sd.image,
                     'w_px': (cint(sd.width) or 40) * PX_PER_MM,
                     'h_px': (cint(sd.height) or 40) * PX_PER_MM,
@@ -1630,8 +1635,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             # 电子章(v15.22.80):本逻辑页的章(条件已过滤);锚定格 x 坐标预计算。
             # v15.22.86:pos 自由位置章直接输出(每物理页同位置,多页单据每页盖);
             # anchor 模型章走行循环走位(存量兼容)
-            _seals_here = [x for x in (_seal_defs.get(page_no) or []) if x.get('pos_x') is None]
-            _seals_free = [x for x in (_seal_defs.get(page_no) or []) if x.get('pos_x') is not None]
+            _seals_here = [x for x in (_seal_defs.get(page_no) or []) if x.get('mode') == 'cell']
+            _seals_free = [x for x in (_seal_defs.get(page_no) or []) if x.get('mode') != 'cell']
             _seal_placed = {}
             if _seals_here:
                 _total_tbl_w = 0
@@ -1713,9 +1718,9 @@ class SuperPrintDesign(frappe.model.document.Document):
                     _srow = row_data if isinstance(row_data, int) else row_data.get('template_row')
                     for _sl in _seals_here:
                         if _sl['row'] == _srow:
-                            _cw = col_styles.get(str(_sl['col']), {}).get('width', 60)
-                            _seal_placed[_sl['idx']] = (
-                                _sl['_cx0'] + _cw / 2, _seal_y + _rh / 2, _sl)
+                            # cell 模式记录参考格左上(y 为该行实例顶;_rh 属本行,
+                            # 数据行展开每实例覆盖,取每页最后实例)
+                            _seal_placed[_sl['idx']] = (_sl['_cx0'], _seal_y, _sl)
                     _seal_y += _rh
             page_html += '</table>'
 
@@ -1775,7 +1780,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                         img=frappe.utils.escape_html(_fs['img']), name=frappe.utils.escape_html(_fs['name']),
                         l=float(_fs['pos_x']) - _fs['w_px'] / 2, t=float(_fs['pos_y']) - _fs['h_px'] / 2,
                         w=_fs['w_px'], h=_fs['h_px'], op=_op_s))
-            # anchor 模式章(存量兼容):按行循环走位结果输出
+            # cell 模式章:参考格左上 + 偏移(章中心),数据行展开跟每页最后实例
             for _cx, _cy, _sl in _seal_placed.values():
                 _op = _sl['opacity']
                 _op_s = ('opacity:%s;' % _op) if (_op is not None and float(_op) < 1) else ''
@@ -1784,7 +1789,8 @@ class SuperPrintDesign(frappe.model.document.Document):
                     'style="position:absolute;left:{l:.1f}px;top:{t:.1f}px;'
                     'width:{w:.1f}px;height:{h:.1f}px;{op}z-index:8;pointer-events:none;">'.format(
                         img=frappe.utils.escape_html(_sl['img']), name=frappe.utils.escape_html(_sl['name']),
-                        l=_cx - _sl['w_px'] / 2, t=_cy - _sl['h_px'] / 2,
+                        l=_cx + _sl.get('offset_x', 0.0) - _sl['w_px'] / 2,
+                        t=_cy + _sl.get('offset_y', 0.0) - _sl['h_px'] / 2,
                         w=_sl['w_px'], h=_sl['h_px'], op=_op_s))
             page_html += '</div>'
             pages_html.append(page_html)
