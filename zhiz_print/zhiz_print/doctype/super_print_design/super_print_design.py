@@ -1719,29 +1719,6 @@ class SuperPrintDesign(frappe.model.document.Document):
                     _seal_y += _rh
             page_html += '</table>'
 
-            # 电子章输出(表格后、页 close 前;浮层 z-index 盖在表格上)。
-            # pos 自由位置章直接按存档坐标输出(每物理页同位置)
-            for _fs in _seals_free:
-                _op = _fs['opacity']
-                _op_s = ('opacity:%s;' % _op) if (_op is not None and float(_op) < 1) else ''
-                page_html += (
-                    '<img src="{img}" class="spd-seal-img" data-seal="{name}" '
-                    'style="position:absolute;left:{l:.1f}px;top:{t:.1f}px;'
-                    'width:{w:.1f}px;height:{h:.1f}px;{op}z-index:5;pointer-events:none;">'.format(
-                        img=frappe.utils.escape_html(_fs['img']), name=frappe.utils.escape_html(_fs['name']),
-                        l=float(_fs['pos_x']) - _fs['w_px'] / 2, t=float(_fs['pos_y']) - _fs['h_px'] / 2,
-                        w=_fs['w_px'], h=_fs['h_px'], op=_op_s))
-            # anchor 模式章(存量兼容):按行循环走位结果输出
-            for _cx, _cy, _sl in _seal_placed.values():
-                _op = _sl['opacity']
-                _op_s = ('opacity:%s;' % _op) if (_op is not None and float(_op) < 1) else ''
-                page_html += (
-                    '<img src="{img}" class="spd-seal-img" data-seal="{name}" '
-                    'style="position:absolute;left:{l:.1f}px;top:{t:.1f}px;'
-                    'width:{w:.1f}px;height:{h:.1f}px;{op}z-index:5;pointer-events:none;">'.format(
-                        img=frappe.utils.escape_html(_sl['img']), name=frappe.utils.escape_html(_sl['name']),
-                        l=_cx - _sl['w_px'] / 2, t=_cy - _sl['h_px'] / 2,
-                        w=_sl['w_px'], h=_sl['h_px'], op=_op_s))
             page_html += '</div>'
 
             # Footer area
