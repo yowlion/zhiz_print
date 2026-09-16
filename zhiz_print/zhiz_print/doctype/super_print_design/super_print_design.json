@@ -73,7 +73,8 @@
   "design_items",
   "params_tab",
   "design_parameters",
-  "design_queries"
+  "design_queries",
+  "design_seals"
  ],
  "fields": [
   {
@@ -514,6 +515,12 @@
    "fieldtype": "Table",
    "label": "Query Definition",
    "options": "Super Print Design Query"
+  },
+  {
+   "fieldname": "design_seals",
+   "fieldtype": "Table",
+   "label": "Design Seals",
+   "options": "Super Print Design Seal"
   }
  ],
  "index_web_pages_for_search": 0,

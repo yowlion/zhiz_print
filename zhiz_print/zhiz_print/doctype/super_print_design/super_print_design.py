@@ -1516,6 +1516,52 @@ class SuperPrintDesign(frappe.model.document.Document):
             html = '<style>' + script + '</style>' + html
         return html
 
+    # ==================== 电子章渲染(v15.22.80) ====================
+
+    def _eval_seal_condition(self, condition, doc):
+        """章呈现条件求值 —— 与 check_enable_conditions 同款语法/上下文/JS 运算符归一。"""
+        cond = (condition or '').strip()
+        if not cond:
+            return True
+        if cond.startswith('eval:'):
+            cond = cond[5:].strip()
+        cond = (cond.replace('===', '==').replace('!==', '!=')
+                .replace('||', ' or ').replace('&&', ' and ')
+                .replace(' & ', ' and ').replace(' | ', ' or '))
+        try:
+            local_vars = SuperPrintDesign._build_safe_eval_locals(doc)
+            local_vars['user'] = frappe.session.user
+            return bool(frappe.safe_eval(cond, {}, local_vars))
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), 'Seal condition evaluation failed')
+            return False
+
+    def _load_seal_defs(self, doc):
+        """加载本设计的电子章定义(条件过滤 + 章文档数据缓存)。
+
+        返回 {page_no: [ {row, col, img, w_px, h_px, opacity, name}, ... ]}。"""
+        out = {}
+        for item in (getattr(self, 'design_seals', None) or []):
+            try:
+                if not self._eval_seal_condition(item.condition, doc):
+                    continue
+                sd = frappe.db.get_value("Electronic Seal", item.seal,
+                    ["image", "width", "height", "opacity"], as_dict=True)
+                if not sd or not sd.image:
+                    continue
+                out.setdefault(cint(item.page_no) or 1, []).append({
+                    'row': cint(item.anchor_row) or 1,
+                    'col': cint(item.anchor_col) or 1,
+                    'img': sd.image,
+                    'w_px': (cint(sd.width) or 40) * PX_PER_MM,
+                    'h_px': (cint(sd.height) or 40) * PX_PER_MM,
+                    'opacity': sd.opacity if sd.opacity is not None else 1,
+                    'name': item.seal,
+                })
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), 'Seal load failed: %s' % item.seal)
+        return out
+
     def _build_pages_html(self, pages, cell_maps_by_page, cell_grids_by_page, row_styles, col_styles,
                           query_results, doc, row_type_map, row_display_map, paper, params=None,
                           row_heights_by_page=None, row_items_map_by_page=None, shrink_map=None):
@@ -1553,6 +1599,8 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         total_pages = len(pages)
         pages_html = []
+        # 电子章定义(一次加载,按逻辑页分组;条件在此求值)
+        _seal_defs = self._load_seal_defs(doc)
 
         for page_idx, page_entry in enumerate(pages):
             if isinstance(page_entry, tuple):
@@ -1573,6 +1621,21 @@ class SuperPrintDesign(frappe.model.document.Document):
 
             cell_map = cell_maps_by_page.get(page_no, {})
             cell_grid = cell_grids_by_page.get(page_no)
+
+            # 电子章(v15.22.80):本逻辑页的章(条件已过滤);锚定格 x 坐标预计算
+            _seals_here = _seal_defs.get(page_no) or []
+            _seal_placed = {}
+            if _seals_here:
+                _total_tbl_w = 0
+                _col_x = {}
+                for _c in range(1, (self.columns or 1) + 1):
+                    _cw = col_styles.get(str(_c), {}).get('width', 60)
+                    _col_x[_c] = _total_tbl_w
+                    _total_tbl_w += _cw
+                _content_w = (paper_w_px - margin_left * PX_PER_MM - margin_right * PX_PER_MM)
+                _center_off = max(0, (_content_w - _total_tbl_w) / 2)
+                for _sl in _seals_here:
+                    _sl['_cx0'] = margin_left * PX_PER_MM + _center_off + _col_x.get(_sl['col'], 0)
 
             # 该页打印次数:驱动单元格渲染值(子表字段替换后 cint,max(1,N) 兜底;非数字/0→1)
             _driver_count = 1
@@ -1614,6 +1677,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             page_html += f'<div class="print-page-content" style="position:absolute;top:{content_top:.1f}px;left:0;right:0;bottom:{footer_area_h:.1f}px;padding:0 {margin_right * PX_PER_MM:.1f}px 0 {margin_left * PX_PER_MM:.1f}px;overflow:hidden;">'
             page_html += '<table class="print-form-table" style="font-family:\'' + (self.font_family or 'Microsoft YaHei') + '\',sans-serif;">'
             page_html += self._build_colgroup(col_styles)
+            # 电子章:页内 y 走位(与行渲染同高口径:实测锁定优先,否则样式+估算)
+            _seal_y = margin_top * PX_PER_MM
             for serial, row_data in page_rows:
                 locked = None
                 if serial is not None and row_heights_by_page:
@@ -1631,7 +1696,33 @@ class SuperPrintDesign(frappe.model.document.Document):
                     locked_height=locked, row_items_map=_row_items, shrink_map=shrink_map,
                     page_row_items_map=_page_row_items
                 )
-            page_html += '</table></div>'
+                # 电子章:锚定行命中即记录(后写覆盖 → 数据行取本页最后一个展开实例);
+                # 未锁高度走 _get_row_height 与渲染/估算同口径
+                if _seals_here:
+                    _rh = locked if locked else self._get_row_height(
+                        row_data, row_styles, cell_map, col_styles, doc,
+                        row_display_map, self.font_size or 12)
+                    _srow = row_data if isinstance(row_data, int) else row_data.get('template_row')
+                    for _sl in _seals_here:
+                        if _sl['row'] == _srow:
+                            _cw = col_styles.get(str(_sl['col']), {}).get('width', 60)
+                            _seal_placed[_sl['name']] = (
+                                _sl['_cx0'] + _cw / 2, _seal_y + _rh / 2, _sl)
+                    _seal_y += _rh
+            page_html += '</table>'
+
+            # 电子章输出(表格后、页 close 前;浮层 z-index 盖在表格上)
+            for _cx, _cy, _sl in _seal_placed.values():
+                _op = _sl['opacity']
+                _op_s = ('opacity:%s;' % _op) if (_op is not None and float(_op) < 1) else ''
+                page_html += (
+                    '<img src="{img}" class="spd-seal-img" data-seal="{name}" '
+                    'style="position:absolute;left:{l:.1f}px;top:{t:.1f}px;'
+                    'width:{w:.1f}px;height:{h:.1f}px;{op}z-index:5;pointer-events:none;">'.format(
+                        img=frappe.utils.escape_html(_sl['img']), name=frappe.utils.escape_html(_sl['name']),
+                        l=_cx - _sl['w_px'] / 2, t=_cy - _sl['h_px'] / 2,
+                        w=_sl['w_px'], h=_sl['h_px'], op=_op_s))
+            page_html += '</div>'
 
             # Footer area
             has_footer = getattr(self, 'page_footer_left', '') or getattr(

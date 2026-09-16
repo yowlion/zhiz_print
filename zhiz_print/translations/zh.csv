@@ -439,3 +439,14 @@ Number,数字
 Number Format,格式化方式
 原样显示 (不格式化),原样显示 (不格式化)
 千分位·小数原样 (1,234,567.8945),千分位·小数原样 (1,234,567.8945)
+Electronic Seal,电子章
+Seal Name,章名
+Seal Image,章图片
+Opacity,透明度
+Seal,电子章
+Anchor Row,锚定行
+Anchor Col,锚定列
+Condition,呈现条件
+Insert Seal,插入电子章
+Design Seals,电子章
+Page No,页码

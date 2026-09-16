@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "creation": "2026-09-16 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["seal", "page_no", "anchor_row", "anchor_col", "condition"],
+ "fields": [
+  {
+   "fieldname": "seal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Seal",
+   "options": "Electronic Seal",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "page_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Page No"
+  },
+  {
+   "fieldname": "anchor_row",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Anchor Row"
+  },
+  {
+   "fieldname": "anchor_col",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Anchor Col"
+  },
+  {
+   "description": "Same syntax as Enable Condition (doc/user/get_value/fmt/flt, JS-style && ||). Empty = always show. Seal center aligns to the anchor cell center; on data-driven rows it follows the LAST expanded instance of each physical page.",
+   "fieldname": "condition",
+   "fieldtype": "Small Text",
+   "label": "Condition"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Super Print Design Seal",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

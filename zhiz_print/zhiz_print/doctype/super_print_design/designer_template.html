@@ -45,6 +45,7 @@
         <button class="btn btn-default btn-xs" id="spd-add-page-btn" title="{{ _('Add Blank Page') }}"><i class="fa fa-plus" style="color:#28a745"></i></button>
         <button class="btn btn-default btn-xs" id="spd-duplicate-page-btn" title="{{ _('Duplicate Current Page') }}"><i class="fa fa-copy" style="color:#17a2b8"></i></button>
         <button class="btn btn-default btn-xs" id="spd-paper-setting-btn" title="{{ _('Paper Setting') }}"><i class="fa fa-cog" style="color:#6c757d"></i> {{ _("纸张设置") }}</button>
+        <button class="btn btn-default btn-xs" id="spd-insert-seal-btn" title="{{ _('Insert Electronic Seal - click a cell to anchor its center') }}"><i class="fa fa-stamp" style="color:#c0392b"></i> {{ _("插入电子章") }}</button>
         <button class="btn btn-default btn-xs" id="spd-fit-width-btn" title="{{ _('Scale the canvas so the paper width fits the preview area (for low-resolution screens)') }}"><i class="fa fa-arrows-h" style="color:#0d5c63"></i> {{ _("适配宽度") }}</button>
         <button class="btn btn-default btn-xs" id="spd-fit-page-btn" title="{{ _('Scale the canvas so the whole paper fits the preview area (for low-resolution screens)') }}"><i class="fa fa-compress" style="color:#0d5c63"></i> {{ _("适配整页") }}</button>
         <button class="btn btn-default btn-xs" id="spd-zoom-reset-btn" style="display:none" title="{{ _('Reset zoom to 100%') }}"><i class="fa fa-undo"></i> <span id="spd-zoom-label">100%</span></button>
@@ -74,6 +75,7 @@
                     <div class="super-zprint-grid-body">
                         <div class="super-zprint-row-headers" id="spd-row-headers" style="margin-top:{{ m_top }}px;"></div>
                         <div class="spd-paper" id="spd-paper" style="width:{{ paper_w }}px; min-height:{{ paper_h }}px; position:relative;">
+                            <div id="spd-seal-layer" style="position:absolute;inset:0;z-index:6;pointer-events:none;"></div>
                             <div class="spd-margin-line" style="top:{{ m_top }}px; left:{{ m_left }}px; right:{{ m_right }}px; bottom:{{ m_bottom }}px;"></div>
                             <div id="spd-header-footer"></div>
                             <div class="spd-table-area" style="position:absolute; top:{{ m_top }}px; left:{{ m_left }}px; right:{{ m_right }}px; display:flex; justify-content:center;">

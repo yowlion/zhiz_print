@@ -1175,6 +1175,23 @@ def load_design_data(design_name):
                 cell_data["master_cell_id"] = val[10:-2] if len(val) > 12 else ""
             cells.append(cell_data)
 
+    # 电子章(含章文档数据:图/尺寸/透明度,前端画布渲染直接可用)
+    seals = []
+    for item in (getattr(doc, 'design_seals', None) or []):
+        sd = frappe.db.get_value("Electronic Seal", item.seal,
+            ["image", "width", "height", "opacity"], as_dict=True) if item.seal else None
+        seals.append({
+            "seal": item.seal,
+            "page_no": cint(item.page_no) if item.page_no else 1,
+            "anchor_row": cint(item.anchor_row) or 1,
+            "anchor_col": cint(item.anchor_col) or 1,
+            "condition": item.condition or "",
+            "image": (sd.image if sd else "") or "",
+            "width_mm": (sd.width if sd else 40) or 40,
+            "height_mm": (sd.height if sd else 40) or 40,
+            "opacity": (sd.opacity if sd is not None and sd.opacity is not None else 1),
+        })
+
     return {
         "rows": doc.rows or 20,
         "columns": doc.columns or 15,
@@ -1191,6 +1208,7 @@ def load_design_data(design_name):
         "page_footer_right": doc.page_footer_right or "",
         "paper": paper_info,
         "cells": cells,
+        "seals": seals,
     }
 
 
@@ -1775,6 +1793,78 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 
 # ==================== Excel Export Main Function ====================
 
+def _add_seals_to_excel(ws, soup):
+    """电子章 → Excel 悬浮图片(v15.22.80)。
+
+    渲染 HTML 里章是每 print-page 内的 img.spd-seal-img(绝对定位 px);
+    Excel 侧用 AbsoluteAnchor(EMU 绝对坐标)按页纵向偏移摆放,不依赖
+    单元格映射 —— 页高取 print-page 的 style height,与打印分页一致。"""
+    from openpyxl.drawing.image import Image as XLImage
+    from openpyxl.drawing.spreadsheet_drawing import AbsoluteAnchor
+    from openpyxl.drawing.xdr import XDRPoint2D, XDRPositiveSize2D
+    from openpyxl.utils.units import pixels_to_EMU
+    import io as _io
+    import os as _os
+    import re as _re
+    from PIL import Image as PILImage
+
+    EMU_PER_PX = 9525  # 96dpi
+    page_y = 0
+    added = 0
+    for page in soup.select('.print-page'):
+        ph_m = _re.search(r'height:\s*([\d.]+)px', page.get('style') or '')
+        page_h = float(ph_m.group(1)) if ph_m else 1120.0
+        for img in page.select('img.spd-seal-img'):
+            try:
+                st = img.get('style') or ''
+                lm = _re.search(r'left:\s*(-?[\d.]+)px', st)
+                tm = _re.search(r'top:\s*(-?[\d.]+)px', st)
+                wm = _re.search(r'width:\s*([\d.]+)px', st)
+                hm = _re.search(r'height:\s*([\d.]+)px', st)
+                if not (lm and tm and wm and hm):
+                    continue
+                src = img.get('src') or ''
+                if src.startswith('data:'):
+                    b64 = src.split(',', 1)[1]
+                    import base64 as _b64
+                    fp = _io.BytesIO(_b64.b64decode(b64))
+                elif src.startswith('/files/'):
+                    local = _os.path.join(frappe.get_site_path('public'), src.lstrip('/'))
+                    if not _os.path.exists(local):
+                        continue
+                    fp = open(local, 'rb')
+                else:
+                    continue
+                pil = PILImage.open(fp)
+                # 透明度:章 opacity<1 时合成白底(Excel 图片不支持 CSS opacity)
+                op_m = _re.search(r'opacity:\s*([\d.]+)', st)
+                if op_m and float(op_m.group(1)) < 1:
+                    bg = PILImage.new('RGB', pil.size, (255, 255, 255))
+                    if pil.mode in ('RGBA', 'LA'):
+                        bg.paste(pil.convert('RGBA'), mask=pil.convert('RGBA').split()[-1])
+                    else:
+                        bg.paste(pil.convert('RGB'))
+                    out = _io.BytesIO(); bg.save(out, 'PNG'); out.seek(0)
+                    xl_img = XLImage(_io.BytesIO(out.getvalue()))
+                else:
+                    if hasattr(fp, 'seek'):
+                        fp.seek(0)
+                    xl_img = XLImage(_io.BytesIO(fp.read()) if hasattr(fp, 'read') else fp)
+                w_px, h_px = float(wm.group(1)), float(hm.group(1))
+                xl_img.width, xl_img.height = int(w_px), int(h_px)
+                x_emu = pixels_to_EMU(float(lm.group(1)))
+                y_emu = pixels_to_EMU(page_y + float(tm.group(1)))
+                xl_img.anchor = AbsoluteAnchor(
+                    pos=XDRPoint2D(x_emu, y_emu),
+                    ext=XDRPositiveSize2D(pixels_to_EMU(w_px), pixels_to_EMU(h_px)))
+                ws.add_image(xl_img)
+                added += 1
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), 'Excel seal failed')
+        page_y += page_h
+    return added
+
+
 @frappe.whitelist()
 def export_print_excel(doctype, docname, design_name=None, params=None, report_filters=None, inject_query_results=None):
     """Export print design data to Excel file download."""
@@ -1857,6 +1947,13 @@ def export_print_excel(doctype, docname, design_name=None, params=None, report_f
             skip = header_count if page_idx > 0 else 0
             rows_written = _write_table_to_excel(ws, table, current_row, css_rules, skip_rows=skip)
             current_row += rows_written
+
+        # 电子章:悬浮图片(AbsoluteAnchor 按打印页纵向偏移;传整棵 soup,
+        # 函数内按 .print-page 分页累计 y)
+        try:
+            _add_seals_to_excel(ws, soup)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), 'Excel seals failed')
 
     # Generate Excel file
     output = BytesIO()

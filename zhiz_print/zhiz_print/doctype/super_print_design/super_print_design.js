@@ -48,6 +48,10 @@ class SuperPrintDesigner {
             { value: 'FangSong', label: 'FangSong' }
         ];
 
+        // 电子章(设计实例):[{seal,page_no,anchor_row,anchor_col,condition,image,width_mm,height_mm,opacity}]
+        this.seals = [];
+        this.selectedSeal = null;   // 选中章的 uid(运行时)
+        this._placingSeal = null;   // 放置模式选中的章文档
         this.cellTypes = [
             { value: 'static', label: __('Static Text'), icon: 'fa-font' },
             { value: 'number', label: __('Number'), icon: 'fa-hashtag' },
@@ -183,6 +187,11 @@ class SuperPrintDesigner {
             this.fontSize = serverData.font_size || this.fontSize;
             this.rowStyles = serverData.row_styles || {};
             this.colStyles = serverData.col_styles || {};
+            // 电子章实例(含章文档数据,画布渲染直接用)
+            this.seals = (serverData.seals || []).map((sl, i) => Object.assign({}, sl, {
+                _uid: 'seal_load_' + i + '_' + (sl.seal || ''),
+            }));
+            this.selectedSeal = null;
             this.pageHeaderLeft = serverData.page_header_left || '';
             this.pageHeaderCenter = serverData.page_header_center || '';
             this.pageHeaderRight = serverData.page_header_right || '';
@@ -877,6 +886,17 @@ class SuperPrintDesigner {
             dlg.$body.html('<iframe src="/app/super-print-paper/' + encodeURIComponent(pname) + '" style="width:100%;height:70vh;border:0;"></iframe>');
             dlg.$wrapper.find('.modal-dialog').css('max-width', '900px');
             dlg.show();
+        });
+        container.querySelector('#spd-insert-seal-btn')?.addEventListener('click', () => this._showSealPicker());
+        // 放置模式:点击格子锚定章(容器级委托,refreshGrid 重建不失效)
+        const sealPaperArea = container.querySelector('.spd-grid-wrap');
+        sealPaperArea?.addEventListener('click', (e) => {
+            if (!this._placingSeal) return;
+            const td = e.target.closest('.spd-cell');
+            if (!td) return;
+            const row = parseInt(td.dataset.row), col = parseInt(td.dataset.col);
+            if (!row || !col) return;
+            this._placeSeal(row, col);
         });
         container.querySelector('#spd-fit-width-btn')?.addEventListener('click', () => this._fitCanvas('width'));
         container.querySelector('#spd-fit-page-btn')?.addEventListener('click', () => this._fitCanvas('page'));
@@ -2105,6 +2125,17 @@ class SuperPrintDesigner {
                     '<label>' + __('Text Size (px)') + ':</label>' +
                     '<input type="number" id="prop-barcode-text-size" class="form-control" value="10">' +
                 '</div>' +
+                '<div id="seal-prop-panel" style="display:none;border-top:1px solid #e8e8e8;padding-top:6px;margin-top:6px;">' +
+                    '<b><i class="fa fa-stamp" style="color:#c0392b"></i> ' + __('电子章') + '</b>' +
+                    '<div style="font-size:11px;margin:4px 0;"><span id="seal-prop-name"></span> <span class="text-muted">(@ <span id="seal-prop-anchor"></span>)</span></div>' +
+                    '<label style="font-size:11px;">' + __('呈现条件(同启用条件语法,留空=始终显示)') + ':</label>' +
+                    '<textarea id="seal-prop-cond" class="form-control" rows="2" style="font-size:11px;" placeholder="doc.company == &#39;xx&#39;"></textarea>' +
+                    '<div style="display:flex;gap:6px;margin-top:4px;">' +
+                        '<button type="button" class="btn btn-default btn-xs" id="seal-prop-apply">' + __('应用条件') + '</button>' +
+                        '<button type="button" class="btn btn-danger btn-xs" id="seal-prop-del"><i class="fa fa-trash"></i> ' + __('删除章') + '</button>' +
+                    '</div>' +
+                    '<p style="font-size:10px;color:#888;margin:4px 0 0;">' + __('拖动章到其他单元格可重新锚定;Delete 键删除选中章') + '</p>' +
+                '</div>' +
                 '<div id="number-group" style="display:none">' +
                     '<label>' + __('Number Format') + ':</label>' +
                     '<select id="prop-number-format" class="form-control">' +
@@ -2374,6 +2405,30 @@ class SuperPrintDesigner {
         container.querySelector('#prop-number-format')?.addEventListener('change', (e) => {
             this.updateCellProperty('number_format', e.target.value);
         });
+        // 电子章属性面板:应用条件 / 删除 / Delete 键
+        container.querySelector('#seal-prop-apply')?.addEventListener('click', () => {
+            const sl = (this.seals || []).find(x => x._uid === this.selectedSeal);
+            const ta = container.querySelector('#seal-prop-cond');
+            if (sl && ta) {
+                sl.condition = ta.value || '';
+                frappe.show_alert({ message: __('章条件已更新'), indicator: 'green' });
+            }
+        });
+        container.querySelector('#seal-prop-del')?.addEventListener('click', () => {
+            this.deleteSelectedSeal();
+        });
+        if (!this._sealKeydownBound) {
+            this._sealKeydownBound = true;
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Delete') return;
+                const t = e.target;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+                if (this.selectedSeal && this.deleteSelectedSeal()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        }
         container.querySelector('#prop-font-size')?.addEventListener('change', (e) => {
             this.applyFontSize(parseInt(e.target.value) || 12);
         });
@@ -2653,6 +2708,140 @@ class SuperPrintDesigner {
     }
 
     // 列宽自由拖动:鼠标移到列签右边界(6px 内)自动变 col-resize,按住左右拖动改该列宽
+    // ===== 电子章(v15.22.80):选章 → 点击单元格锚定,章中心=格中心 =====
+    _showSealPicker() {
+        frappe.db.get_list('Electronic Seal', { filters: { enabled: 1 }, fields: ['name', 'image', 'width', 'height', 'opacity'], limit_page_length: 0 })
+            .then(rows => {
+                if (!rows || !rows.length) {
+                    frappe.msgprint(__('尚未创建电子章') + ' — ' + __('请先在 Electronic Seal(电子章)列表新建:章图片(建议透明底PNG)+ 尺寸(mm)+ 透明度'));
+                    return;
+                }
+                const d = new frappe.ui.Dialog({
+                    title: __('选择电子章'),
+                    fields: [{
+                        fieldname: 'seal', fieldtype: 'HTML',
+                        options: '<div style="display:flex;flex-wrap:wrap;gap:10px;">' + rows.map(r =>
+                            '<div class="spd-seal-pick" data-name="' + this.escapeHtml(r.name) + '" style="cursor:pointer;text-align:center;border:2px solid transparent;border-radius:8px;padding:8px;width:110px;">'
+                            + '<img src="' + this.escapeHtml(r.image || '') + '" style="width:80px;height:80px;object-fit:contain;">'
+                            + '<div style="font-size:11px;margin-top:4px;">' + this.escapeHtml(r.name) + '</div>'
+                            + '<div style="font-size:10px;color:#888;">' + (r.width || 40) + '×' + (r.height || 40) + 'mm</div></div>').join('') + '</div>'
+                    }],
+                    primary_action_label: __('进入放置'),
+                    primary_action: () => { d.hide(); }
+                });
+                d.$wrapper.on('click', '.spd-seal-pick', (e) => {
+                    d.$wrapper.find('.spd-seal-pick').css('border-color', 'transparent');
+                    const el = $(e.currentTarget);
+                    el.css('border-color', '#0d5c63');
+                    const name = el.data('name');
+                    this._placingSeal = rows.find(r => r.name === name) || null;
+                });
+                d.show();
+                frappe.show_alert({ message: __('选择章后点「进入放置」,再点击设计网格的目标单元格 — 章将以该格正中摆放'), indicator: 'blue' });
+            });
+    }
+
+    _placeSeal(row, col) {
+        const sd = this._placingSeal;
+        if (!sd) return;
+        this.seals.push({
+            _uid: 'seal_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            seal: sd.name, page_no: this.currentPageNo || 1,
+            anchor_row: row, anchor_col: col, condition: '',
+            image: sd.image, width_mm: sd.width || 40, height_mm: sd.height || 40,
+            opacity: (sd.opacity === 0 || sd.opacity) ? sd.opacity : 1,
+        });
+        this._placingSeal = null;
+        this.selectedSeal = null;
+        this.renderSeals();
+        frappe.show_alert({ message: __('已放置') + ': ' + sd.name + ' → R' + row + 'C' + col, indicator: 'green' });
+    }
+
+    renderSeals() {
+        const container = document.getElementById(this.designContainerId);
+        const layer = container?.querySelector('#spd-seal-layer');
+        const paper = container?.querySelector('#spd-paper');
+        if (!layer || !paper) return;
+        layer.innerHTML = '';
+        (this.seals || []).forEach(sl => {
+            if ((sl.page_no || 1) !== (this.currentPageNo || 1)) return;
+            const td = paper.querySelector('.spd-cell[data-row="' + sl.anchor_row + '"][data-col="' + sl.anchor_col + '"]');
+            const img = document.createElement('img');
+            img.src = sl.image || '';
+            const w = (sl.width_mm || 40) * 4, h = (sl.height_mm || 40) * 4;
+            img.style.cssText = 'width:' + w + 'px;height:' + h + 'px;object-fit:contain;position:absolute;pointer-events:auto;cursor:move;'
+                + ((sl.opacity && sl.opacity < 1) ? 'opacity:' + sl.opacity + ';' : '');
+            if (td) {
+                // 章中心=锚定格中心(视口坐标差 → paper 内坐标;paper position:relative)
+                const tdR = td.getBoundingClientRect(), pR = paper.getBoundingClientRect();
+                img.style.left = (tdR.left + tdR.width / 2 - pR.left - w / 2) + 'px';
+                img.style.top = (tdR.top + tdR.height / 2 - pR.top - h / 2) + 'px';
+            }
+            if (this.selectedSeal && sl._uid === this.selectedSeal) {
+                img.style.outline = '2px solid #0d5c63';
+                img.style.outlineOffset = '2px';
+            }
+            img.dataset.sealUid = sl._uid || '';
+            // 选中
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.selectedSeal = sl._uid;
+                this._syncSealPropPanel(sl);
+                this.renderSeals();
+            });
+            // 拖动换锚定格
+            img.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const ghost = img.cloneNode(true);
+                ghost.style.opacity = '0.5';
+                ghost.style.pointerEvents = 'none';
+                layer.appendChild(ghost);
+                const move = (ev) => {
+                    ghost.style.left = (parseFloat(img.style.left) + ev.clientX - e.clientX) + 'px';
+                    ghost.style.top = (parseFloat(img.style.top) + ev.clientY - e.clientY) + 'px';
+                };
+                const up = (ev) => {
+                    document.removeEventListener('mousemove', move);
+                    document.removeEventListener('mouseup', up);
+                    ghost.remove();
+                    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+                    const td2 = el && el.closest ? el.closest('.spd-cell') : null;
+                    if (td2) {
+                        sl.anchor_row = parseInt(td2.dataset.row);
+                        sl.anchor_col = parseInt(td2.dataset.col);
+                        frappe.show_alert({ message: __('已重新锚定') + ' R' + sl.anchor_row + 'C' + sl.anchor_col, indicator: 'blue' });
+                    }
+                    this.renderSeals();
+                };
+                document.addEventListener('mousemove', move);
+                document.addEventListener('mouseup', up);
+            });
+            layer.appendChild(img);
+        });
+    }
+
+    _syncSealPropPanel(sl) {
+        const container = document.getElementById(this.designContainerId);
+        const panel = container?.querySelector('#seal-prop-panel');
+        if (!panel) return;
+        panel.style.display = 'block';
+        panel.querySelector('#seal-prop-name').textContent = sl.seal || '';
+        panel.querySelector('#seal-prop-anchor').textContent = 'R' + sl.anchor_row + 'C' + sl.anchor_col + ' · ' + __('页') + ' ' + (sl.page_no || 1);
+        const cond = panel.querySelector('#seal-prop-cond');
+        if (cond) cond.value = sl.condition || '';
+    }
+
+    deleteSelectedSeal() {
+        if (!this.selectedSeal) return false;
+        this.seals = (this.seals || []).filter(x => x._uid !== this.selectedSeal);
+        this.selectedSeal = null;
+        const container = document.getElementById(this.designContainerId);
+        const panel = container?.querySelector('#seal-prop-panel');
+        if (panel) panel.style.display = 'none';
+        this.renderSeals();
+        return true;
+    }
+
     // ===== 画布缩放(v15.22.70):低分辨率屏适配 —— 纸张超出预览区时一键缩放 =====
     _applyCanvasZoom(scale) {
         const container = document.getElementById(this.designContainerId);
@@ -3236,6 +3425,12 @@ class SuperPrintDesigner {
             this.frm.set_value(f, this.frm.doc[f] || '');
         });
         this.frm.set_value('design_items', designItems);
+        // 电子章实例随存(运行时字段 _uid 剔除)
+        this.frm.set_value('design_seals', (this.seals || []).map(sl => ({
+            seal: sl.seal, page_no: sl.page_no || 1,
+            anchor_row: sl.anchor_row || 1, anchor_col: sl.anchor_col || 1,
+            condition: sl.condition || '',
+        })));
         return { cells: designItems.length, pages: pageNumbers.length };
     }
 
@@ -3607,6 +3802,7 @@ class SuperPrintDesigner {
                 '<div style="flex:1;text-align:right;padding-right:' + mRight + 'px;">' + (fr_ || '') + '</div>';
         }
         setTimeout(() => this.syncRowHeaderHeights(), 50);
+        this.renderSeals();
     }
 
     parseCellId(cellId) {
