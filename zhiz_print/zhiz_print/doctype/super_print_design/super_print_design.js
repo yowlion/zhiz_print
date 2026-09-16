@@ -2110,7 +2110,6 @@ class SuperPrintDesigner {
                     '<select id="prop-number-format" class="form-control">' +
                         '<option value="comma-2">' + __('千分位两位 (50,000,000.00)') + '</option>' +
                         '<option value="comma-int">' + __('千分位整数 (50,000,000)') + '</option>' +
-                        '<option value="comma-3">' + __('千分位三位 (50,000,000.000)') + '</option>' +
                         '<option value="plain-int">' + __('原样整数 (50000000)') + '</option>' +
                         '<option value="plain-2">' + __('原样两位 (50000000.00)') + '</option>' +
                         '<option value="cny">' + __('金额 (¥50,000,000.00)') + '</option>' +
