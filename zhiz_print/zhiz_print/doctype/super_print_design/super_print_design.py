@@ -1484,6 +1484,7 @@ class SuperPrintDesign(frappe.model.document.Document):
                     'barcode_height': item.barcode_height or 40,
                     'barcode_show_text': cint(item.barcode_show_text) if item.barcode_show_text is not None else 1,
                     'barcode_text_size': cint(item.barcode_text_size) or 10,
+                    'number_format': item.number_format or 'comma-2',
                     'is_print_count_driver': cint(item.is_print_count_driver),
                 }
         return cell_map
@@ -2079,7 +2080,9 @@ class SuperPrintDesign(frappe.model.document.Document):
         """Render cell content"""
         cell_type = cell_data.get('cell_type', 'static')
 
-        if cell_type == 'barcode':
+        if cell_type == 'number':
+            return self._render_number_content(cell_value, cell_data)
+        elif cell_type == 'barcode':
             return self._render_barcode_content(cell_value, cell_data, cell_w, cell_h)
         elif cell_type == 'qrcode':
             return self._render_qrcode_content(cell_value, cell_data, cell_w, cell_h)
@@ -2099,6 +2102,125 @@ class SuperPrintDesign(frappe.model.document.Document):
                 return escaped
             escaped = re.sub(r' {2,}', lambda m: '&nbsp;' * len(m.group()), escaped)
             return re.sub(r'\r\n|\r|\n', '<br>', escaped)
+
+    # 数字类型格式化方式(存库 key → 行为)
+    _NUMBER_FORMATS = ('comma-2', 'comma-int', 'comma-3', 'plain-int', 'plain-2', 'cny', 'cn-upper')
+
+    def _render_number_content(self, value, cell_data):
+        """数字(number)类型:对解析后的值套格式化(v15.22.71)。
+
+        值照常写占位符/表达式(进入本函数前已替换/求值为显示文本),本类型再解析
+        为数字并按 number_format 输出:
+          comma-2  50,000,000.00(默认)   comma-int 50,000,000   comma-3 50,000,000.000
+          plain-int 50000000(去尾零)     plain-2  50000000.00
+          cny      ¥50,000,000.00        cn-upper 伍仟万元整(人民币大写)
+        值为空/非数字时原样显示(不出空白);千分位逗号只进显示文本 ——
+        合计(rowsum)与行排序走独立取值通道,取原始数值不受影响。"""
+        text = str(value or '').strip()
+        if not text:
+            return ''
+        # 解析:去千分位逗号/空格/¥ 后 float;失败(纯文本)原样返回
+        cleaned = text.replace(',', '').replace('\u00a0', '').replace(' ', '').lstrip('¥￥')
+        try:
+            num = float(cleaned)
+        except (ValueError, TypeError):
+            return frappe.utils.escape_html(text)
+        fmt = (cell_data.get('number_format') or 'comma-2').strip()
+        if fmt not in self._NUMBER_FORMATS:
+            fmt = 'comma-2'
+        if fmt == 'cn-upper':
+            return self._cn_upper_amount(num)
+        if fmt == 'cny':
+            return '¥{:,.2f}'.format(num)
+        if fmt == 'comma-int':
+            return '{:,.0f}'.format(num)
+        if fmt == 'comma-3':
+            return '{:,.3f}'.format(num)
+        if fmt == 'plain-int':
+            return self._fmt_val(num)
+        if fmt == 'plain-2':
+            return '{:.2f}'.format(num)
+        return '{:,.2f}'.format(num)
+
+    _CN_DIGITS = '零壹贰叁肆伍陆柒捌玖'
+    _CN_UNITS = ['', '拾', '佰', '仟']
+    _CN_BIG = ['', '万', '亿', '万亿']
+
+    def _cn_upper_amount(self, value):
+        """人民币大写(v15.22.71):50000000 → 伍仟万元整;1.05 → 壹元零角伍分。
+        四舍五入到分;负数前缀"负";非有限数回退原样文本。"""
+        import math
+        try:
+            if not math.isfinite(value):
+                raise ValueError
+            cents = int(round(abs(float(value)) * 100))
+        except (ValueError, TypeError, OverflowError):
+            return frappe.utils.escape_html(str(value))
+        negative = float(value) < 0
+        yuan, rem = divmod(cents, 100)
+        jiao, fen = divmod(rem, 10)
+        if yuan == 0 and jiao == 0 and fen == 0:
+            return '零元整'
+
+        def _four(n):
+            # 4 位整数段 → 大写(含段内零规则);0 → ''
+            if n == 0:
+                return ''
+            out, zero_pending = '', False
+            for pos in range(3, -1, -1):
+                d, n = divmod(n, 10 ** pos)
+                unit = self._CN_UNITS[pos]
+                if d == 0:
+                    if out:
+                        zero_pending = True
+                    continue
+                if zero_pending:
+                    out += '零'
+                    zero_pending = False
+                out += self._CN_DIGITS[d] + unit
+            return out
+
+        # 整数部分:4 位一组(低→高),组间万/亿。两条补零规则:
+        # ① 段值 <1000(段内千位为零,如 50、500)且非最高输出组 → 组间补零
+        #    (100500000 → 壹亿零伍拾万);
+        # ② 整组为零但更低位还有非零组 → 补一个零(100000001 → 壹亿零壹)
+        parts, groups, g = [], [], yuan
+        while g > 0:
+            groups.append(g % 10000)
+            g //= 10000
+        for gi in range(len(groups) - 1, -1, -1):
+            gv = groups[gi]
+            seg = _four(gv)
+            if seg:
+                if parts and gv < 1000 and parts[-1] != '零':
+                    parts.append('零')
+                parts.append(seg + self._CN_BIG[gi])
+            else:
+                if parts and any(groups[k] for k in range(gi)) and parts[-1] != '零':
+                    parts.append('零')
+        yuan_str = ''.join(parts)
+        if not yuan_str:
+            yuan_str = '零'
+
+        # 小数:角/分(财务规范 —— 角位为零且分非零时补"零":1.05 → 壹元零伍分)
+        if yuan > 0:
+            if jiao and fen:
+                dec = self._CN_DIGITS[jiao] + '角' + self._CN_DIGITS[fen] + '分'
+            elif jiao:
+                dec = self._CN_DIGITS[jiao] + '角'
+            elif fen:
+                dec = '零' + self._CN_DIGITS[fen] + '分'
+            else:
+                dec = '整'
+            out = yuan_str + '元' + dec
+        else:
+            if jiao and fen:
+                out = self._CN_DIGITS[jiao] + '角' + self._CN_DIGITS[fen] + '分'
+            elif jiao:
+                out = self._CN_DIGITS[jiao] + '角'
+            else:
+                out = self._CN_DIGITS[fen] + '分'
+        return ('负' if negative else '') + out
 
     def _render_barcode_content(self, value, cell_data, cell_w=100, cell_h=40):
         """Render barcode — v15.22.32 起条码尺寸跟随单元格,不再使用宽高设置项。

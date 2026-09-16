@@ -2547,6 +2547,7 @@ class SuperPrintDesigner {
         if (copyContent) {
             newCell.cell_type = sourceCell.cell_type || 'static';
             if (sourceCell.barcode_format) newCell.barcode_format = sourceCell.barcode_format;
+            if (sourceCell.number_format) newCell.number_format = sourceCell.number_format;
             if (sourceCell.barcode_width) newCell.barcode_width = sourceCell.barcode_width;
             if (sourceCell.barcode_height) newCell.barcode_height = sourceCell.barcode_height;
         }

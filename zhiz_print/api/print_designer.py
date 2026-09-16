@@ -1154,6 +1154,7 @@ def load_design_data(design_name):
                 "rowspan": item.rowspan or 1,
                 "colspan": item.colspan or 1,
                 "cell_type": item.cell_type or "static",
+                "number_format": item.number_format or "comma-2",
                 "cell_value": item.cell_value or "",
                 "css_style": item.css_style or "",
                 "data_key": item.data_key or "",

@@ -14,6 +14,7 @@
   "colspan",
   "section_break_type",
   "cell_type",
+  "number_format",
   "cell_value",
   "column_break_type",
   "data_key",
@@ -92,8 +93,17 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Cell Type",
-   "options": "static\nbarcode\nqrcode\nimage\nhtml",
+   "options": "static\nnumber\nbarcode\nqrcode\nimage\nhtml",
    "default": "static"
+  },
+  {
+   "fieldname": "number_format",
+   "fieldtype": "Select",
+   "label": "Number Format",
+   "options": "comma-2\ncomma-int\ncomma-3\nplain-int\nplain-2\ncny\ncn-upper",
+   "default": "comma-2",
+   "depends_on": "eval:doc.cell_type === 'number'",
+   "description": "comma-2=50,000,000.00 · comma-int=50,000,000 · comma-3 · plain-int=50000000 · plain-2=50000000.00 · cny=¥50,000,000.00 · cn-upper=Chinese uppercase amount"
   },
   {
    "fieldname": "cell_value",
