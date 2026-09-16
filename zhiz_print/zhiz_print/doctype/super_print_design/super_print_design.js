@@ -2949,6 +2949,7 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         const props = container?.querySelector('#spd-props');
         if (!props) return;
+        props.classList.add('visible');  // 面板 CSS 默认 display:none,首次点击须显出(与单元格/页面设置入口同款)
         const seq = ((this.seals || []).filter(x => (x.page_no || 1) === (this.currentPageNo || 1)).indexOf(sl) + 1) || 1;
         const titleElement = props.querySelector('h4');
         if (titleElement) {
