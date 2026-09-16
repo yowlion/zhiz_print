@@ -2125,17 +2125,6 @@ class SuperPrintDesigner {
                     '<label>' + __('Text Size (px)') + ':</label>' +
                     '<input type="number" id="prop-barcode-text-size" class="form-control" value="10">' +
                 '</div>' +
-                '<div id="seal-prop-panel" style="display:none;border-top:1px solid #e8e8e8;padding-top:6px;margin-top:6px;">' +
-                    '<b><i class="fa fa-stamp" style="color:#c0392b"></i> ' + __('电子章') + '</b>' +
-                    '<div style="font-size:11px;margin:4px 0;"><span id="seal-prop-name"></span> <span class="text-muted">(@ <span id="seal-prop-anchor"></span>)</span></div>' +
-                    '<label style="font-size:11px;">' + __('呈现条件(同启用条件语法,留空=始终显示)') + ':</label>' +
-                    '<textarea id="seal-prop-cond" class="form-control" rows="2" style="font-size:11px;" placeholder="doc.company == &#39;xx&#39;"></textarea>' +
-                    '<div style="display:flex;gap:6px;margin-top:4px;">' +
-                        '<button type="button" class="btn btn-default btn-xs" id="seal-prop-apply">' + __('应用条件') + '</button>' +
-                        '<button type="button" class="btn btn-danger btn-xs" id="seal-prop-del"><i class="fa fa-trash"></i> ' + __('删除章') + '</button>' +
-                    '</div>' +
-                    '<p style="font-size:10px;color:#888;margin:4px 0 0;">' + __('拖动章到其他单元格可重新锚定;Delete 键删除选中章') + '</p>' +
-                '</div>' +
                 '<div id="number-group" style="display:none">' +
                     '<label>' + __('Number Format') + ':</label>' +
                     '<select id="prop-number-format" class="form-control">' +
@@ -2405,80 +2394,6 @@ class SuperPrintDesigner {
         container.querySelector('#prop-number-format')?.addEventListener('change', (e) => {
             this.updateCellProperty('number_format', e.target.value);
         });
-        // 电子章属性面板:应用条件 / 删除 / Delete 键
-        container.querySelector('#seal-prop-apply')?.addEventListener('click', () => {
-            const sl = (this.seals || []).find(x => x._uid === this.selectedSeal);
-            const ta = container.querySelector('#seal-prop-cond');
-            if (sl && ta) {
-                sl.condition = ta.value || '';
-                frappe.show_alert({ message: __('章条件已更新'), indicator: 'green' });
-            }
-        });
-        container.querySelector('#seal-prop-del')?.addEventListener('click', () => {
-            this.deleteSelectedSeal();
-        });
-        if (!this._sealKeydownBound) {
-            this._sealKeydownBound = true;
-            document.addEventListener('keydown', (e) => {
-                if (e.key !== 'Delete') return;
-                const t = e.target;
-                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-                if (this.selectedSeal && this.deleteSelectedSeal()) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            });
-        }
-        container.querySelector('#prop-font-size')?.addEventListener('change', (e) => {
-            this.applyFontSize(parseInt(e.target.value) || 12);
-        });
-        container.querySelector('#prop-padding')?.addEventListener('change', (e) => {
-            this.applyPadding(parseInt(e.target.value) || 0);
-        });
-
-        this.bindCssQuickButtons(cell);
-        this.bindBorderButtons();
-        this.bindSpinnerButtons();
-
-        // Cell vertical alignment buttons
-        container.querySelectorAll('.cell-valign-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const newCss = this.setCssProperty(cell.css_style || '', 'vertical-align', btn.dataset.valign);
-                this.updateCellProperty('css_style', newCss);
-            });
-        });
-
-        // Tab switching
-        container.querySelectorAll('.super-zprint-prop-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                container.querySelectorAll('.super-zprint-prop-tab').forEach(t => t.classList.remove('active'));
-                container.querySelectorAll('.super-zprint-prop-tab-content').forEach(c => c.classList.remove('active'));
-                tab.classList.add('active');
-                const target = container.querySelector('.super-zprint-prop-tab-content[data-tab="' + tab.dataset.tab + '"]');
-                if (target) target.classList.add('active');
-                this.lastActiveTab = tab.dataset.tab;
-            });
-        });
-    }
-
-    onPrintCountDriverToggle(checked) {
-        if (!this.currentCell) return;
-        const [row, col] = this.parseCellId(this.currentCell);
-        const cell = this.grid[row - 1]?.[col - 1];
-        if (!cell || cell._merged) return;
-        if (checked) {
-            // 唯一:清除其他 cell 的驱动标记(一个设计只能一个驱动单元格;勾选不校验值,保存时后端 validate 校验)
-            for (const pn of Object.keys(this.pages || {})) {
-                const pg = this.pages[pn];
-                for (const cid in (pg.cellDataMap || {})) {
-                    const c = pg.cellDataMap[cid];
-                    if (c && !c._merged && cid !== cell.cell_id && parseInt(c.is_print_count_driver)) {
-                        c.is_print_count_driver = 0;
-                    }
-                }
-            }
-        }
         this.updateCellProperty('is_print_count_driver', checked ? 1 : 0);
     }
 
@@ -2846,17 +2761,14 @@ class SuperPrintDesigner {
                 img.style.outlineOffset = '2px';
             }
             img.dataset.sealUid = sl._uid || '';
-            // 单击选中
+            // 单击:选中(不重建 DOM,避免打断;高亮 + 右侧面板切「公章设置」)
             img.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.selectedSeal = sl._uid;
-                this._syncSealPropPanel(sl);
-                this.renderSeals();
-            });
-            // 双击:显示条件设置弹窗
-            img.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                this._showSealCondDialog(sl);
+                layer.querySelectorAll('img').forEach(im => im.style.outline = '');
+                img.style.outline = '2px solid #0d5c63';
+                img.style.outlineOffset = '2px';
+                this._renderSealSettings(sl);
             });
             // 拖动:自由移动(pos 模式)或换格(anchor 模式)
             img.addEventListener('mousedown', (e) => {
@@ -2896,45 +2808,37 @@ class SuperPrintDesigner {
         });
     }
 
-    _showSealCondDialog(sl) {
-        const d = new frappe.ui.Dialog({
-            title: __('电子章显示条件') + ' — ' + (sl.seal || ''),
-            fields: [
-                { fieldname: 'cond', fieldtype: 'Text', label: __('条件(同启用条件语法,留空=始终显示)'),
-                  default: sl.condition || '',
-                  description: __("示例: doc.company == '广德' && doc.docstatus == 1") },
-            ],
-            primary_action_label: __('确定'),
-            primary_action: (v) => {
-                sl.condition = (v.cond || '').trim();
-                d.hide();
-                this._syncSealPropPanel(sl);
-                frappe.show_alert({ message: __('条件已保存(随设计保存生效)'), indicator: 'green' });
-            }
+    // 点击章:右侧属性面板切换为「公章设置」(条件编辑 + 右下角删除按钮)
+    _renderSealSettings(sl) {
+        const container = document.getElementById(this.designContainerId);
+        const props = container?.querySelector('#spd-props');
+        if (!props) return;
+        props.innerHTML =
+            '<h4><i class="fa fa-stamp" style="color:#c0392b"></i> ' + __('公章设置') + '</h4>' +
+            '<div style="font-size:12px;margin:6px 0;"><b>' + this.escapeHtml(sl.seal || '') + '</b></div>' +
+            '<div style="font-size:11px;color:#888;margin-bottom:8px;">' +
+                __('尺寸') + ': ' + (sl.width_mm || 40) + '×' + (sl.height_mm || 40) + 'mm · ' +
+                __('位置') + ': (' + Math.round(sl.pos_x) + ', ' + Math.round(sl.pos_y) + ') · ' +
+                __('透明度') + ': ' + (sl.opacity || 1) +
+            '</div>' +
+            '<p style="font-size:10px;color:#888;">' + __('拖动章可移动位置;点击单元格返回单元格属性') + '</p>' +
+            '<label style="font-size:11px;">' + __('显示条件(同启用条件语法,留空=始终显示)') + ':</label>' +
+            '<textarea id="spd-seal-cond" class="form-control" rows="3" style="font-size:11px;">' + this.escapeHtml(sl.condition || '') + '</textarea>' +
+            '<div style="font-size:10px;color:#999;margin-top:2px;">' + __("示例: doc.company == '广德' && doc.docstatus == 1") + '</div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">' +
+                '<button type="button" class="btn btn-primary btn-sm" id="spd-seal-save-cond"><i class="fa fa-check"></i> ' + __('保存条件') + '</button>' +
+                '<button type="button" class="btn btn-danger btn-sm" id="spd-seal-delete"><i class="fa fa-trash"></i> ' + __('删除公章') + '</button>' +
+            '</div>';
+        props.querySelector('#spd-seal-save-cond')?.addEventListener('click', () => {
+            sl.condition = (props.querySelector('#spd-seal-cond')?.value || '').trim();
+            frappe.show_alert({ message: __('条件已保存(随设计保存生效)'), indicator: 'green' });
         });
-        d.show();
-    }
-
-    _syncSealPropPanel(sl) {
-        const container = document.getElementById(this.designContainerId);
-        const panel = container?.querySelector('#seal-prop-panel');
-        if (!panel) return;
-        panel.style.display = 'block';
-        panel.querySelector('#seal-prop-name').textContent = sl.seal || '';
-        panel.querySelector('#seal-prop-anchor').textContent = 'R' + sl.anchor_row + 'C' + sl.anchor_col + ' · ' + __('页') + ' ' + (sl.page_no || 1);
-        const cond = panel.querySelector('#seal-prop-cond');
-        if (cond) cond.value = sl.condition || '';
-    }
-
-    deleteSelectedSeal() {
-        if (!this.selectedSeal) return false;
-        this.seals = (this.seals || []).filter(x => x._uid !== this.selectedSeal);
-        this.selectedSeal = null;
-        const container = document.getElementById(this.designContainerId);
-        const panel = container?.querySelector('#seal-prop-panel');
-        if (panel) panel.style.display = 'none';
-        this.renderSeals();
-        return true;
+        props.querySelector('#spd-seal-delete')?.addEventListener('click', () => {
+            this.seals = (this.seals || []).filter(x => x._uid !== sl._uid);
+            this.selectedSeal = null;
+            this.renderSeals();
+            frappe.show_alert({ message: __('公章已删除(随设计保存生效)'), indicator: 'orange' });
+        });
     }
 
     // ===== 画布缩放(v15.22.70):低分辨率屏适配 —— 纸张超出预览区时一键缩放 =====

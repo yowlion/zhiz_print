@@ -9,7 +9,7 @@ import re
 import datetime
 import copy
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, flt
 from zhiz_print.utils.query_executor import (
     is_merged_cell, extract_master_id,
     generate_barcode_base64, generate_qrcode_base64, image_to_base64_src,
@@ -1553,6 +1553,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                     'idx': _idx,
                     'row': cint(item.anchor_row) or 1,
                     'col': cint(item.anchor_col) or 1,
+                    # v15.22.86 自由位置(章中心 px,相对纸张左上;Float 列读出可能是
+                    # 字符串,统一 flt;无值回落锚定格模型)
+                    'pos_x': flt(item.pos_x) if item.pos_x is not None else None,
+                    'pos_y': flt(item.pos_y) if item.pos_y is not None else None,
                     'img': sd.image,
                     'w_px': (cint(sd.width) or 40) * PX_PER_MM,
                     'h_px': (cint(sd.height) or 40) * PX_PER_MM,
