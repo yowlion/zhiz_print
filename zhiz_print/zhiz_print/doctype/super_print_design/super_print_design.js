@@ -2061,6 +2061,11 @@ class SuperPrintDesigner {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
         this.clearPageAreaHighlights();
+        // 离开电子章选中态:清焦点 + 去外框(不重建章 DOM)
+        if (this.selectedSeal) {
+            this.selectedSeal = null;
+            container.querySelectorAll('#spd-seal-layer img').forEach(im => im.style.outline = '');
+        }
         const [row, col] = this.parseCellId(cellId);
         let cell = this.grid[row - 1]?.[col - 1];
         if (!cell) return;
