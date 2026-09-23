@@ -468,14 +468,19 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         return re.sub(r'\{doc\.(\w+)\.(\w+)\}', replacer, value)
 
-    def _replace_rep_placeholders(self, value, data_item=None):
+    def _replace_rep_placeholders(self, value, data_item=None, data_index=None):
         """{rep.xxx} 报表命名空间(v15.22.18 三段语义):
 
         {rep.name}          报表本身字段(Report 文档字段,如 name/ref_doctype/module)
         {rep.filters.字段}   当前报表筛选值
         {rep.items.字段}     数据驱动行上下文的当前报表行字段
         仅报表设计(design_target=Report)生效;其余场景占位符原样保留。
-        单级 {rep.字段} 的正则不含点号,天然不会误吞 items/filters 两段。"""
+        单级 {rep.字段} 的正则不含点号,天然不会误吞 items/filters 两段。
+
+        {rep.items.seq} 内置序号(字段优先):报表行本身有非 None 的 seq 字段 →
+        显示报表值;没有 → 自动行号 data_index+1(1,2,3...,展开序=排序/勾选
+        过滤后的最终打印顺序,跨物理页连续)。data_index 由 _build_expanded_rows_v2
+        的展开记录携带,非数据行上下文占位符原样保留。"""
         if not value or '{rep.' not in value:
             return value or ''
         if (self.design_target or 'DocType') != 'Report' or not self.report_name:
@@ -486,9 +491,17 @@ class SuperPrintDesign(frappe.model.document.Document):
             def item_repl(m):
                 f = m.group(1)
                 if hasattr(data_item, f):
-                    return self._fmt_val(getattr(data_item, f))
-                if isinstance(data_item, dict) and f in data_item:
-                    return self._fmt_val(data_item.get(f))
+                    v = getattr(data_item, f)
+                    # seq 字段为 None 时视作缺失,落入下方自动行号
+                    if v is not None or f != 'seq':
+                        return self._fmt_val(v)
+                elif isinstance(data_item, dict) and f in data_item:
+                    v = data_item.get(f)
+                    if v is not None or f != 'seq':
+                        return self._fmt_val(v)
+                # {rep.items.seq}:报表行无 seq 字段(或为 None)→ 自动行号
+                if f == 'seq' and data_index is not None:
+                    return str(cint(data_index) + 1)
                 return m.group(0)
             value = re.sub(r'\{rep\.items\.(\w+)\}', item_repl, value)
 
@@ -920,7 +933,8 @@ class SuperPrintDesign(frappe.model.document.Document):
             cells = []
             for c in cols[:12]:
                 v = self._compute_cell_sort_value(
-                    row, c.get('col') or 1, it, cell_map, doc, query_results, params)
+                    row, c.get('col') or 1, it, cell_map, doc, query_results, params,
+                    data_index=pos)
                 v = (v or '').replace('\n', ' ').strip()
                 if len(v) > 60:
                     v = v[:60] + '…'
@@ -976,11 +990,14 @@ class SuperPrintDesign(frappe.model.document.Document):
             return items
         try:
             for col_idx, order in reversed(parsed):
+                # id→原始位置映射:传 data_index 供 {rep.items.seq} 自动行号解析
+                pos_map = {id(it): i for i, it in enumerate(items)}
                 items = sorted(
                     items,
                     key=lambda it, ci=col_idx: self._sort_key_normalized(
                         self._compute_cell_sort_value(
-                            template_row, ci, it, cell_map, doc, query_results, params)),
+                            template_row, ci, it, cell_map, doc, query_results, params,
+                            data_index=pos_map.get(id(it)))),
                     reverse=(order == 'DESC'))
             return items
         except Exception:
@@ -1004,12 +1021,14 @@ class SuperPrintDesign(frappe.model.document.Document):
             return (1, s)
 
     def _compute_cell_sort_value(self, template_row, col_idx, data_item,
-                                 cell_map, doc, query_results, params):
+                                 cell_map, doc, query_results, params, data_index=None):
         """Compute the rendered display value of a cell, for sorting. Mirrors
         the value-resolution part of _build_row_html (expression / logic eval
         + doc/child/param/query placeholder substitution). Covers static,
         {doc.x}, {doc.child.field}, logic-cell, {param.x}, and '=expr'
-        expression columns. data_key/query-only columns fall back to raw."""
+        expression columns. data_key/query-only columns fall back to raw.
+        v15.22.x:补 {rep.xxx} 报表命名空间替换(传 data_index 支持 {rep.items.seq}
+        自动行号),修复按 {rep.items.字段} 列排序不生效、勾选对话框显示占位符原文的缺口。"""
         cell = cell_map.get("{0}_{1}".format(template_row, col_idx))
         if not cell:
             return ''
@@ -1028,6 +1047,7 @@ class SuperPrintDesign(frappe.model.document.Document):
         cv = self._replace_query_data_placeholders(cv, query_results)
         if data_item:
             cv = self._replace_child_table_placeholders(cv, data_item)
+        cv = self._replace_rep_placeholders(cv, data_item, data_index)
         return cv or ''
 
     def _eval_expression_cell(self, raw, doc, data_item, query_results, params):
@@ -1077,9 +1097,10 @@ class SuperPrintDesign(frappe.model.document.Document):
         columns resolve correctly before summing; non-numeric cells are skipped.
         Returns formatted sum (trailing zeros stripped)."""
         total = 0.0
-        for it in (data_items or []):
+        for di, it in enumerate(data_items or []):
             v = self._compute_cell_sort_value(
-                target_row, target_col, it, cell_map, doc, query_results, params)
+                target_row, target_col, it, cell_map, doc, query_results, params,
+                data_index=di)
             try:
                 total += float(v or 0)
             except (ValueError, TypeError):
@@ -2038,9 +2059,10 @@ class SuperPrintDesign(frappe.model.document.Document):
                                 if isinstance(row_result, dict) and dk in row_result:
                                     cell_value = str(row_result[dk] if row_result[dk] is not None else '')
 
-                # {rep.xxx} 报表命名空间(items=当前行,仅数据行上下文;filters/单级任意单元格)
+                # {rep.xxx} 报表命名空间(items=当前行,仅数据行上下文;filters/单级任意单元格;
+                # items.seq 传展开序 data_index 供自动行号)
                 cell_value = self._replace_rep_placeholders(
-                    cell_value, data_item)
+                    cell_value, data_item, _data_idx)
 
                 # Query data replacement (for non-expanded rows, take first query result row)
                 if not data_item and cell_data.get('query_name') and cell_data.get('data_key'):

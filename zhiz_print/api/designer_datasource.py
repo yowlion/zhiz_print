@@ -119,15 +119,24 @@ def get_datasource_tree(design_name=None, target_doctype=None, report_name=None)
                 "key": "rep-filters", "label": "筛选字段", "icon": "fa-filter",
                 "children": [{"key": "rep.filters." + k, "label": k, "leaf": True} for k in fl],
             })
-        # 报表数据列(取样)
+        # 报表数据列(取样)。seq 为内置序号字段,默认置顶注入(可拖拽/双击出
+        # {rep.items.seq});报表自带 seq 列时跳过 —— 字段优先语义见
+        # SuperPrintDesign._replace_rep_placeholders(报表值优先,缺省自动行号 1,2,3...)
         sample = get_report_sample_data(report_name, {}, 5)
         cols = sample.get("columns") or []
-        if cols:
+        item_children = []
+        if "seq" not in [c.get("fieldname") for c in cols]:
+            item_children.append({
+                "key": "rep.items.seq", "label": "序号 (seq) [内置]", "leaf": True,
+            })
+        item_children.extend(
+            {"key": "rep.items." + c["fieldname"],
+             "label": "{0} ({1})".format(_(c["label"]), c["fieldname"]),
+             "leaf": True} for c in cols)
+        if item_children:
             rep_children.append({
                 "key": "rep-items", "label": "报表数据列", "icon": "fa-table",
-                "children": [{"key": "rep.items." + c["fieldname"],
-                              "label": "{0} ({1})".format(_(c["label"]), c["fieldname"]),
-                              "leaf": True} for c in cols],
+                "children": item_children,
             })
         if rep_children:
             tree.append({
