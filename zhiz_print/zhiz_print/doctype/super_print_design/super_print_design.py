@@ -506,13 +506,19 @@ class SuperPrintDesign(frappe.model.document.Document):
             value = re.sub(r'\{rep\.items\.(\w+)\}', item_repl, value)
 
         # 2) {rep.filters.field} — 当前筛选值
-        filters = getattr(self, '_active_filters', None) or {}
+        filters = getattr(self, '_active_filters', None)
+        # 纯模板结构预览(设计器,_active_filters=None):占位符原样保留,与本地设计器网格语义一致;
+        # 运行态(报表预览/打印/PDF/Excel)筛选未填/未传 → 空串,不残留占位符
+        in_design_mode = filters is None
+        filters = filters or {}
 
         def filter_repl(m):
             f = m.group(1)
+            if in_design_mode:
+                return m.group(0)
             if f in filters:
                 return self._fmt_val(filters[f])
-            return m.group(0)
+            return ''
 
         value = re.sub(r'\{rep\.filters\.(\w+)\}', filter_repl, value)
 
@@ -547,16 +553,22 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         依赖实例属性 _active_filters(由 get_preview_for_document /
         get_measurement_for_document 的 report_filters 参数设置)。"""
-        filters = getattr(self, '_active_filters', None)
-        if not value or not filters:
+        if not value:
             return value or ''
+        filters = getattr(self, '_active_filters', None)
+        # 纯模板结构预览(设计器,_active_filters=None):占位符原样保留;
+        # 运行态筛选未填/未传 → 空串,不残留占位符
+        in_design_mode = filters is None
+        filters = filters or {}
 
         def replacer(match):
             filter_name = match.group(1)
+            if in_design_mode:
+                return match.group(0)
             if filter_name in filters:
                 v = filters[filter_name]
                 return SuperPrintDesign._fmt_val(v)
-            return match.group(0)
+            return ''
 
         return re.sub(r'\{filter\.(\w+)\}', replacer, value)
 
