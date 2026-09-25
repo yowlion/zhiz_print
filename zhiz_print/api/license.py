@@ -154,9 +154,52 @@ def _decrypt_response(encrypted_data):
     return json.loads(plaintext.decode("utf-8"))
 
 
+_LOCAL_MISS = object()
+
+
+def _local_license_call(module, endpoint, request_payload):
+    """本机即 licser 中心时的进程内直调,绕过 HTTP 回环。
+
+    中心服务器(test)同一 site 同时装 zhiz_licser(服务端)与 zhiz_print(客户端),
+    走 HTTP 会请求回 https://gdzhiz.com:38443 再回到本机 gunicorn,需要第二个
+    空闲 worker 应答;并发凑满 sync worker 数即整站自噬死锁(2026-09-25 事故)。
+    本机直调不占第二个 worker,永不自噬;调用语义与 HTTP 层一致(验签/加密全走原协议)。
+
+    返回 _LOCAL_MISS 表示本机没有 licser(调用方走 HTTP);
+    返回 None 表示本机直调失败(与 HTTP 5xx/超时同语义)。
+    """
+    if "zhiz_licser" not in frappe.get_installed_apps():
+        return _LOCAL_MISS
+    try:
+        api_mod = frappe.get_module("zhiz_licser.api.{0}".format(module))
+    except Exception:
+        return _LOCAL_MISS
+    fn = getattr(api_mod, endpoint, None)
+    if not callable(fn):
+        return _LOCAL_MISS
+    # licser 端点从 frappe.local.form_dict 读参——替换后直调再还原,不污染当前请求上下文
+    saved = frappe.local.form_dict
+    try:
+        frappe.local.form_dict = frappe._dict(request_payload)
+        ret = fn()
+        if isinstance(ret, dict) and "encrypted" in ret and "iv" in ret:
+            return _decrypt_response(ret)
+        return ret
+    except Exception:
+        frappe.log_error(
+            title="zhiz_print local licser call failed: {0}.{1}".format(module, endpoint)
+        )
+        return None
+    finally:
+        frappe.local.form_dict = saved
+
+
 def _call_license_api(endpoint, body_dict, module="license_api", timeout=10):
     import requests
     request_payload = _build_request(body_dict)
+    local = _local_license_call(module, endpoint, request_payload)
+    if local is not _LOCAL_MISS:
+        return local
     url = "{0}/api/method/zhiz_licser.api.{1}.{2}".format(LICENSE_SERVER, module, endpoint)
     response = requests.post(url, json=request_payload, timeout=timeout)
     if response.status_code == 200:
