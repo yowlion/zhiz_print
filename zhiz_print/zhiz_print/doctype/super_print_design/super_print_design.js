@@ -2129,8 +2129,6 @@ class SuperPrintDesigner {
                 '<optgroup label="' + g + '">' + groups[g].map(f =>
                     '<option value="' + f.value + '">' + f.label + '</option>').join('') + '</optgroup>').join('');
         })();
-        const queryOptions = this.generateQueryOptions();
-
         const activeTab = this.lastActiveTab || 'style';
         const contentTabCls = activeTab === 'content' ? ' active' : '';
         const styleTabCls = activeTab === 'style' ? ' active' : '';
@@ -2149,12 +2147,6 @@ class SuperPrintDesigner {
                 '<div class="spd-fx-popover" id="spd-fx-popover" style="display:none"></div>' +
                 '</div>' +
                 '<label style="font-size:10px;margin-top:4px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="prop-print-count-driver"> ' + __('Set as Print Count Driver') + '</label>' +
-                '<div id="query-group" style="display:none">' +
-                    '<label>' + __('Bound Query') + ':</label>' +
-                    '<select id="prop-query-name" class="form-control"><option value="">--</option>' + queryOptions + '</select>' +
-                    '<label>' + __('Data Key') + ':</label>' +
-                    '<select id="prop-data-key" class="form-control"><option value="">--</option></select>' +
-                '</div>' +
                 '<div id="barcode-group" style="display:none">' +
                     '<label>' + __('Barcode Format') + ':</label>' +
                     '<select id="prop-barcode-format" class="form-control">' + barcodeFormatOptions + '</select>' +
@@ -2277,8 +2269,6 @@ class SuperPrintDesigner {
         setValue('prop-cell-value', cell.cell_value);
         const _fxb = container.querySelector('#spd-fx-btn');
         if (_fxb) _fxb.style.display = (cell.cell_value || '').startsWith('=') ? '' : 'none';
-        setValue('prop-query-name', cell.query_name);
-        setValue('prop-data-key', cell.data_key);
         setValue('prop-barcode-format', cell.barcode_format || 'CODE128');
         setValue('prop-number-format', cell.number_format || 'none');
         const showTextCb = container.querySelector('#prop-barcode-show-text');
@@ -2287,98 +2277,17 @@ class SuperPrintDesigner {
         const _driverCb = container.querySelector('#prop-print-count-driver');
         if (_driverCb) _driverCb.checked = !!(parseInt(cell.is_print_count_driver));
         this.togglePropertyGroups(cell.cell_type);
-        if (cell.cell_type === 'image' && cell.query_name) {
-            this.loadDataKeyOptions(cell.query_name);
-        }
     }
 
     togglePropertyGroups(cellType) {
         const container = document.getElementById(this.designContainerId);
         if (!container) return;
-        const queryGroup = container.querySelector('#query-group');
         const barcodeGroup = container.querySelector('#barcode-group');
         const qrcodeGroup = container.querySelector('#qrcode-group');
         const numberGroup = container.querySelector('#number-group');
-        if (queryGroup) queryGroup.style.display = (cellType === 'image') ? 'block' : 'none';
         if (barcodeGroup) barcodeGroup.style.display = (cellType === 'barcode') ? 'block' : 'none';
         if (qrcodeGroup) qrcodeGroup.style.display = (cellType === 'qrcode') ? 'block' : 'none';
         if (numberGroup) numberGroup.style.display = (cellType === 'number') ? 'block' : 'none';
-    }
-
-    loadDataKeyOptions(queryName) {
-        const container = document.getElementById(this.designContainerId);
-        const select = container?.querySelector('#prop-data-key');
-        if (!select) return;
-        select.innerHTML = '<option value="">--</option>';
-        if (!queryName) return;
-
-        // 报表伪查询:Data Key 三类分组(rep 命名空间)
-        // 1类 报表本身字段(rep.name 等) / 2类 filters.字段名 / 3类 items.字段名(报表行)
-        // 筛选优先取报表页透传的 sessionStorage(从报表页进设计流程时),
-        // 否则空筛选由服务端逐级补默认筛选(公司/日期)重试
-        if (queryName === '__report_main__') {
-            let reportFilters = {};
-            try { reportFilters = JSON.parse(sessionStorage.getItem('spd_report_filters:' + (this.frm.doc.report_name || '')) || '{}'); } catch (e) { /* ignore */ }
-            frappe.call({
-                method: 'zhiz_print.api.report_print.get_report_sample_data',
-                args: {
-                    report_name: this.frm.doc.report_name,
-                    filters: reportFilters,
-                    sample_rows: this.frm.doc.sample_rows || 20,
-                },
-                callback: (r) => {
-                    const m = r.message || {};
-                    const addGroup = (label, items) => {
-                        if (!items || !items.length) return;
-                        const og = document.createElement('optgroup');
-                        og.label = label;
-                        items.forEach(it => {
-                            const opt = document.createElement('option');
-                            opt.value = it.value;
-                            opt.textContent = it.label;
-                            og.appendChild(opt);
-                        });
-                        select.appendChild(og);
-                    };
-                    // 1类 报表本身字段(单级 rep.字段)
-                    addGroup(__('Report Fields'), (m.report_fields || []).map(f => ({
-                        value: f.key, label: f.label || f.key })));
-                    // 2类 筛选字段(rep.filters.字段名)
-                    addGroup(__('Report Filters'), (m.filter_fields || []).map(k => ({
-                        value: 'filters.' + k, label: 'filters.' + k })));
-                    // 3类 报表数据列(rep.items.字段名)
-                    addGroup(__('Report Columns'), (m.columns || []).map(c => ({
-                        value: 'items.' + (c.fieldname || c.label),
-                        label: (c.label || c.fieldname) + ' (items.' + (c.fieldname || c.label) + ')' })));
-                    const cell = this.cellDataMap[this.currentCell];
-                    if (cell && cell.data_key) select.value = cell.data_key;
-                    if (m.error) {
-                        frappe.msgprint({
-                            title: __('Failed to load report columns'),
-                            message: __('{0}', [m.error]),
-                            indicator: 'orange',
-                        });
-                    }
-                },
-            });
-            return;
-        }
-
-        frappe.call({
-            method: 'zhiz_print.zhiz_print.doctype.super_print_design.super_print_design.get_query_keys',
-            args: { design_name: this.frm.doc.name, query_name: queryName },
-            callback: (r) => {
-                const keys = r.message || [];
-                keys.forEach(k => {
-                    const opt = document.createElement('option');
-                    opt.value = k;
-                    opt.textContent = k;
-                    select.appendChild(opt);
-                });
-                const cell = this.cellDataMap[this.currentCell];
-                if (cell && cell.data_key) select.value = cell.data_key;
-            }
-        });
     }
 
     bindPropertyFormEvents(cell) {
@@ -2402,22 +2311,6 @@ class SuperPrintDesigner {
         });
         container.querySelector('#prop-css-style')?.addEventListener('change', (e) => {
             this.updateCellProperty('css_style', e.target.value);
-        });
-        container.querySelector('#prop-data-key')?.addEventListener('change', (e) => {
-            this.updateCellProperty('data_key', e.target.value);
-            // 报表数据键(v15.22.18):选中即生成 {rep.键位} 占位符写入单元格值,
-            // 网格即时预览显示(如选 物料 → 单元格显示 {rep.items.item_code})
-            const cell = this.cellDataMap[this.currentCell];
-            if (e.target.value && cell && (cell.query_name || '') === '__report_main__') {
-                const ph = '{rep.' + e.target.value + '}';
-                this.updateCellProperty('cell_value', ph);
-                const ta = container.querySelector('#prop-cell-value');
-                if (ta) ta.value = ph;
-            }
-        });
-        container.querySelector('#prop-query-name')?.addEventListener('change', (e) => {
-            this.updateCellProperty('query_name', e.target.value);
-            this.loadDataKeyOptions(e.target.value);
         });
         container.querySelector('#prop-barcode-show-text')?.addEventListener('change', (e) => {
             this.updateCellProperty('barcode_show_text', e.target.checked ? 1 : 0);
@@ -3532,20 +3425,6 @@ class SuperPrintDesigner {
             cssEditor.dispatchEvent(new Event('change', { bubbles: true }));
             frappe.show_alert({ message: __('Cleared') + ' ' + propName + ' ' + __('property'), indicator: 'orange' });
         }
-    }
-
-    generateQueryOptions() {
-        const queries = this.frm.doc.design_queries || [];
-        // 报表模式(v15.23):首位注入伪查询 __report_main__(报表数据源,行=报表行);
-        // 单元格绑它 + Data Key 选报表列 → 数据驱动行按报表行展开
-        let opts = '';
-        if ((this.frm.doc.design_target || 'DocType') === 'Report') {
-            opts += '<option value="__report_main__">' + __('Report Data') + '</option>';
-        }
-        opts += queries.map(q =>
-            '<option value="' + q.query_name + '">' + __(q.query_name) + '</option>'
-        ).join('');
-        return opts;
     }
 
     syncToForm() {
