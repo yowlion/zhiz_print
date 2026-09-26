@@ -1247,6 +1247,8 @@ class SuperPrintDesigner {
               example: '=min(row.qty, 10)' },
             { name: 'round(v, n)', usage: '四舍五入到 n 位小数', snippet: 'round(flt(row.qty) / 3, 2)',
               example: '=round(flt(row.qty) / 3, 2)' },
+            { name: 'striptags(v)', usage: '富文本字段去HTML标签取纯文本(多段自动换行)', snippet: 'striptags({doc.operations.description})',
+              example: '=striptags({doc.operations.description})' },
             { name: 'has_native_print_format()', usage: '目标单据是否存在原生打印格式', snippet: 'has_native_print_format()',
               example: '=not has_native_print_format()' },
         ];

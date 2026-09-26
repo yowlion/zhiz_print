@@ -8,6 +8,7 @@ import json
 import re
 import datetime
 import copy
+import html as _html_mod
 from frappe import _
 from frappe.utils import cint, flt
 from zhiz_print.utils.query_executor import (
@@ -26,6 +27,39 @@ PX_PER_MM = 4
 # Tolerates half-width () and full-width （） parentheses and surrounding spaces.
 _ROWSUM_RE = re.compile(r'\s*=\s*rowsum\s*[（(]\s*(\d+)\s*:\s*(\d+)\s*[）)]')
 _PAGEROWSUM_RE = re.compile(r'\s*=\s*pagerowsum\s*[（(]\s*(\d+)\s*:\s*(\d+)\s*[）)]')
+
+# =striptags({ph}) — rich-text field (ql-editor HTML) to plain text.
+# Placeholder substitution is bare-value concatenation: HTML/quotes inside the
+# substituted value would make the expression a SyntaxError, so the placeholder
+# argument is stashed as a sentinel and backfilled as a Python string literal
+# after all substitution passes (see _eval_expression_cell).
+_STRIPTAGS_ARG_RE = re.compile(r'(striptags\s*[（(]\s*)\{([A-Za-z0-9_.]+)\}(\s*[）)])')
+
+# Block-level tags become line breaks so multi-paragraph rich text keeps one line per <p>.
+_STRIPTAGS_BLOCK_RE = re.compile(
+    r'(?i)</?\s*(p|div|br|li|tr|td|th|h[1-6]|table|thead|tbody|ul|ol|blockquote|pre|hr)\b[^>]*>')
+
+
+def _striptags(value):
+    """Strip HTML tags and unescape entities for plain-text display.
+
+    e.g. '<div class="ql-editor read-mode"><p>420X90X100</p></div>' -> '420X90X100'.
+    Exposed to templates as =striptags({ph}) via _build_safe_eval_locals."""
+    if value is None:
+        return ''
+    text = value if isinstance(value, str) else str(value)
+    if '<' not in text and '&' not in text:
+        return text
+    # drop script/style blocks entirely (their text content is not display data)
+    text = re.sub(r'(?is)<(script|style)\b[^>]*>.*?</\1\s*>', '', text)
+    text = _STRIPTAGS_BLOCK_RE.sub('\n', text)
+    text = re.sub(r'(?s)<[^>]+>', '', text)
+    try:
+        text = _html_mod.unescape(text)
+    except Exception:
+        pass
+    lines = [ln.strip() for ln in text.split('\n')]
+    return '\n'.join([ln for ln in lines if ln])
 
 
 class SuperPrintDesign(frappe.model.document.Document):
@@ -379,6 +413,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             'get_value': get_value,
             'fmt': fmt,
             'flt': frappe.utils.flt,
+            'striptags': _striptags,
             'has_native_print_format': has_native_print_format,
             'max': max,
             'min': min,
@@ -395,6 +430,8 @@ class SuperPrintDesign(frappe.model.document.Document):
         - fmt(value, precision=2): format numeric value as fixed-decimal string
           (str.format is blocked by safe_eval — "format is an unsafe attribute")
         - flt(value): alias for frappe.utils.flt (safe_eval blocks frappe.utils.* attribute access)
+        - striptags(value): strip HTML tags/entities for plain text, e.g.
+          =striptags({doc.operations.description}) on ql-editor rich-text fields
         - max/min/round: builtins (safe_eval hides them by default)
         """
         # 设计预览(doc=None):不求值,显示表达式原文(截断长表达式,让用户看到 logic cell 内容)
@@ -1103,11 +1140,32 @@ class SuperPrintDesign(frappe.model.document.Document):
         if not raw:
             return ''
         expr = raw.lstrip()[1:]  # strip leading '='
+        # =striptags({ph}): placeholder substitution is bare-value concatenation —
+        # HTML/quotes inside the value would break the expression syntax, so stash
+        # the placeholder argument as a sentinel before substitution and backfill
+        # it afterwards as a quoted Python string literal (repr).
+        _stashed = []
+
+        def _stash_striptags_arg(m):
+            _stashed.append('{%s}' % m.group(2))
+            return m.group(1) + '\x00%d\x00' % (len(_stashed) - 1) + m.group(3)
+
+        expr = _STRIPTAGS_ARG_RE.sub(_stash_striptags_arg, expr)
         expr = self._replace_doc_placeholders(expr, doc)
         expr = self._replace_param_placeholders(expr, params)
         expr = self._replace_query_data_placeholders(expr, query_results)
         if data_item:
             expr = self._replace_child_table_placeholders(expr, data_item)
+        # backfill stashed striptags arguments: run the same four substitution
+        # passes on the bare placeholder, then embed as a string literal
+        for _i, _ph in enumerate(_stashed):
+            _val = _ph
+            _val = self._replace_doc_placeholders(_val, doc)
+            _val = self._replace_param_placeholders(_val, params)
+            _val = self._replace_query_data_placeholders(_val, query_results)
+            if data_item:
+                _val = self._replace_child_table_placeholders(_val, data_item)
+            expr = expr.replace('\x00%d\x00' % _i, repr(_val))
         try:
             result = frappe.safe_eval(expr, {}, self._build_safe_eval_locals(doc, data_item))
             if isinstance(result, str):
