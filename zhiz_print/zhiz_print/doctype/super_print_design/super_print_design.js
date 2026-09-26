@@ -1433,25 +1433,31 @@ class SuperPrintDesigner {
                         '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px">' + __('Row Height') + ':</label>' +
                             '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-height" data-step="5">-</button>' +
                                 '<input type="number" id="row-height" class="form-control super-zprint-spin-input" value="' + (rowStyle.height || '') + '" min="1" max="500" step="1" placeholder="20">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-height" data-step="5">+</button>' +
+                                '<div class="super-zprint-spin-btns">' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-height" data-step="5" title="+">+</button>' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-height" data-step="5" title="-">&#8722;</button>' +
+                                '</div>' +
                             '</div>' +
                         '</div>' +
                         '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px" title="' + __('Data-Driven Row only: fixed physical row count') + '">' + __('Fixed Rows') + ':</label>' +
                             '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-fixed-rows" data-step="1">-</button>' +
                                 '<input type="number" id="row-fixed-rows" class="form-control super-zprint-spin-input" value="' + (rowStyle.fixed_rows || '') + '" min="0" max="200" step="1" placeholder="0">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-fixed-rows" data-step="1">+</button>' +
+                                '<div class="super-zprint-spin-btns">' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-fixed-rows" data-step="1" title="+">+</button>' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-fixed-rows" data-step="1" title="-">&#8722;</button>' +
+                                '</div>' +
                             '</div>' +
                         '</div>' +
                         '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px">' + __('Font') + ':</label>' +
                             '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-font-size" data-step="1">-</button>' +
                                 '<input type="number" id="row-font-size" class="form-control super-zprint-spin-input" value="' + (rowStyle.font_size || '') + '" min="8" max="36" step="1" placeholder="12">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-font-size" data-step="1">+</button>' +
+                                '<div class="super-zprint-spin-btns">' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-font-size" data-step="1" title="+">+</button>' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-font-size" data-step="1" title="-">&#8722;</button>' +
+                                '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
@@ -1510,9 +1516,11 @@ class SuperPrintDesigner {
                 '<div class="super-zprint-property-section-header"><i class="fa fa-arrows-v"></i> ' + __('Line Spacing') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Auto Wrap') + ')</small></div>' +
                 '<div class="property-section-body" style="padding:8px">' +
                     '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
-                        '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-line-spacing" data-step="1">-</button>' +
                         '<input type="number" id="row-line-spacing" class="form-control super-zprint-spin-input" value="' + (rowStyle.line_spacing || '') + '" min="0" max="20" step="1" placeholder="0">' +
-                        '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-line-spacing" data-step="1">+</button>' +
+                        '<div class="super-zprint-spin-btns">' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-line-spacing" data-step="1" title="+">+</button>' +
+                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-line-spacing" data-step="1" title="-">&#8722;</button>' +
+                        '</div>' +
                     '</div>' +
                     '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('Extra spacing between wrapped lines, 0-20px (0=default)') + '</div>' +
                 '</div>' +
@@ -2017,9 +2025,11 @@ class SuperPrintDesigner {
                         '<div class="super-zprint-layout-control-group" style="flex:1">' +
                             '<label style="font-size:9px">' + __('Column Width') + ':</label>' +
                             '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="col-width" data-step="10">-</button>' +
                                 '<input type="number" id="col-width" class="form-control super-zprint-spin-input" value="' + (colStyle.width || '') + '" min="1" max="500" step="1" placeholder="60">' +
-                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="col-width" data-step="10">+</button>' +
+                                '<div class="super-zprint-spin-btns">' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="col-width" data-step="10" title="+">+</button>' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="col-width" data-step="10" title="-">&#8722;</button>' +
+                                '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
@@ -2193,17 +2203,21 @@ class SuperPrintDesigner {
                     '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Rowspan') + ':</label>' +
                         '<div class="super-zprint-number-spinner">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-rowspan" data-step="1">-</button>' +
                             '<input type="number" id="prop-rowspan" class="form-control super-zprint-spin-input" min="1" max="100" value="' + (cell.rowspan || 1) + '">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-rowspan" data-step="1">+</button>' +
+                            '<div class="super-zprint-spin-btns">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-rowspan" data-step="1" title="+">+</button>' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-rowspan" data-step="1" title="-">&#8722;</button>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Colspan') + ':</label>' +
                         '<div class="super-zprint-number-spinner">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-colspan" data-step="1">-</button>' +
                             '<input type="number" id="prop-colspan" class="form-control super-zprint-spin-input" min="1" max="26" value="' + (cell.colspan || 1) + '">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-colspan" data-step="1">+</button>' +
+                            '<div class="super-zprint-spin-btns">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-colspan" data-step="1" title="+">+</button>' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-colspan" data-step="1" title="-">&#8722;</button>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -2211,17 +2225,21 @@ class SuperPrintDesigner {
                     '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Font (px)') + ':</label>' +
                         '<div class="super-zprint-number-spinner">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-font-size" data-step="1">-</button>' +
                             '<input type="number" id="prop-font-size" class="form-control super-zprint-spin-input" value="' + this.extractFontSize(cell.css_style, row) + '" min="8" max="36">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-font-size" data-step="1">+</button>' +
+                            '<div class="super-zprint-spin-btns">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-font-size" data-step="1" title="+">+</button>' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-font-size" data-step="1" title="-">&#8722;</button>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="super-zprint-layout-control-group">' +
                         '<label>' + __('Padding') + ':</label>' +
                         '<div class="super-zprint-number-spinner">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-padding" data-step="1">-</button>' +
                             '<input type="number" id="prop-padding" class="form-control super-zprint-spin-input" value="' + this.extractPadding(cell.css_style) + '" min="0" max="20">' +
-                            '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-padding" data-step="1">+</button>' +
+                            '<div class="super-zprint-spin-btns">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="prop-padding" data-step="1" title="+">+</button>' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="prop-padding" data-step="1" title="-">&#8722;</button>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
