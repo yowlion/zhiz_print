@@ -1439,6 +1439,14 @@ class SuperPrintDesigner {
                             '</div>' +
                         '</div>' +
                         '<div class="super-zprint-layout-control-group">' +
+                            '<label style="font-size:9px" title="' + __('Data-Driven Row only: fixed physical row count') + '">' + __('Fixed Rows') + ':</label>' +
+                            '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-fixed-rows" data-step="1">-</button>' +
+                                '<input type="number" id="row-fixed-rows" class="form-control super-zprint-spin-input" value="' + (rowStyle.fixed_rows || '') + '" min="0" max="200" step="1" placeholder="0">' +
+                                '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-fixed-rows" data-step="1">+</button>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px">' + __('Font') + ':</label>' +
                             '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
                                 '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-font-size" data-step="1">-</button>' +
@@ -1533,6 +1541,14 @@ class SuperPrintDesigner {
 
         if (heightInput) heightInput.addEventListener('change', (e) => {
             this.updateRowStyle(row, 'height', parseInt(e.target.value) || undefined);
+        });
+
+        // Fixed row count (Data-Driven Row): 0/empty = auto expand, N = fixed
+        // physical rows (pad blanks / truncate beyond N)
+        const fixedRowsInput = container.querySelector('#row-fixed-rows');
+        if (fixedRowsInput) fixedRowsInput.addEventListener('change', (e) => {
+            const v = parseInt(e.target.value) || 0;
+            this.updateRowStyle(row, 'fixed_rows', v > 0 ? v : undefined);
         });
         if (fontInput) fontInput.addEventListener('change', (e) => {
             this.updateRowStyle(row, 'font_size', parseInt(e.target.value) || undefined);

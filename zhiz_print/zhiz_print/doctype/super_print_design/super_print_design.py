@@ -695,13 +695,16 @@ class SuperPrintDesign(frappe.model.document.Document):
                     if row_num not in data_driven_rows:
                         row_sorts = ''
                         row_data_mode = ''
+                        row_fixed_rows = 0
                         if row_styles and isinstance(row_styles, dict):
                             row_cfg = row_styles.get(str(row_num), {}) or {}
                             row_sorts = row_cfg.get('sorts', '') or ''
                             row_data_mode = row_cfg.get('data_mode', '') or ''
+                            row_fixed_rows = cint(row_cfg.get('fixed_rows') or 0)
                         data_driven_rows[row_num] = {
                             'child_tables': set(), 'query_names': set(),
-                            'sorts': row_sorts, 'data_mode': row_data_mode}
+                            'sorts': row_sorts, 'data_mode': row_data_mode,
+                            'fixed_rows': row_fixed_rows}
                     for (table_name, _) in child_patterns:
                         data_driven_rows[row_num]['child_tables'].add(
                             table_name)
@@ -798,6 +801,11 @@ class SuperPrintDesign(frappe.model.document.Document):
             if sorts and items:
                 items = self._sort_data_items_by_row_cols(
                     items, sorts, row_num, cell_map, doc, query_results, params)
+            # 固定行数:截断到前 N 条(row_data_map 也截断,保证 =rowsum 合计
+            # 与实际显示行一致);不足的空位在下方展开循环里补 blank 行
+            fixed_rows = cint(info.get('fixed_rows') or 0)
+            if fixed_rows > 0 and items:
+                items = items[:fixed_rows]
             row_data_map[row_num] = items
 
         # Build expanded row list — group adjacent data-driven rows sharing query_name
@@ -826,7 +834,23 @@ class SuperPrintDesign(frappe.model.document.Document):
                     break
 
                 data_items = row_data_map[row]
-                if data_items and len(group) > 1:
+                # 固定行数:不足 N 补 blank 行(data_item=None + blank 标记),
+                # 渲染时空白格子保留边框/行高/静态文字,只清动态占位符;
+                # 组场景(blank 也成组 emit)保持组员行不丢失
+                fixed_rows = cint(data_driven_rows[row].get('fixed_rows') or 0)
+                if fixed_rows > 0:
+                    if len(data_items) < fixed_rows:
+                        data_items = list(data_items) + [None] * (fixed_rows - len(data_items))
+                    rows_to_emit = group if len(group) > 1 else [row]
+                    for data_idx, data_item in enumerate(data_items):
+                        for gr in rows_to_emit:
+                            result.append({
+                                'template_row': gr,
+                                'data_index': data_idx,
+                                'data_item': data_item,
+                                'blank': data_item is None,
+                            })
+                elif data_items and len(group) > 1:
                     # Group expansion: for each data item, emit all rows in group
                     for data_idx, data_item in enumerate(data_items):
                         for gr in group:
@@ -1859,10 +1883,12 @@ class SuperPrintDesign(frappe.model.document.Document):
             data_item = row_data['data_item']
             row_num = template_row
             _data_idx = row_data.get('data_index')
+            _blank = bool(row_data.get('blank'))
         else:
             row_num = row_data
             data_item = None
             _data_idx = None
+            _blank = False
 
         def _is_merged_covering(merged_info, check_row, check_col):
             """Check if merge area covers specified row/column"""
@@ -1989,6 +2015,14 @@ class SuperPrintDesign(frappe.model.document.Document):
                 # Get cell value
                 cell_value = cell_data.get('cell_value', '')
                 cell_type = cell_data.get('cell_type', 'static')
+
+                # 固定行数补的空白行:清动态内容('=' 表达式与 {..} 占位符),
+                # 保留静态文字/边框/行高 → 不足 N 行时尾部整行空白显示
+                if _blank and cell_value:
+                    if cell_value.lstrip().startswith('='):
+                        cell_value = ''
+                    else:
+                        cell_value = re.sub(r'\{[^{}]+\}', '', cell_value)
 
                 # '=' cells: =rowsum(R:C) sum across a Data-Driven Row, or =expr arithmetic
                 # doc=None(纯模板结构预览)时原样显示 =rowsum()/=expr 文本,不计算(无 doc/items 无法求值)

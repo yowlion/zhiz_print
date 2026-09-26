@@ -458,3 +458,5 @@ Pick Anchor Cell,拾取单元格
 paper,纸张固定
 Offset X (px, seal center from anchor cell top-left),偏移X(章中心相对参考格左上)
 Offset Y (px),偏移Y(px)
+Fixed Rows,固定行数
+Data-Driven Row only: fixed physical row count,仅数据驱动行有效：固定展开的物理行数（不足补空白行，超出截断）
