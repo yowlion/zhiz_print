@@ -345,7 +345,7 @@
 .super-zprint-prop-tab-content.active { display:block; }
 .super-zprint-css-quick-buttons { display:flex; flex-wrap:wrap; gap:3px; margin:6px 0; }
 .super-zprint-css-quick-buttons .btn { width:28px; height:28px; padding:0; display:flex; align-items:center; justify-content:center; }
-.super-zprint-layout-controls { display:flex; flex-wrap:nowrap; gap:3px; margin-bottom:6px; }
+.super-zprint-layout-controls { display:flex; flex-wrap:wrap; gap:3px; margin-bottom:6px; }
 .super-zprint-layout-control-group { flex:1 1 auto; min-width:0; }
 .super-zprint-layout-control-group label { font-size:9px; margin-bottom:2px; white-space:nowrap; }
 .super-zprint-number-spinner { display:flex; align-items:center; gap:2px; }

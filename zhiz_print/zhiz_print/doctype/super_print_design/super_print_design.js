@@ -1441,22 +1441,22 @@ class SuperPrintDesigner {
                             '</div>' +
                         '</div>' +
                         '<div class="super-zprint-layout-control-group">' +
-                            '<label style="font-size:9px" title="' + __('Data-Driven Row only: fixed physical row count') + '">' + __('Fixed Rows') + ':</label>' +
-                            '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
-                                '<input type="number" id="row-fixed-rows" class="form-control super-zprint-spin-input" value="' + (rowStyle.fixed_rows || '') + '" min="0" max="200" step="1" placeholder="0">' +
-                                '<div class="super-zprint-spin-btns">' +
-                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-fixed-rows" data-step="1" title="+">+</button>' +
-                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-fixed-rows" data-step="1" title="-">&#8722;</button>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="super-zprint-layout-control-group">' +
                             '<label style="font-size:9px">' + __('Font') + ':</label>' +
                             '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
                                 '<input type="number" id="row-font-size" class="form-control super-zprint-spin-input" value="' + (rowStyle.font_size || '') + '" min="8" max="36" step="1" placeholder="12">' +
                                 '<div class="super-zprint-spin-btns">' +
                                     '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-font-size" data-step="1" title="+">+</button>' +
                                     '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-font-size" data-step="1" title="-">&#8722;</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="super-zprint-layout-control-group" id="spd-row-fixedrows-group" style="display:' + (rowType === 'Data-Driven Row' ? '' : 'none') + '">' +
+                            '<label style="font-size:9px" title="' + __('Data-Driven Row only: fixed physical row count') + '">' + __('Fixed Rows') + ':</label>' +
+                            '<div class="super-zprint-number-spinner super-zprint-number-spinner-sm">' +
+                                '<input type="number" id="row-fixed-rows" class="form-control super-zprint-spin-input" value="' + (rowStyle.fixed_rows || '') + '" min="0" max="200" step="1" placeholder="0">' +
+                                '<div class="super-zprint-spin-btns">' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-plus" data-target="row-fixed-rows" data-step="1" title="+">+</button>' +
+                                    '<button type="button" class="btn btn-xs super-zprint-spin-btn spin-minus" data-target="row-fixed-rows" data-step="1" title="-">&#8722;</button>' +
                                 '</div>' +
                             '</div>' +
                         '</div>' +
@@ -1599,6 +1599,8 @@ class SuperPrintDesigner {
                 if (sortSection) sortSection.style.display = isDataDriven ? '' : 'none';
                 const dataModeSection = container.querySelector('#spd-row-datamode-section');
                 if (dataModeSection) dataModeSection.style.display = isDataDriven ? '' : 'none';
+                const fixedRowsGroup = container.querySelector('#spd-row-fixedrows-group');
+                if (fixedRowsGroup) fixedRowsGroup.style.display = isDataDriven ? '' : 'none';
                 if (dataModeSelect && !isDataDriven) dataModeSelect.value = '';
             });
         }
