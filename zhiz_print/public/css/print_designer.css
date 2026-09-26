@@ -345,13 +345,13 @@
 .super-zprint-prop-tab-content.active { display:block; }
 .super-zprint-css-quick-buttons { display:flex; flex-wrap:wrap; gap:3px; margin:6px 0; }
 .super-zprint-css-quick-buttons .btn { width:28px; height:28px; padding:0; display:flex; align-items:center; justify-content:center; }
-.super-zprint-layout-controls { display:flex; gap:8px; margin-bottom:6px; }
-.super-zprint-layout-control-group { flex:1; }
+.super-zprint-layout-controls { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+.super-zprint-layout-control-group { flex:1; min-width:140px; }
 .super-zprint-layout-control-group label { font-size:9px; margin-bottom:2px; }
 .super-zprint-number-spinner { display:flex; align-items:center; gap:2px; }
 .super-zprint-number-spinner .super-zprint-spin-input { width:50px; text-align:center; padding:2px; }
 .super-zprint-number-spinner .super-zprint-spin-btn { width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; font-size:14px; }
-.super-zprint-number-spinner-sm .super-zprint-spin-input { width:45px; }
+.super-zprint-number-spinner-sm .super-zprint-spin-input { width:90px; }
 .super-zprint-color-picker-wrapper { position:relative; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid #ccc; border-radius:3px; cursor:pointer; }
 .super-zprint-color-picker-wrapper i { position:relative; z-index:1; pointer-events:none; font-size:12px; }
 .super-zprint-color-picker-wrapper input[type="color"] { position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; border:none; padding:0; }
