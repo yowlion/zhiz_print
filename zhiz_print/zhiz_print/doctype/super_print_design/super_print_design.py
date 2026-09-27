@@ -825,6 +825,17 @@ class SuperPrintDesign(frappe.model.document.Document):
         if not data_driven_rows:
             return all_rows, {}
 
+        # doc=None 纯模板结构预览(分享-设计稿):数据驱动行不按数据展开
+        # (fixed_rows/sample_rows 会铺出一整排清空占位符的空白行,浏览者看不到
+        # 每列绑定了什么),只渲染一遍模板行且不做空白清理 —— 单元格 {占位符}
+        # 与 =表达式 原样显示,与设计器网格"占位符原样"语义一致
+        if doc is None:
+            return ([{'template_row': r, 'data_index': 0,
+                      'data_item': None, 'blank': False}
+                     if r in data_driven_rows else r
+                     for r in all_rows],
+                    {r: [] for r in data_driven_rows})
+
         # Get actual data for each data-driven row
         sel_map = self._get_row_selection_map(params)
         select_heads = self._get_select_group_heads(data_driven_rows) if sel_map is not None else set()

@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import json
 import re
 import frappe
+from frappe.utils import cint
 from zhiz_print.api.license import _call_license_api, _get_company_name, get_machine_id
 
 # 脱敏:模板平台公开(装 app 都能看),返回客户端前把公司名替换为固定占位,保密真实客户。
@@ -224,10 +225,32 @@ def _clean_doc(d):
 
 
 @frappe.whitelist()
-def share_template(design_name):
-    """序列化设计 + 渲染预览 + 推送到模板平台。"""
+def share_template(design_name, page_break_map=None, row_heights=None,
+                   shrink_map=None, measure_only=0, preview_doc=None):
+    """序列化设计 + 渲染预览 + 推送到模板平台。
+
+    v15.23.12 效果预览接入客户端实测分页:设计器分享按钮先带 measure_only=1
+    取测量架,浏览器实测行高算出 page_break_map/row_heights 后再调本方法推送,
+    平台上的实际打印预览与本地打印逐像素一致。旧的服务端估算单次渲染在行高
+    估大时会溢出切两页,且旧分页的重复标题行二次渲染会丢占位符(显示原文)。
+    测量失败/老客户端不带参数时自动回退旧估算路径,行为不变。
+    """
     if not design_name:
         frappe.throw("Design name required")
+
+    def _as_dict(v):
+        if not v:
+            return None
+        if isinstance(v, dict):
+            return v
+        try:
+            return json.loads(v)
+        except (ValueError, TypeError):
+            return None
+
+    page_break_map = _as_dict(page_break_map)
+    row_heights = _as_dict(row_heights)
+    shrink_map = _as_dict(shrink_map)
 
     design = frappe.get_doc("Super Print Design", design_name)
     design_data = _clean_doc(design.as_dict(no_nulls=True))
@@ -235,6 +258,25 @@ def share_template(design_name):
     # 实际打印预览:单据型用 sample_doc;报表型注入报表真实数据(默认筛选取样)
     is_report = (design.design_target or 'DocType') == 'Report'
     preview_html = ""
+
+    # 测量轮:只出测量架不推送(报表/无演示单据无可测对象,直接告知跳过)
+    if cint(measure_only):
+        if is_report:
+            return {"measure_only": 1, "no_doc": 1}
+        docname = preview_doc or design.sample_doc
+        if not docname and design.target_doctype:
+            docname = frappe.db.get_value(design.target_doctype, {"docstatus": 1},
+                "name", order_by="modified desc")
+        if not docname:
+            return {"measure_only": 1, "no_doc": 1}
+        measurement_html, meta = design.get_measurement_for_document(doc_name=docname)
+        return {"measure_only": 1, "preview_doc": docname,
+                "measurement_html": measurement_html,
+                "content_h_px": meta.get("content_h_px"),
+                "content_w_px": meta.get("content_w_px"),
+                "page_count": meta.get("page_count"),
+                "blocks": meta.get("blocks")}
+
     try:
         if is_report:
             from zhiz_print.api.report_print import _run_report, REPORT_MAIN_KEY, _default_report_filters
@@ -249,12 +291,19 @@ def share_template(design_name):
         else:
             # v15.22.70 sample_doc 已非必填:未填时取该单据类型最近一张已提交单据
             # 做演示数据(分享预览有真实感);无任何单据则预览为空,下方用设计稿顶上
-            preview_doc = design.sample_doc
-            if not preview_doc and design.target_doctype:
-                preview_doc = frappe.db.get_value(design.target_doctype, {"docstatus": 1},
+            # v15.23.12 preview_doc 参数优先(测量轮已选定的单据,保证两轮同一张);
+            # 带实测 page_break_map 时走客户端精确分页,与本地打印一致
+            _pdoc = preview_doc or design.sample_doc
+            if not _pdoc and design.target_doctype:
+                _pdoc = frappe.db.get_value(design.target_doctype, {"docstatus": 1},
                     "name", order_by="modified desc")
-            if preview_doc:
-                preview_html = design.get_preview_for_document(doc_name=preview_doc) or ""
+            if _pdoc:
+                if page_break_map or row_heights or shrink_map:
+                    preview_html = design.get_preview_for_document(
+                        doc_name=_pdoc, page_break_map=page_break_map,
+                        row_heights=row_heights, shrink_map=shrink_map) or ""
+                else:
+                    preview_html = design.get_preview_for_document(doc_name=_pdoc) or ""
     except Exception:
         preview_html = ""
     # 设计渲染(None 占位符原样,纯模板结构)

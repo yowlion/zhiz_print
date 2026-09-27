@@ -4795,11 +4795,34 @@ frappe.ui.form.on('Super Print Design', {
         // 分享到模板平台(form 头部 .custom-actions 按钮,弹窗确认 + 推送)
         if (!frm.is_new() && frm.doc.design_name) {
             frm.add_custom_button(__('分享到模板平台'), () => {
-                frappe.confirm(__('确认将此设计推送到模板平台?'), () => {
+                frappe.confirm(__('确认将此设计推送到模板平台?'), async () => {
                     frappe.dom.freeze(__('推送中...'));
+                    // v15.23.12 效果预览走客户端实测分页(与本地打印一致):
+                    // 第一轮 measure_only 拿测量架 → 浏览器量行高算 break map
+                    // → 第二轮带 map 精确渲染后推送;测量失败回退服务端估算
+                    const extra = {};
+                    try {
+                        const m1 = await frappe.call({
+                            method: 'zhiz_print.api.template_store.share_template',
+                            args: { design_name: frm.doc.design_name, measure_only: 1 }
+                        });
+                        const mm = (m1 && m1.message) || {};
+                        if (mm.measurement_html && spd_designer) {
+                            const measured = await spd_designer._sp_measure_row_heights(mm.measurement_html, mm.content_w_px);
+                            if (measured && Object.keys(measured.heights || {}).length) {
+                                const bm = spd_designer._sp_compute_break_map(measured, mm);
+                                if (bm) {
+                                    extra.page_break_map = bm.page_break_map;
+                                    extra.row_heights = bm.row_heights;
+                                    extra.shrink_map = bm.shrink_map;
+                                    extra.preview_doc = mm.preview_doc;
+                                }
+                            }
+                        }
+                    } catch (e) { /* 测量失败:回退服务端估算路径 */ }
                     frappe.call({
                         method: 'zhiz_print.api.template_store.share_template',
-                        args: { design_name: frm.doc.design_name },
+                        args: Object.assign({ design_name: frm.doc.design_name }, extra),
                         callback: (r) => {
                             frappe.dom.unfreeze();
                             const m = r.message || {};
