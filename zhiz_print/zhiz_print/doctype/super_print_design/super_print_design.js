@@ -3836,6 +3836,10 @@ class SuperPrintDesigner {
         const grid = container.querySelector('#spd-grid');
         if (grid) {
             grid.innerHTML = this.generateGridHtml();
+            // 重算表格内联宽度(与 fetchDesignerHtml 初始化对齐):删列后若沿用旧值,
+            // table-layout:fixed 会把多出的宽度摊到各列+按旧宽居中,实际列边界右漂,
+            // 而列头按 colStyles 名义列宽排布 → 列头与表格错位(刷新才恢复)
+            grid.style.width = this._getTotalWidth() + 'px';
             grid.style.fontFamily = "'" + this.fontFamily + "', sans-serif";
         }
         // Update row/col headers
