@@ -386,23 +386,25 @@ class SuperPrintDesign(frappe.model.document.Document):
             get_value("Item", doc.production_item, "classification") == "滑板"
         """
         def get_value(doctype, name, field):
-            """按主键或过滤器 dict 查单字段,空/未命中返回空串。
+            """按主键查单字段,空/未命中返回空串。
+            get_value("Item", row.item_code, "brand")
+            """
+            if not name:
+                return ''
+            v = frappe.db.get_value(doctype, name, field)
+            return '' if v is None else str(v)
 
-            主键用法: get_value("Item", row.item_code, "brand")
-            过滤用法(行级查子表,如取行物料的客户物料编码):
-            get_value("Item Customer Detail",
-                      {"parent": row.item_code, "customer_name": doc.customer}, "ref_code")
-            dict 过滤器任一条件值为空 → 视为未配置返回空串(不退化为部分条件查询,
+        def get(doctype, filters, field):
+            """按过滤条件 dict 查单字段(可查子表行,如取行物料的客户物料编码)。
+            get("Item Customer Detail",
+                {"parent": row.item_code, "customer_name": doc.customer}, "ref_code")
+            任一条件值为空 → 视为未配置返回空串(不退化为部分条件查询,
             避免空 customer 时仅按 parent 命中任意客户的 ref_code)。
             """
-            if isinstance(name, dict):
-                if not name or any(v in (None, '') for v in name.values()):
-                    return ''
-                v = frappe.db.get_value(doctype, name, field)
-            else:
-                if not name:
-                    return ''
-                v = frappe.db.get_value(doctype, name, field)
+            if not isinstance(filters, dict) or not filters or any(
+                    v in (None, '') for v in filters.values()):
+                return ''
+            v = frappe.db.get_value(doctype, filters, field)
             return '' if v is None else str(v)
 
         def fmt(value, precision=2):
@@ -425,6 +427,7 @@ class SuperPrintDesign(frappe.model.document.Document):
             'row': row,
             'frappe': frappe,
             'get_value': get_value,
+            'get': get,
             'fmt': fmt,
             'flt': frappe.utils.flt,
             'striptags': _striptags,
@@ -440,9 +443,9 @@ class SuperPrintDesign(frappe.model.document.Document):
 
         Exposes (via _build_safe_eval_locals):
         - doc, row, frappe
-        - get_value(doctype, name, field): fast SQL single-field lookup, returns '' on None/empty;
-          name also accepts a filters dict for conditional (child-table row) lookup, e.g.
-          get_value("Item Customer Detail", {"parent": row.item_code, "customer_name": doc.customer}, "ref_code")
+        - get_value(doctype, name, field): fast SQL single-field lookup by primary key, returns '' on None/empty
+        - get(doctype, filters, field): single-field lookup by filters dict (child-table rows ok), e.g.
+          get("Item Customer Detail", {"parent": row.item_code, "customer_name": doc.customer}, "ref_code")
         - fmt(value, precision=2): format numeric value as fixed-decimal string
           (str.format is blocked by safe_eval — "format is an unsafe attribute")
         - flt(value): alias for frappe.utils.flt (safe_eval blocks frappe.utils.* attribute access)
