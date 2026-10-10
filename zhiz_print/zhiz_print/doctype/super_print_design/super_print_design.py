@@ -2040,6 +2040,17 @@ class SuperPrintDesign(frappe.model.document.Document):
         if row_css:
             row_style_attr += row_css
 
+        # 奇偶行颜色(斑马纹): 仅数据驱动行展开的物理行生效,按 data_index 奇偶交替
+        # (0 基: data_index=0 即第 1 条数据 → 奇数行颜色)。fixed_rows 补的 blank 行
+        # data_index 连续递增,条纹自然延续;分组行共享同一 data_index,整组同色。
+        # 在行 css_style 之后追加 → 启用即覆盖行级 css 的背景色;单元格自身
+        # background-color 写在 <td> 上仍优先(<td> 盖 <tr>)。
+        if isinstance(row_data, dict) and row_style.get('zebra'):
+            _zebra_odd = (row_style.get('zebra_odd_color') or '#FFFFFF').strip()
+            _zebra_even = (row_style.get('zebra_even_color') or '#F2F2F2').strip()
+            _di = cint(row_data.get('data_index'))
+            row_style_attr += f'background-color:{_zebra_odd if _di % 2 == 0 else _zebra_even};'
+
         # Row display effect
         if row_display == 'Fixed Height':
             row_style_attr += 'overflow:hidden;white-space:nowrap;'

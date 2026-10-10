@@ -1506,6 +1506,23 @@ class SuperPrintDesigner {
                     '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('row.N = display value of column N. Comma = multi-level. Empty = natural order.') + '</div>' +
                 '</div>' +
             '</div>' +
+            '<div class="super-zprint-property-section" id="spd-row-zebra-section" style="display:' + (rowType === 'Data-Driven Row' ? '' : 'none') + '">' +
+                '<div class="super-zprint-property-section-header"><i class="fa fa-list"></i> ' + __('Zebra Rows') + ' <small style="color:#6c757d;font-weight:normal">(' + __('Data-Driven Row') + ')</small></div>' +
+                '<div class="property-section-body" style="padding:8px">' +
+                    '<label style="font-size:9px;display:flex;align-items:center;gap:4px;margin-bottom:2px"><input type="checkbox" id="row-zebra-enable"' + (rowStyle.zebra ? ' checked' : '') + '> ' + __('Enable Zebra Rows') + '</label>' +
+                    '<div id="row-zebra-colors" style="display:' + (rowStyle.zebra ? '' : 'none') + '">' +
+                        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">' +
+                            '<label style="font-size:9px;flex:1;white-space:nowrap">' + __('Odd Row Color') + '</label>' +
+                            '<input type="color" id="row-zebra-odd" value="' + (rowStyle.zebra_odd_color || '#FFFFFF') + '" style="width:100%;height:24px;padding:0;border:1px solid #d1d8dd;background:none;cursor:pointer">' +
+                        '</div>' +
+                        '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">' +
+                            '<label style="font-size:9px;flex:1;white-space:nowrap">' + __('Even Row Color') + '</label>' +
+                            '<input type="color" id="row-zebra-even" value="' + (rowStyle.zebra_even_color || '#F2F2F2') + '" style="width:100%;height:24px;padding:0;border:1px solid #d1d8dd;background:none;cursor:pointer">' +
+                        '</div>' +
+                        '<div style="font-size:9px;color:#6c757d;margin-top:4px">' + __('Expanded data rows alternate odd/even background colors (1st, 3rd... = odd)') + '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
             '<div class="super-zprint-property-section">' +
                 '<div class="super-zprint-property-section-header"><i class="fa fa-text-height"></i> ' + __('Row Display Effect') + '</div>' +
                 '<div class="property-section-body" style="padding:8px">' +
@@ -1591,6 +1608,30 @@ class SuperPrintDesigner {
             });
         }
 
+        // Zebra rows (per Data-Driven Row template): enable + odd/even bg colors
+        const zebraEnable = container.querySelector('#row-zebra-enable');
+        if (zebraEnable) {
+            zebraEnable.addEventListener('change', (e) => {
+                const on = e.target.checked;
+                this.updateRowStyle(row, 'zebra', on ? 1 : undefined);
+                if (on) {
+                    // 开启时补默认色,保证渲染端总有可用颜色
+                    if (!this.rowStyles[row]?.zebra_odd_color) this.updateRowStyle(row, 'zebra_odd_color', '#FFFFFF');
+                    if (!this.rowStyles[row]?.zebra_even_color) this.updateRowStyle(row, 'zebra_even_color', '#F2F2F2');
+                }
+                const colorsDiv = container.querySelector('#row-zebra-colors');
+                if (colorsDiv) colorsDiv.style.display = on ? '' : 'none';
+            });
+        }
+        const zebraOddInput = container.querySelector('#row-zebra-odd');
+        if (zebraOddInput) zebraOddInput.addEventListener('input', (e) => {
+            this.updateRowStyle(row, 'zebra_odd_color', e.target.value);
+        });
+        const zebraEvenInput = container.querySelector('#row-zebra-even');
+        if (zebraEvenInput) zebraEvenInput.addEventListener('input', (e) => {
+            this.updateRowStyle(row, 'zebra_even_color', e.target.value);
+        });
+
         // Row type selection
         const rowTypeSelect = container.querySelector('#row-type-select');
         if (rowTypeSelect) {
@@ -1605,6 +1646,8 @@ class SuperPrintDesigner {
                 if (dataModeSection) dataModeSection.style.display = isDataDriven ? '' : 'none';
                 const fixedRowsGroup = container.querySelector('#spd-row-fixedrows-group');
                 if (fixedRowsGroup) fixedRowsGroup.style.display = isDataDriven ? '' : 'none';
+                const zebraSection = container.querySelector('#spd-row-zebra-section');
+                if (zebraSection) zebraSection.style.display = isDataDriven ? '' : 'none';
                 if (dataModeSelect && !isDataDriven) dataModeSelect.value = '';
             });
         }
@@ -1958,9 +2001,12 @@ class SuperPrintDesigner {
                 cell.row_type = rowType || '';
             }
         }
-        // 数据呈现方式只在数据驱动行下有意义 — 切走行类型时清空
-        if (rowType !== 'Data-Driven Row' && this.rowStyles[row]?.data_mode) {
-            this.updateRowStyle(row, 'data_mode', undefined);
+        // 数据呈现方式/奇偶行颜色只在数据驱动行下有意义 — 切走行类型时清空
+        if (rowType !== 'Data-Driven Row' && this.rowStyles[row]) {
+            if (this.rowStyles[row].data_mode) this.updateRowStyle(row, 'data_mode', undefined);
+            if (this.rowStyles[row].zebra) this.updateRowStyle(row, 'zebra', undefined);
+            if (this.rowStyles[row].zebra_odd_color) this.updateRowStyle(row, 'zebra_odd_color', undefined);
+            if (this.rowStyles[row].zebra_even_color) this.updateRowStyle(row, 'zebra_even_color', undefined);
         }
         this.refreshGrid();
         this.frm.dirty();

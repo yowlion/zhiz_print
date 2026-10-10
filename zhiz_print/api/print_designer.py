@@ -1690,6 +1690,8 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
         col = 1
         row_max_lines = 1  # Track max line count for row height auto-fit
         row_max_font_pt = 10.5  # Default font size (~14px → 10.5pt)
+        # 行级样式(奇偶行斑马纹背景色写在 <tr> 上): td 未显式设背景色时继承
+        tr_styles = _get_element_styles(tr, css_rules)
         for cell_elem in tr.find_all(['td', 'th']):
             while occupied.get((excel_row, col)):
                 col += 1
@@ -1708,6 +1710,9 @@ def _write_table_to_excel(ws, table, start_row, css_rules, skip_rows=0):
 
             # Get styles
             cell_styles = _get_element_styles(cell_elem, css_rules)
+            # td 无显式背景色时继承 <tr> 的(斑马纹奇偶行颜色)
+            if 'background-color' not in cell_styles and 'background-color' in tr_styles:
+                cell_styles['background-color'] = tr_styles['background-color']
             if cell_elem.name == 'th' and 'font-weight' not in cell_styles:
                 cell_styles['font-weight'] = 'bold'
 
