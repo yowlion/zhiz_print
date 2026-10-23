@@ -36,6 +36,22 @@ page_js = {
     "batch-print": "public/js/page/batch_print.js",
 }
 
+# Desk (apps screen) tile. Frappe v16 renders the desktop grid only from apps
+# declaring this hook (boot.py sets on_apps_screen=bool(hook)); v15 >= 15.39
+# shows the same entry on the /apps switcher, older v15 ignores it inertly.
+# Label is translated in translations/zh.csv; sequence_id sorts the tile
+# ahead of the default (100) and the pinned Framework entry (1000). The
+# /app/... route form works on both v15 (native) and v16 (aliased to /desk).
+add_to_apps_screen = [
+    {
+        "name": app_name,
+        "logo": "/assets/zhiz_print/images/print-template-platform.svg",
+        "title": "Print Template Platform",
+        "route": "/app/print-template-store",
+        "sequence_id": 10,
+    }
+]
+
 # Super Print Design list view — 模板商店入口按钮
 doctype_list_js = {"Super Print Design": "public/js/super_print_design_list.js"}
 

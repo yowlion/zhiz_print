@@ -465,3 +465,4 @@ Enable Zebra Rows,启用奇偶行颜色
 Odd Row Color,奇数行背景色
 Even Row Color,偶数行背景色
 Expanded data rows alternate odd/even background colors (1st, 3rd... = odd),展开的数据行按奇偶交替显示背景色（第1、3、5…条为奇数行）
+Print Template Platform,打印模板平台
