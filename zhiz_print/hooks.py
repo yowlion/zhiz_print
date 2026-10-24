@@ -33,7 +33,6 @@ app_include_js = [
 # Print page JS override
 page_js = {
     "print": "public/js/page/print.js",
-    "batch-print": "public/js/page/batch_print.js",
 }
 
 # Desk (apps screen) tile. Frappe v16 renders the desktop grid only from apps

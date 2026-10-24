@@ -1,6 +1,6 @@
 // Batch Print Interceptor
 // Patches frappe.views.ListView to intercept bulk print action
-// When Super Print is enabled for the doctype, redirects to batch-print page
+// When Super Print is enabled for the doctype, redirects to batch_print page
 
 frappe.provide('zhiz_print.batch');
 
@@ -55,7 +55,7 @@ frappe.provide('zhiz_print.batch');
                                         doctype: this.doctype,
                                         docnames: JSON.stringify(docnames),
                                     });
-                                    window.location.href = '/app/batch-print?' + params.toString();
+                                    window.location.href = '/app/batch_print?' + params.toString();
                                 } else {
                                     // No designs available, fallback to default
                                     origAction();

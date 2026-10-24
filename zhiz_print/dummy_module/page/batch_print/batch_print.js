@@ -2,7 +2,9 @@
 // Renders multiple documents with a shared print template
 // Layout: left sidebar (templates + logs) | right preview area (all docs consecutively)
 
-frappe.pages["batch-print"].on_page_load = function (wrapper) {
+// Desk Page 路由=docname 原文:此页 docname 是 batch_print(下划线),
+// 注册键必须与 frappe.pages 的 wrapper 键一致,连字符会让脚本执行即死(白屏)。
+frappe.pages["batch_print"].on_page_load = function (wrapper) {
     frappe.ui.make_app_page({ parent: wrapper });
 
     const page = wrapper.page;
@@ -56,6 +58,7 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         this.current_params = {};
         this.preview_results = [];
         this.preview_errors = [];
+        this.preview_skipped = [];
     }
 
     async setup_page() {
@@ -84,17 +87,27 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         this.setup_toolbar();
 
         // Build layout
+        const enableNative = !!(frappe.boot.zhiz_print?.print_designer?.enable_native_print_formats);
         this.page.main.html(`
             <div class="super-print-layout">
                 <div class="super-print-sidebar" id="super-print-sidebar">
                     <div class="sp-sidebar-top">
                         <div class="sp-sidebar-header">
-                            <i class="fa fa-print"></i> ${__("Print Templates")}
+                            <i class="fa fa-print"></i> 高级打印模板
                             <span class="sp-batch-doc-count">${this.docnames.length} ${__("docs")}</span>
                         </div>
                         <div class="sp-sidebar-body" id="sp-template-list">
                             <div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__("Loading...")}</div>
                         </div>
+                        ${enableNative ? `
+                        <div class="sp-native-section" id="sp-native-section">
+                            <div class="sp-native-header" id="sp-native-header">
+                                <i class="fa fa-caret-right sp-native-caret"></i> 原生打印模板
+                            </div>
+                            <div class="sp-native-body" id="sp-native-list" style="display:none">
+                                <div class="sp-loading"><i class="fa fa-spinner fa-spin"></i> ${__("Loading...")}</div>
+                            </div>
+                        </div>` : ""}
                     </div>
                     <div class="sp-sidebar-bottom">
                         <div class="sp-sidebar-header" id="sp-log-header">
@@ -122,6 +135,8 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         `);
 
         await this.load_templates();
+        // Load native print formats (sidebar collapsible section, if enabled in settings)
+        this.load_native_formats();
     }
 
     setup_toolbar() {
@@ -133,12 +148,14 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
         this.page.set_primary_action(__("Print All"), () => this.print_all(), "printer");
         const pd = frappe.boot.zhiz_print?.print_designer;
+        // Native format: PDF still shown (export_all_pdf handles native branch);
+        // Excel hidden (native has no excel).
         if (pd?.allow_export_pdf !== false) {
             this.page.add_button(__("Export All PDF"), () => this.export_all_pdf(), {
                 icon: "es-solid-pdf",
             });
         }
-        if (pd?.allow_export_excel !== false) {
+        if (!this.current_native_format && pd?.allow_export_excel !== false) {
             this.page.add_button(__("Export All Excel"), () => this.export_all_excel(), {
                 icon: "es-solid-excel",
             });
@@ -213,8 +230,10 @@ zhiz_print.BatchPrintView = class BatchPrintView {
     }
 
     on_auto_match_click(el) {
-        document.querySelectorAll(".sp-template-item").forEach((i) => i.classList.remove("active"));
+        document.querySelectorAll(".sp-template-item.active, .sp-native-item.active").forEach((i) => i.classList.remove("active"));
         el.classList.add("active");
+        this.current_native_format = null;
+        this.current_native_html = "";
 
         this.current_design = null;
         this.current_design_info = null;
@@ -224,8 +243,10 @@ zhiz_print.BatchPrintView = class BatchPrintView {
     }
 
     async on_template_click(design, el) {
-        document.querySelectorAll(".sp-template-item").forEach((i) => i.classList.remove("active"));
+        document.querySelectorAll(".sp-template-item.active, .sp-native-item.active").forEach((i) => i.classList.remove("active"));
         el.classList.add("active");
+        this.current_native_format = null;
+        this.current_native_html = "";
 
         this.current_design = design.name;
         this.current_design_info = design;
@@ -241,6 +262,131 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         }
 
         await this.render_batch_preview();
+    }
+
+    // ==================== Native Print Format ====================
+
+    toggle_native_section() {
+        const body = document.getElementById("sp-native-list");
+        const caret = document.querySelector(".sp-native-caret");
+        if (!body) return;
+        const open = body.style.display !== "none";
+        body.style.display = open ? "none" : "block";
+        if (caret) {
+            caret.classList.toggle("fa-caret-right", open);
+            caret.classList.toggle("fa-caret-down", !open);
+        }
+        // 展开且当前未选原生 → 自动选最高优先级原生(is_default 优先,否则第一个)
+        if (!open && !this.current_native_format && this.available_native_formats && this.available_native_formats.length) {
+            const def = this.available_native_formats.find((f) => f.is_default) || this.available_native_formats[0];
+            const defItem = def && body.querySelector('.sp-native-item[data-name="' + def.name + '"]');
+            if (defItem) this.on_native_template_click(def, defItem);
+        }
+    }
+
+    async load_native_formats() {
+        const section = document.getElementById("sp-native-section");
+        const header = document.getElementById("sp-native-header");
+        const listEl = document.getElementById("sp-native-list");
+        if (!section || !listEl) return;  // native disabled in Zprint Setting
+        if (header) header.addEventListener("click", () => this.toggle_native_section());
+        try {
+            const res = await frappe.call({
+                method: "zhiz_print.api.print_designer.get_native_print_formats",
+                args: { doctype: this.doctype },
+            });
+            const formats = res.message || [];
+            if (formats.length === 0) {
+                listEl.innerHTML = '<div class="sp-empty"><p>' + __("No print templates available") + "</p></div>";
+                return;
+            }
+            this.available_native_formats = formats;
+            listEl.innerHTML = "";
+            formats.forEach((f) => {
+                const item = document.createElement("div");
+                item.className = "sp-native-item";
+                item.dataset.name = f.name;
+                item.innerHTML = '<i class="fa fa-file-o"></i><span>' + this.esc(f.label) + "</span>";
+                item.addEventListener("click", () => this.on_native_template_click(f, item));
+                listEl.appendChild(item);
+            });
+            // 无高级设计时,自动选最高优先级原生(is_default 优先,否则第一个)
+            if ((!this.available_designs || this.available_designs.length === 0) && !this.current_native_format && !this.current_design) {
+                const def = formats.find((f) => f.is_default) || formats[0];
+                const defItem = def && listEl.querySelector('.sp-native-item[data-name="' + def.name + '"]');
+                if (defItem) this.on_native_template_click(def, defItem);
+            }
+        } catch (e) {
+            console.error("Failed to load native formats:", e);
+            listEl.innerHTML = '<div class="sp-error"><i class="fa fa-exclamation-circle"></i> ' + __("Loading failed") + "</div>";
+        }
+    }
+
+    on_native_template_click(format, el) {
+        document.querySelectorAll(".sp-template-item.active, .sp-native-item.active").forEach((i) => i.classList.remove("active"));
+        el.classList.add("active");
+        this.current_native_format = format.name;
+        this.current_native_html = "";
+        this.current_design = null;
+        this.current_design_info = null;
+        this.auto_match = false;
+        this.current_params = {};
+        this.setup_toolbar();
+        this.render_batch_native_preview();
+    }
+
+    async render_batch_native_preview() {
+        if (!this.current_native_format) return;
+        const area = document.getElementById("sp-preview-area");
+        area.innerHTML =
+            '<div class="sp-loading"><i class="fa fa-spinner fa-spin fa-2x" style="color:#2196f3"></i>' +
+            '<p class="text-muted" style="margin-top:10px">' + __("Rendering batch preview...") + "</p></div>";
+        try {
+            const result = await frappe.call({
+                method: "zhiz_print.api.batch_print.batch_render_native_preview",
+                args: {
+                    doctype: this.doctype,
+                    docnames: JSON.stringify(this.docnames),
+                    print_format: this.current_native_format,
+                },
+            });
+            if (!result.message) {
+                area.innerHTML = '<div class="alert alert-danger">' + __("Rendering failed") + "</div>";
+                return;
+            }
+            // Reuse preview_results so print_all's concatenation logic works unchanged.
+            this.preview_results = result.message.results || [];
+            this.preview_errors = result.message.errors || [];
+            this.preview_skipped = [];
+            this._update_info_bar();
+
+            if (this.preview_results.length === 0) {
+                area.innerHTML =
+                    '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> ' +
+                    __("All documents failed to render") + "</div>";
+                return;
+            }
+
+            // Native HTML has no .print-page structure; render each doc in its own iframe.
+            area.innerHTML = "";
+            const stack = document.createElement("div");
+            stack.className = "sp-native-batch-stack";
+            this.preview_results.forEach((docResult, docIdx) => {
+                const sep = document.createElement("div");
+                sep.className = "sp-doc-separator";
+                sep.textContent = this.esc(docResult.docname) + " (" + (docIdx + 1) + "/" + this.preview_results.length + ")";
+                stack.appendChild(sep);
+
+                const frame = document.createElement("iframe");
+                frame.className = "sp-native-batch-frame";
+                frame.srcdoc = docResult.html;  // full native print HTML (own @page/print-format CSS)
+                stack.appendChild(frame);
+            });
+            area.appendChild(stack);
+        } catch (e) {
+            console.error("Native batch preview failed:", e);
+            area.innerHTML = '<div class="alert alert-danger">' + __("Rendering failed") + "</div>";
+        }
     }
 
     show_parameter_dialog(design) {
@@ -315,6 +461,11 @@ zhiz_print.BatchPrintView = class BatchPrintView {
 
             this.preview_results = result.message.results || [];
             this.preview_errors = result.message.errors || [];
+            this.preview_skipped = result.message.skipped || [];
+
+            // Reflect skipped/error counts in the top info bar so the user sees the
+            // policy-applied summary right away, not only at the bottom of the preview.
+            this._update_info_bar();
 
             if (this.preview_results.length === 0) {
                 area.innerHTML =
@@ -437,6 +588,24 @@ zhiz_print.BatchPrintView = class BatchPrintView {
                 pagesContainer.appendChild(errBox);
             }
 
+            // Show skipped drafts at bottom (info, not error — policy-driven, not a failure)
+            if (this.preview_skipped && this.preview_skipped.length > 0) {
+                const skipBox = document.createElement("div");
+                skipBox.className = "sp-batch-skipped-summary";
+                skipBox.innerHTML =
+                    '<i class="fa fa-info-circle" style="color:#1976d2"></i> ' +
+                    this.esc(String(this.preview_skipped.length)) + " " +
+                    __("document(s) skipped as draft (design disables draft printing)") +
+                    "<ul>" +
+                    this.preview_skipped.map((s) => {
+                        let label = this.esc(s.docname);
+                        if (s.design_label) label += " — " + this.esc(s.design_label);
+                        return "<li>" + label + "</li>";
+                    }).join("") +
+                    "</ul>";
+                pagesContainer.appendChild(skipBox);
+            }
+
             area.appendChild(pagesContainer);
 
             // Write iframe content
@@ -460,6 +629,32 @@ zhiz_print.BatchPrintView = class BatchPrintView {
                 this.esc(e.message || String(e)) +
                 "</div>";
         }
+    }
+
+    _update_info_bar() {
+        const bar = document.getElementById("sp-batch-info-bar");
+        if (!bar) return;
+        // Strip any previously appended status pills (keep only the original doctype/sep/count).
+        bar.querySelectorAll(".sp-batch-info-status").forEach((n) => n.remove());
+        const status = [];
+        if (this.preview_results && this.preview_results.length > 0) {
+            status.push(this.esc(String(this.preview_results.length)) + " " + __("to preview"));
+        }
+        if (this.preview_skipped && this.preview_skipped.length > 0) {
+            status.push('<span style="color:#1976d2">' +
+                this.esc(String(this.preview_skipped.length)) + " " + __("draft skipped") +
+                "</span>");
+        }
+        if (this.preview_errors && this.preview_errors.length > 0) {
+            status.push('<span style="color:#e53935">' +
+                this.esc(String(this.preview_errors.length)) + " " + __("failed") +
+                "</span>");
+        }
+        if (status.length === 0) return;
+        const span = document.createElement("span");
+        span.className = "sp-batch-info-status";
+        span.innerHTML = '<span class="sp-batch-info-sep">/</span>' + status.join('<span class="sp-batch-info-sep">·</span>');
+        bar.appendChild(span);
     }
 
     _build_single_page_html(pageEl, fullDoc, previewW, previewH) {
@@ -497,12 +692,16 @@ zhiz_print.BatchPrintView = class BatchPrintView {
             const logArgs = {
                 doctype: this.doctype,
                 docnames: JSON.stringify(this.docnames),
-                design_name: this.current_design,
                 params: this.current_params,
                 export_type: "Print",
             };
-            if (this.auto_match) {
-                logArgs.auto_match = 1;
+            if (this.current_native_format) {
+                logArgs.native_format = this.current_native_format;
+            } else {
+                logArgs.design_name = this.current_design;
+                if (this.auto_match) {
+                    logArgs.auto_match = 1;
+                }
             }
             await frappe.call({
                 method: "zhiz_print.api.batch_print.batch_record_print_log",
@@ -542,17 +741,12 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         printFrame.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;";
         document.body.appendChild(printFrame);
 
-        // Set orientation
-        const paperInfo = this.current_design_info;
-        if (paperInfo && paperInfo.paper_width && paperInfo.paper_height) {
-            const orient = paperInfo.paper_width > paperInfo.paper_height ? "landscape" : "portrait";
-            const injectCss = '<style>@media print { @page { size: ' + orient + "; margin: 0; } }</style>";
-            allHtml = allHtml.replace("</head>", injectCss + "\n</head>");
-        }
+        // v15.04.39: 浏览器批量打印直接使用 HTML 原始 @page(paper 原始宽高),
+        // 不再做 Force Landscape/Portrait 交换 — 多页打印方式已解决方向问题。
 
         const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
         frameDoc.open();
-        frameDoc.write(allHtml);
+        frameDoc.write(this._expand_print_count(allHtml));
         frameDoc.close();
 
         printFrame.onload = () => {
@@ -567,9 +761,57 @@ zhiz_print.BatchPrintView = class BatchPrintView {
         this.load_batch_logs();
     }
 
+    _expand_print_count(html) {
+        // 打印次数驱动:把每个 print-page 按 data-print-count 复制 N 份(预览不重复,仅打印时)
+        if (!html) return html;
+        let doc;
+        try { doc = new DOMParser().parseFromString(html, 'text/html'); }
+        catch (e) { return html; }
+        const pages = doc.querySelectorAll('.print-page');
+        if (!pages.length) return html;
+        const out = doc.createElement('div');
+        pages.forEach((page) => {
+            let n = parseInt(page.dataset.printCount || '1', 10);
+            if (isNaN(n) || n < 1) n = 1;
+            for (let i = 0; i < n; i++) out.appendChild(page.cloneNode(true));
+        });
+        return '<!DOCTYPE html>\n<html>\n<head>' + doc.head.innerHTML + '\n</head>\n<body>\n' + out.innerHTML + '\n</body>\n</html>';
+    }
+
     // ==================== Export All PDF ====================
 
     async export_all_pdf() {
+        if (this.current_native_format) {
+            // Native: merged PDF via frappe.get_print per document
+            const nativeParams = {
+                doctype: this.doctype,
+                docnames: JSON.stringify(this.docnames),
+                print_format: this.current_native_format,
+            };
+            const url = "/api/method/zhiz_print.api.batch_print.batch_generate_native_pdf?" + new URLSearchParams(nativeParams);
+            const w = window.open(url, "_blank");
+            if (!w) {
+                frappe.msgprint(__("Please allow pop-up windows"));
+                return;
+            }
+            try {
+                await frappe.call({
+                    method: "zhiz_print.api.batch_print.batch_record_print_log",
+                    args: {
+                        doctype: this.doctype,
+                        docnames: JSON.stringify(this.docnames),
+                        native_format: this.current_native_format,
+                        params: this.current_params,
+                        export_type: "Export PDF",
+                    },
+                });
+                this.load_batch_logs();
+            } catch (e) {
+                console.error("Failed to record batch PDF logs:", e);
+            }
+            return;
+        }
+
         if (!this.current_design && !this.auto_match) {
             frappe.show_alert({ message: __("Please select a template first"), indicator: "yellow" });
             return;
@@ -618,6 +860,10 @@ zhiz_print.BatchPrintView = class BatchPrintView {
     // ==================== Export All Excel ====================
 
     async export_all_excel() {
+        if (this.current_native_format) {
+            frappe.show_alert({ message: "原生打印模板不支持 Excel 导出", indicator: "blue" });
+            return;
+        }
         if (!this.current_design && !this.auto_match) {
             frappe.show_alert({ message: __("Please select a template first"), indicator: "yellow" });
             return;
