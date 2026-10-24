@@ -61,3 +61,28 @@ boot_session = "zhiz_print.api.print_setting.get_boot_settings"
 
 # After install - create preset papers and designs
 after_install = "zhiz_print.zhiz_print.after_install.after_install"
+
+# Scheduler (scan-print plan 7) - the FIRST cron hooks in this app, so a
+# site upgrading to this version MUST restart the frappe-bench-workers
+# group (web restart alone does not register new scheduler events).
+#   every minute : receipt harvesting + stale-job/agent maintenance
+#   daily 03:00  : retention purges
+scheduler_events = {
+    "cron": {
+        "*/1 * * * *": [
+            "zhiz_print.api.maintenance.expire_stale_jobs",
+            "zhiz_print.api.maintenance.mark_offline_agents",
+            "zhiz_print.zhiz_print.print_channels.ipp.harvest_ipp_states",
+            "zhiz_print.zhiz_print.print_channels.cloud.harvest_vendor_receipts",
+        ],
+        "0 3 * * *": [
+            "zhiz_print.api.maintenance.cleanup_pdf_debug_days",
+            "zhiz_print.api.maintenance.purge_expired_jobs",
+        ],
+    }
+}
+
+# Pretty alias for the scanner web page (www/scan_print.html serves /scan_print)
+website_redirect = [
+    {"source": r"/scan-print", "target": r"/scan_print"}
+]

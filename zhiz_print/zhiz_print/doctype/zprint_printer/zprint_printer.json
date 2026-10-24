@@ -1,0 +1,224 @@
+{
+ "actions": [],
+ "autoname": "field:printer_logical_name",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "printer_logical_name",
+  "channel",
+  "station",
+  "enabled",
+  "section_break_channel_a",
+  "agent",
+  "column_break_channel_a",
+  "os_printer_name",
+  "section_break_channel_a_2",
+  "paper",
+  "column_break_channel_a_2",
+  "bin",
+  "monochrome",
+  "section_break_channel_b",
+  "uri",
+  "column_break_channel_b",
+  "auth_mode",
+  "credential",
+  "media",
+  "timeout",
+  "capability_snapshot",
+  "section_break_channel_c",
+  "cloud_device",
+  "column_break_channel_c",
+  "payload_kind"
+ ],
+ "fields": [
+  {
+   "fieldname": "printer_logical_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Printer Logical Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Channel",
+   "options": "A\nB\nC",
+   "reqd": 1
+  },
+  {
+   "description": "Owning station; required for Channel A printers",
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Station",
+   "options": "Zprint Station"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "section_break_channel_a",
+   "fieldtype": "Section Break",
+   "label": "Channel A: Print Agent"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'A'",
+   "fieldname": "agent",
+   "fieldtype": "Link",
+   "label": "Print Agent",
+   "options": "Zprint Agent"
+  },
+  {
+   "fieldname": "column_break_channel_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'A'",
+   "description": "Printer name as listed by the agent on the Windows host",
+   "fieldname": "os_printer_name",
+   "fieldtype": "Data",
+   "label": "OS Printer Name"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_channel_a_2",
+   "fieldtype": "Section Break",
+   "label": "Channel A: Paper"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'A'",
+   "description": "Paper name as reported by agent doctor",
+   "fieldname": "paper",
+   "fieldtype": "Data",
+   "label": "Paper"
+  },
+  {
+   "fieldname": "column_break_channel_a_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'A'",
+   "fieldname": "bin",
+   "fieldtype": "Data",
+   "label": "Bin"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.channel == 'A'",
+   "fieldname": "monochrome",
+   "fieldtype": "Check",
+   "label": "Monochrome"
+  },
+  {
+   "fieldname": "section_break_channel_b",
+   "fieldtype": "Section Break",
+   "label": "Channel B: IPP (LAN Only)"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'B'",
+   "fieldname": "uri",
+   "fieldtype": "Data",
+   "label": "Printer URI"
+  },
+  {
+   "fieldname": "column_break_channel_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "none",
+   "depends_on": "eval:doc.channel == 'B'",
+   "fieldname": "auth_mode",
+   "fieldtype": "Select",
+   "label": "Auth Mode",
+   "options": "none\nbasic"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'B'",
+   "fieldname": "credential",
+   "fieldtype": "Password",
+   "label": "Credential"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'B'",
+   "fieldname": "media",
+   "fieldtype": "Data",
+   "label": "Media"
+  },
+  {
+   "default": "10",
+   "depends_on": "eval:doc.channel == 'B'",
+   "fieldname": "timeout",
+   "fieldtype": "Int",
+   "label": "Timeout (sec)"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'B'",
+   "description": "Get-Printer-Attributes snapshot; enabling requires application/pdf support",
+   "fieldname": "capability_snapshot",
+   "fieldtype": "Code",
+   "label": "Capability Snapshot",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_channel_c",
+   "fieldtype": "Section Break",
+   "label": "Channel C: Cloud Device"
+  },
+  {
+   "depends_on": "eval:doc.channel == 'C'",
+   "fieldname": "cloud_device",
+   "fieldtype": "Link",
+   "label": "Cloud Device",
+   "options": "Zprint Cloud Device"
+  },
+  {
+   "fieldname": "column_break_channel_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "pdf",
+   "depends_on": "eval:doc.channel == 'C'",
+   "fieldname": "payload_kind",
+   "fieldtype": "Select",
+   "label": "Payload Kind",
+   "options": "pdf\ntext_markup"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Printer",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "printer_logical_name",
+ "track_changes": 1
+}

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>{{ _("Scan Print") }}</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+        font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+        background: #f2f4f7; color: #1f2329; overflow: hidden;
+        display: flex; flex-direction: column; touch-action: manipulation;
+    }
+    header {
+        padding: 10px 14px; background: #1f2329; color: #fff;
+        font-size: 15px; font-weight: 600; display: flex;
+        justify-content: space-between; align-items: center; flex: none;
+    }
+    header .dot { width: 9px; height: 9px; border-radius: 50%; background: #6b7280; display: inline-block; margin-right: 6px; }
+    header .dot.on { background: #22c55e; }
+    #banner {
+        flex: none; margin: 12px 14px 6px; border-radius: 12px; padding: 14px 16px;
+        font-size: 16px; font-weight: 600; line-height: 1.4; min-height: 54px;
+        display: flex; align-items: center; transition: background .2s, color .2s;
+    }
+    #banner.idle { background: #e5e7eb; color: #4b5563; }
+    #banner.work { background: #fde68a; color: #78350f; }
+    #banner.ok   { background: #bbf7d0; color: #14532d; }
+    #banner.fail { background: #fecaca; color: #7f1d1d; }
+    #banner.warn { background: #fed7aa; color: #7c2d12; }
+    #scanzone { flex: none; padding: 8px 14px 4px; }
+    #scan {
+        width: 100%; font-size: 22px; padding: 14px 12px; border: 2px solid #cbd5e1;
+        border-radius: 12px; background: #fff; outline: none; caret-color: #2563eb;
+    }
+    #scan:focus { border-color: #2563eb; }
+    #hint { padding: 4px 18px; font-size: 12px; color: #6b7280; flex: none; }
+    #history { flex: 1 1 auto; overflow-y: auto; padding: 8px 14px 16px; }
+    .row {
+        display: flex; justify-content: space-between; align-items: center;
+        background: #fff; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+        font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    }
+    .row .code { font-weight: 600; word-break: break-all; margin-right: 8px; }
+    .row .msg { color: #6b7280; font-size: 12px; word-break: break-all; text-align: right; }
+    .chip { flex: none; width: 12px; height: 12px; border-radius: 50%; margin-left: 8px; }
+    .chip.work { background: #f59e0b; } .chip.ok { background: #22c55e; }
+    .chip.fail { background: #ef4444; } .chip.warn { background: #f97316; }
+    #overlay {
+        position: fixed; inset: 0; background: rgba(15, 23, 42, .96); z-index: 50;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: #f8fafc; text-align: center; padding: 24px;
+    }
+    #overlay h1 { font-size: 22px; margin-bottom: 8px; }
+    #overlay p { font-size: 14px; color: #cbd5e1; margin-bottom: 28px; }
+    #start {
+        font-size: 20px; font-weight: 700; color: #0f172a; background: #fbbf24;
+        border: none; border-radius: 14px; padding: 16px 44px;
+    }
+    #start:active { transform: scale(.97); }
+</style>
+</head>
+<body data-csrf="{{ csrf_token }}" data-station="{{ station_id }}"
+      data-wedge="{{ wedge_suffix }}" data-station-name="{{ station_name }}">
+<header>
+    <span><span class="dot" id="netdot"></span><span id="hdrname">{{ station_name }}</span></span>
+    <span id="clock"></span>
+</header>
+<div id="banner" class="idle">{{ _("Ready") }}</div>
+<div id="scanzone">
+    <input id="scan" type="text" autocomplete="off" autocapitalize="off"
+           spellcheck="false" inputmode="none" autofocus
+           placeholder="{{ _("Scan or enter a code") }}">
+</div>
+<div id="hint">{{ _("Scans print automatically. Point the scanner and pull the trigger.") }}</div>
+<div id="history"></div>
+<div id="overlay">
+    <h1>{{ _("Scan Print Workstation") }}</h1>
+    <p>{{ _("Tap to enable sound and start scanning") }}</p>
+    <button id="start" type="button">{{ _("Start Shift") }}</button>
+</div>
+<script>
+(function () {
+    "use strict";
+    var CSRF = document.body.getAttribute("data-csrf") || "";
+    var STATION = document.body.getAttribute("data-station") || "";
+    var WEDGE = document.body.getAttribute("data-wedge") || "enter";
+    var MSG = {
+        ready: "{{ _("Ready") }}",
+        sending: "{{ _("Sending scan...") }}",
+        printing: "{{ _("Printing...") }}",
+        printed: "{{ _("Printed") }}",
+        printedIpp: "{{ _("Print task completed (IPP final state)") }}",
+        agentOffline: "{{ _("Print computer offline (no heartbeat for {0}s)") }}",
+        dup: "{{ _("Duplicate scan within the window; the earlier job is shown") }}",
+        failed: "{{ _("Print failed") }}",
+        unknown: "{{ _("Result unknown, please check the printer") }}",
+        expired: "{{ _("Job expired") }}",
+        net: "{{ _("Connection lost, retrying...") }}",
+        disabled: "{{ _("Network silent printing is disabled on this site") }}",
+        nostation: "{{ _("No print station is bound to your account") }}",
+        notentitled: "{{ _("This site cannot use network silent printing (paid feature, non-STD activation key required)") }}",
+        reason: {
+            "NO_LICENSE": "{{ _("No activation key configured on this site") }}",
+            "LICENSE_INVALID": "{{ _("The activation key is invalid") }}",
+            "STD_AUTO_LICENSE": "{{ _("STD auto-issued keys cannot use this paid feature") }}",
+            "TRIAL_LICENSE": "{{ _("Trial keys cannot use network silent printing") }}",
+            "EXPIRED": "{{ _("The activation key has expired") }}"
+        }
+    };
+
+    var input = document.getElementById("scan");
+    var banner = document.getElementById("banner");
+    var netdot = document.getElementById("netdot");
+    var history = document.getElementById("history");
+    var overlay = document.getElementById("overlay");
+    var clockEl = document.getElementById("clock");
+
+    var audioCtx = null;
+    var started = false;
+    var entitled = false;
+    var allowed = false;
+    var pollMs = 4000;
+    var keepMs = 50000;
+    var jobs = {};          // job_id -> {status, message}
+    var order = [];         // job_ids newest last
+    var current = null;     // newest job_id
+    var pollTimer = null;
+    var debounceTimer = null;
+
+    function _(key) { return MSG[key] || key; }
+
+    // ---- audio ----
+    function beep(freq, dur, delay) {
+        if (!audioCtx) { return; }
+        var t = audioCtx.currentTime + (delay || 0);
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        osc.type = "sine";
+        gain.gain.value = 0.15;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + dur);
+    }
+    function sound(kind) {
+        if (kind === "ok") { beep(880, .09, 0); beep(1320, .12, .1); }
+        else if (kind === "fail") { beep(220, .35, 0); }
+        else if (kind === "warn") { beep(440, .18, 0); }
+    }
+
+    // ---- helpers ----
+    function uuid4() {
+        if (window.crypto && crypto.randomUUID) { return crypto.randomUUID(); }
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0;
+            return (c === "x" ? r : (r & 3 | 8)).toString(16);
+        });
+    }
+    function setBanner(cls, text) {
+        banner.className = cls;
+        banner.textContent = text;
+    }
+    function api(method, params) {
+        var opts = { method: "POST", headers: { "X-Frappe-CSRF-Token": CSRF } };
+        if (params) {
+            opts.headers["Content-Type"] = "application/x-www-form-urlencoded";
+            opts.body = new URLSearchParams(params).toString();
+        }
+        return fetch("/api/method/" + method, opts).then(function (resp) {
+            netdot.className = "dot on";
+            return resp.json().then(function (data) {
+                if (data.exc) { throw new Error("server"); }
+                return data.message;
+            });
+        }).catch(function () {
+            netdot.className = "dot";
+            setBanner("warn", MSG.net);
+            sound("warn");
+            throw new Error("network");
+        });
+    }
+
+    var STATE_CLASS = {
+        queued: "work", rendering: "work", dispatching: "work",
+        ready: "work", sent: "work",
+        dispatched: "work", submitted_to_vendor: "work", vendor_confirmed: "work",
+        printed_queue_ok: "ok", job_state_final: "ok", printed_vendor_confirmed: "ok",
+        failed: "fail", unknown: "warn", expired: "warn"
+    };
+
+    function statusText(status, message, channel) {
+        if (status === "failed") { return message ? MSG.failed + ": " + message : MSG.failed; }
+        if (status === "unknown") { return MSG.unknown; }
+        if (status === "expired") { return MSG.expired; }
+        if (STATE_CLASS[status] === "ok") {
+            return channel === "B" ? MSG.printedIpp : MSG.printed;
+        }
+        return MSG.printing;
+    }
+
+    function trackJob(id) {
+        if (!jobs[id]) { order.push(id); jobs[id] = { status: "queued" }; }
+        current = id;
+        if (order.length > 10) {
+            var old = order.shift();
+            delete jobs[old];
+            renderHistory();
+        }
+    }
+
+    function applyView(view) {
+        if (!view || !view.job_id) { return; }
+        var prev = jobs[view.job_id] || {};
+        jobs[view.job_id] = {
+            status: view.status,
+            message: view.fail_reason || view.message || "",
+            channel: view.channel || prev.channel || "",
+            printer: view.printer_name || prev.printer || "",
+            agentStatus: view.agent_status || prev.agentStatus || "",
+            heartbeatAge: view.agent_heartbeat_age
+        };
+        if (view.job_id === current) {
+            var cls = STATE_CLASS[view.status] || "warn";
+            // In-progress + the agent PC gone quiet: warn, but never fake a
+            // terminal outcome (the poll may still prove otherwise).
+            var hbAge = view.agent_heartbeat_age;
+            var agentQuiet = view.status && STATE_CLASS[view.status] === "work"
+                && (view.agent_status === "offline"
+                    || (typeof hbAge === "number" && hbAge >= 90));
+            if (agentQuiet) {
+                cls = "warn";
+                setBanner(cls, MSG.agentOffline.replace(
+                    "{0}", String(typeof hbAge === "number" ? hbAge : "-")));
+                sound("warn");
+            } else {
+                if (prev.status !== view.status) {
+                    if (cls === "ok") { sound("ok"); }
+                    else if (cls === "fail") { sound("fail"); }
+                    else if (cls === "warn" && prev.status) { sound("warn"); }
+                }
+                var text = statusText(view.status, jobs[view.job_id].message, view.channel);
+                if (cls === "ok" && jobs[view.job_id].printer) {
+                    text += " · " + jobs[view.job_id].printer;
+                }
+                setBanner(cls, text);
+            }
+        }
+        renderHistory();
+    }
+
+    function renderHistory() {
+        var html = "";
+        for (var i = order.length - 1; i >= 0; i--) {
+            var id = order[i];
+            var job = jobs[id] || {};
+            var cls = STATE_CLASS[job.status] || "warn";
+            html += '<div class="row"><span class="code">' + escapeHtml(job.code || id)
+                + '</span><span class="msg">' + escapeHtml(statusText(job.status, job.message, job.channel))
+                + '</span><span class="chip ' + cls + '"></span></div>';
+        }
+        history.innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+        return String(text == null ? "" : text).replace(/[&<>"']/g, function (ch) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+        });
+    }
+
+    // ---- submit ----
+    function submit() {
+        var code = input.value.trim();
+        if (!code) { return; }
+        if (!allowed) { sound("warn"); return; }
+        input.value = "";
+        setBanner("work", MSG.sending);
+        trackJob("pending-" + String(Date.now()));
+        var pendingId = current;
+        api("zhiz_print.api.scan_print.scan_receive",
+            { station_id: STATION, scan_code: code, client_uuid: uuid4() })
+            .then(function (resp) {
+                delete jobs[pendingId];
+                order = order.filter(function (x) { return x !== pendingId; });
+                // Business rejection (no rule, gate, reprint block): the
+                // envelope comes back with job_id=null and a reason message.
+                if (!resp || !resp.job_id) {
+                    current = order.length ? order[order.length - 1] : null;
+                    setBanner("fail", (resp && resp.message) || MSG.failed);
+                    sound("fail");
+                    renderHistory();
+                    return;
+                }
+                trackJob(resp.job_id);
+                jobs[resp.job_id].code = code;
+                if (resp.dup) {
+                    setBanner("work", MSG.dup);
+                    sound("warn");
+                } else {
+                    setBanner("work", MSG.printing);
+                }
+                renderHistory();
+                pollOnce();
+            })
+            .catch(function () {
+                delete jobs[pendingId];
+                order = order.filter(function (x) { return x !== pendingId; });
+                current = order.length ? order[order.length - 1] : null;
+                renderHistory();
+            });
+    }
+
+    // ---- polling ----
+    function pollOnce() {
+        var ids = order.filter(function (id) {
+            return id && String(id).indexOf("pending-") !== 0;
+        });
+        if (!ids.length) { return; }
+        api("zhiz_print.api.scan_print.get_job_status",
+            { job_ids_json: JSON.stringify(ids) })
+            .then(function (resp) {
+                (resp.jobs || []).forEach(applyView);
+                schedulePoll();
+            })
+            .catch(schedulePoll);
+    }
+    function schedulePoll() {
+        if (pollTimer) { clearTimeout(pollTimer); }
+        pollTimer = setTimeout(function () {
+            if (started && !document.hidden) { pollOnce(); } else { schedulePoll(); }
+        }, pollMs);
+    }
+
+    // ---- keepalive + clock ----
+    function keepalive() {
+        setInterval(function () {
+            if (started && !document.hidden) {
+                fetch("/api/method/zhiz_print.api.scan_print.page_bootstrap", {
+                    method: "POST", headers: { "X-Frappe-CSRF-Token": CSRF }
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                    var msg = data.message || {};
+                    if (msg.station && msg.station.wedge_suffix) { WEDGE = msg.station.wedge_suffix; }
+                }).catch(function () { /* offline tick */ });
+            }
+        }, keepMs);
+    }
+    function tickClock() {
+        clockEl.textContent = new Date().toTimeString().slice(0, 5);
+    }
+
+    // ---- input wiring ----
+    input.addEventListener("keydown", function (ev) {
+        if (ev.isComposing || ev.keyCode === 229) { return; }
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            submit();
+        } else if (ev.key === "Tab" && WEDGE === "tab") {
+            ev.preventDefault();
+            submit();
+        }
+    });
+    input.addEventListener("input", function () {
+        if (WEDGE === "none") {
+            if (debounceTimer) { clearTimeout(debounceTimer); }
+            debounceTimer = setTimeout(submit, 300);
+        }
+    });
+    input.addEventListener("blur", function () {
+        setTimeout(function () { input.focus(); }, 60);
+    });
+    document.addEventListener("touchstart", function () {
+        setTimeout(function () { input.focus(); }, 0);
+    }, true);
+
+    // ---- boot ----
+    function boot() {
+        api("zhiz_print.api.scan_print.page_bootstrap", null).then(function (msg) {
+            if (msg.station && msg.station.wedge_suffix) { WEDGE = msg.station.wedge_suffix; }
+            if (msg.station && msg.station.station_id) { STATION = msg.station.station_id; }
+            if (msg.poll_interval_sec && msg.poll_interval_sec >= 4) { pollMs = msg.poll_interval_sec * 1000; }
+            allowed = !!msg.scan_print_enabled && !!msg.entitled && !!STATION;
+            if (!msg.scan_print_enabled) {
+                setBanner("warn", MSG.disabled);
+            } else if (!STATION) {
+                setBanner("warn", MSG.nostation);
+            } else if (!msg.entitled) {
+                setBanner("fail", MSG.notentitled + (msg.reason_code && msg.reason_code !== "OK"
+                    ? " (" + (MSG.reason[msg.reason_code] || msg.reason_code) + ")" : ""));
+            } else {
+                entitled = true;
+                setBanner("idle", MSG.ready);
+            }
+            schedulePoll();
+        }).catch(function () {
+            setBanner("warn", MSG.net);
+            schedulePoll();
+        });
+    }
+
+    document.getElementById("start").addEventListener("click", function () {
+        try {
+            var Ctx = window.AudioContext || window.webkitAudioContext;
+            if (Ctx) { audioCtx = new Ctx(); if (audioCtx.resume) { audioCtx.resume(); } }
+        } catch (err) { audioCtx = null; }
+        overlay.style.display = "none";
+        started = true;
+        input.focus();
+        beep(660, .08, 0);
+        boot();
+        keepalive();
+        setInterval(tickClock, 30000);
+        tickClock();
+    });
+
+    document.addEventListener("visibilitychange", function () {
+        if (!document.hidden && started) { pollOnce(); }
+    });
+})();
+</script>
+</body>
+</html>

@@ -379,54 +379,69 @@ def batch_generate_pdf(doctype, docnames, design_name=None, params=None, auto_ma
     _pdf_response(pdf_bytes, f"batch-{doctype}-{success_count}docs-{label}.pdf")
 
 
-def _generate_chromium_pdf(html, design):
-    """Generate PDF via Chromium headless, return bytes."""
+def _generate_chromium_pdf(html, design, timeout_s=None):
+    """Generate PDF via Chromium headless, return bytes.
+
+    timeout_s: optional subprocess budget override in seconds; None keeps
+    the existing behavior of reading Zprint Setting.scan_render_budget_s
+    via print_designer.get_render_timeout(). Used by the scan-print render
+    facade (api/render_service.py) to pass its explicit budget through.
+    """
     import os
     import subprocess
+    import tempfile
+    from zhiz_print.api.print_designer import (
+        _chromium_tmp_dir,
+        _get_chromium_command,
+        get_render_timeout,
+    )
 
-    chromium_cmd = None
-    for cmd in ['/snap/bin/chromium', 'chromium-browser', 'chromium', 'google-chrome', 'google-chrome-stable']:
-        try:
-            result = subprocess.run(['which', cmd], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0 and result.stdout.strip():
-                chromium_cmd = result.stdout.strip()
-                break
-        except Exception:
-            continue
-
+    chromium_cmd = _get_chromium_command()
     if not chromium_cmd:
         frappe.throw(_("Chromium is not installed"))
 
-    tmpdir = os.path.abspath(os.path.join(frappe.get_site_path(), 'public', 'files', 'pdf_debug'))
-    os.makedirs(tmpdir, exist_ok=True)
-    html_path = os.path.join(tmpdir, 'chrome_batch_combined.html')
-    pdf_path = os.path.join(tmpdir, 'chrome_batch_output.pdf')
+    # Per-request unique temp files (scan-print plan 7-1): the old fixed names
+    # let concurrent renders overwrite/delete each other's input HTML / output
+    # PDF. mkstemp under site private tmp; both files removed in finally.
+    tmpdir = _chromium_tmp_dir()
+    html_fd, html_path = tempfile.mkstemp(prefix='chrome_batch_combined_', suffix='.html', dir=tmpdir)
+    os.close(html_fd)
+    pdf_fd, pdf_path = tempfile.mkstemp(prefix='chrome_batch_output_', suffix='.pdf', dir=tmpdir)
+    os.close(pdf_fd)
 
-    with open(html_path, 'w', encoding='utf-8') as f:
-        f.write(html)
+    try:
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html)
 
-    if os.path.exists(pdf_path):
-        os.remove(pdf_path)
+        chrome_args = [
+            chromium_cmd, '--headless=new', '--disable-gpu', '--no-sandbox',
+            '--print-to-pdf=' + pdf_path, '--no-pdf-header-footer',
+        ]
+        if design.print_paper:
+            paper = frappe.get_doc('Super Print Paper', design.print_paper)
+            chrome_args.append('--print-to-pdf-options=' + json.dumps({
+                'paperWidth': round(paper.width / 25.4, 4),
+                'paperHeight': round(paper.height / 25.4, 4),
+                'marginTop': 0, 'marginBottom': 0, 'marginLeft': 0, 'marginRight': 0,
+            }))
+        chrome_args.append('file://' + html_path)
+        subprocess.run(
+            chrome_args, capture_output=True, text=True,
+            timeout=frappe.utils.cint(timeout_s) or get_render_timeout(),
+        )
 
-    chrome_args = [
-        chromium_cmd, '--headless=new', '--disable-gpu', '--no-sandbox',
-        '--print-to-pdf=' + pdf_path, '--no-pdf-header-footer',
-    ]
-    if design.print_paper:
-        paper = frappe.get_doc('Super Print Paper', design.print_paper)
-        chrome_args.append('--print-to-pdf-options=' + json.dumps({
-            'paperWidth': round(paper.width / 25.4, 4),
-            'paperHeight': round(paper.height / 25.4, 4),
-            'marginTop': 0, 'marginBottom': 0, 'marginLeft': 0, 'marginRight': 0,
-        }))
-    chrome_args.append('file://' + html_path)
-    subprocess.run(chrome_args, capture_output=True, text=True, timeout=60)
+        # mkstemp pre-creates the pdf file, so "not created" == empty file
+        if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) == 0:
+            frappe.throw(_("Chromium PDF generation failed"))
 
-    if not os.path.exists(pdf_path):
-        frappe.throw(_("Chromium PDF generation failed"))
-
-    with open(pdf_path, 'rb') as f:
-        return f.read()
+        with open(pdf_path, 'rb') as f:
+            return f.read()
+    finally:
+        for _tmp in (html_path, pdf_path):
+            try:
+                os.remove(_tmp)
+            except OSError:
+                pass
 
 
 @frappe.whitelist()

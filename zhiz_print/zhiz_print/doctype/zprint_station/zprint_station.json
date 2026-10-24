@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "autoname": "field:station_id",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_station",
+  "station_id",
+  "station_name",
+  "column_break_station_1",
+  "client_type",
+  "topology_tag",
+  "enabled",
+  "section_break_scan_client",
+  "wedge_suffix",
+  "column_break_scan_client",
+  "default_channel",
+  "default_printer",
+  "section_break_access",
+  "bound_user",
+  "column_break_access",
+  "api_key",
+  "api_secret"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_station",
+   "fieldtype": "Section Break",
+   "label": "Station Info"
+  },
+  {
+   "description": "Unique identifier of the scan terminal",
+   "fieldname": "station_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Station ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "station_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Station Name"
+  },
+  {
+   "fieldname": "column_break_station_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "win_usb",
+   "fieldname": "client_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Client Type",
+   "options": "win_usb\npda\nboth"
+  },
+  {
+   "default": "cloud",
+   "description": "cloud = public server access; lan = local network server",
+   "fieldname": "topology_tag",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Topology",
+   "options": "cloud\nlan"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Enabled"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_scan_client",
+   "fieldtype": "Section Break",
+   "label": "Scan Client"
+  },
+  {
+   "default": "enter",
+   "description": "Trailing key the scanner appends to the code (PC browser page)",
+   "fieldname": "wedge_suffix",
+   "fieldtype": "Select",
+   "label": "Wedge Suffix",
+   "options": "enter\ntab\nnone"
+  },
+  {
+   "fieldname": "column_break_scan_client",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Used when no Route Rule matches; empty = deny printing",
+   "fieldname": "default_channel",
+   "fieldtype": "Select",
+   "label": "Default Channel",
+   "options": "\nA\nB\nC"
+  },
+  {
+   "fieldname": "default_printer",
+   "fieldtype": "Link",
+   "label": "Default Printer",
+   "options": "Zprint Printer"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_access",
+   "fieldtype": "Section Break",
+   "label": "Access Credentials"
+  },
+  {
+   "description": "Dedicated login for PDA stations; one user per station",
+   "fieldname": "bound_user",
+   "fieldtype": "Link",
+   "label": "Bound User",
+   "options": "User",
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_access",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Request key for agent/PDA HMAC authentication",
+   "fieldname": "api_key",
+   "fieldtype": "Data",
+   "label": "API Key"
+  },
+  {
+   "fieldname": "api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Station",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "station_name",
+ "track_changes": 1
+}

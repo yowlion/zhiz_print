@@ -1,0 +1,143 @@
+{
+ "actions": [],
+ "autoname": "field:rule_name",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule_name",
+  "enabled",
+  "priority",
+  "section_break_conditions",
+  "station",
+  "column_break_conditions",
+  "target_doctype",
+  "paper",
+  "section_break_route",
+  "channel",
+  "printer",
+  "column_break_route",
+  "fallback_channel",
+  "fallback_printer"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Rule Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "100",
+   "description": "Descending; higher priority matched first",
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Priority"
+  },
+  {
+   "fieldname": "section_break_conditions",
+   "fieldtype": "Section Break",
+   "label": "Match Conditions"
+  },
+  {
+   "description": "Station filter; empty = any station",
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "label": "Station",
+   "options": "Zprint Station"
+  },
+  {
+   "fieldname": "column_break_conditions",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "DocType filter; empty = any doctype",
+   "fieldname": "target_doctype",
+   "fieldtype": "Link",
+   "label": "Target DocType",
+   "options": "DocType"
+  },
+  {
+   "description": "Paper filter; empty = any paper",
+   "fieldname": "paper",
+   "fieldtype": "Data",
+   "label": "Paper"
+  },
+  {
+   "fieldname": "section_break_route",
+   "fieldtype": "Section Break",
+   "label": "Route"
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Channel",
+   "options": "A\nB\nC",
+   "reqd": 1
+  },
+  {
+   "description": "Must belong to the selected channel",
+   "fieldname": "printer",
+   "fieldtype": "Link",
+   "label": "Printer",
+   "options": "Zprint Printer"
+  },
+  {
+   "fieldname": "column_break_route",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Explicit degradation channel; empty = no fallback",
+   "fieldname": "fallback_channel",
+   "fieldtype": "Select",
+   "label": "Fallback Channel",
+   "options": "\nA\nB\nC"
+  },
+  {
+   "description": "Must belong to the fallback channel",
+   "fieldname": "fallback_printer",
+   "fieldtype": "Link",
+   "label": "Fallback Printer",
+   "options": "Zprint Printer"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Route Rule",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "rule_name",
+ "track_changes": 1
+}

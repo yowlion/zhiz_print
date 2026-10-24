@@ -467,3 +467,310 @@ Even Row Color,偶数行背景色
 Expanded data rows alternate odd/even background colors (1st, 3rd... = odd),展开的数据行按奇偶交替显示背景色（第1、3、5…条为奇数行）
 Print Template Platform,打印模板平台
 Zhiz Print - Advanced Print Designer,打印模板平台
+Scan Print,扫码打印
+Enable Scan Print,启用扫码打印
+Master switch for scan-to-print (silent printing). Paid feature: only paid (non-STD) activation keys are allowed,扫码打印(静默打印)总开关。收费功能:仅付费(非 STD)激活码可用
+Enable Channel A,启用通道 A
+Channel A: print agent (ZhizPrintAgent) on a shop-floor Windows PC,通道 A:车间 Windows 电脑上的打印代理(ZhizPrintAgent)
+Enable Channel B,启用通道 B
+Channel B: direct IPP to LAN printers. Keep off for cloud deployments,通道 B:局域网打印机 IPP 直打。云端部署保持关闭
+Enable Channel C,启用通道 C
+"Channel C: cloud printer/box (Liankenet, Xpyun)",通道 C:云打印盒/云打印机(链科、芯烨)
+Enable Long Polling,启用长轮询
+Long polling on scan endpoints. Keep off by default (gunicorn sync workers are scarce),扫码接口长轮询。默认关闭(gunicorn sync worker 稀缺)
+Scan Semaphore Mode,扫码信号量模式
+"Semaphore sizing basis for concurrent scan renders: Cloud=2 slots, LAN=4 slots","扫码并发渲染信号量容量:Cloud=2 个槽位, LAN=4 个槽位"
+Poll Interval (sec),轮询间隔(秒)
+Dedup Window (sec),去重窗口(秒)
+Same scan code + station within this window merges into one print job,同一扫码值+工位在该窗口内合并为一个打印任务
+Max Retry,最大重试次数
+Job Retain Days,任务保留天数
+Min Agent Version,代理最低版本
+Lowest accepted print agent version; older agents are flagged in the agent dashboard,"可接受的打印代理最低版本, 更低版本会在代理看板中标注告警"
+PDF Inline Threshold (bytes),PDF 内联阈值(字节)
+"PDF up to this size is stored inline in the job row, larger goes to private files","不超过该字节数的 PDF 内联存任务行, 超过的写私有文件目录"
+Scan Render Budget (sec),扫码渲染预算(秒)
+Seconds allowed for one PDF render (Chromium subprocess timeout),单次 PDF 渲染允许的秒数(Chromium 子进程超时)
+Scan Max Concurrent,扫码最大并发
+Template Asset Budget (bytes),模板资源预算(字节)
+Hard cap on template asset size (images etc.) for scan rendering,扫码渲染模板资源(图片等)体积硬上限
+Chromium Path,Chromium 路径
+"Absolute path or command name of the Chromium executable, overrides auto-detection when valid","Chromium 可执行文件的绝对路径或命令名, 有效时优先于自动探测"
+Vendor Confirm Timeout (sec),厂商确认超时(秒)
+Seconds before an unconfirmed Channel C vendor job turns unknown,通道 C 厂商任务超过该秒数未确认即转为未知状态
+Zprint Station,打印工位
+Zprint Scan Rule,扫码规则
+Zprint Route Rule,路由规则
+Zprint Printer,打印机
+Zprint Print Job,打印任务
+Zprint Agent,打印代理
+Zprint Cloud Device,云打印设备
+Zprint Scan Event,扫码事件
+Station Info,工位信息
+Station ID,工位编号
+Station Name,工位名称
+Station,工位
+Client Type,客户端类型
+Topology,部署拓扑
+Wedge Suffix,扫码枪后缀键
+Default Channel,默认通道
+Default Printer,默认打印机
+Scan Client,扫码客户端
+Access Credentials,访问凭证
+Bound User,绑定用户
+API Key,API 密钥
+API Secret,API 秘钥
+Rule Name,规则名称
+Match Rules,匹配规则
+Match Mode,匹配模式
+Match Pattern,匹配模式串
+Case Sensitive,区分大小写
+Match Length,匹配长度
+Digit Only,仅数字
+Station Filter,工位过滤
+Sample Scan Value,扫码样例值
+Document Resolution,单据解析
+Docname Mode,单据名解析方式
+Strip Prefix,去除前缀
+Code Field,条码字段
+Resolve Query,解析查询
+Template Binding,模板绑定
+Template Track,模板类型
+Use Auto Match,自动匹配设计
+Params JSON,参数 JSON
+Print Options,打印选项
+Copies,份数
+Allow Reprint,允许补打
+Block Drafts,拦截草稿
+Success Hint Fields,成功提示字段
+Match Conditions,匹配条件
+Route,路由
+Fallback Channel,降级通道
+Fallback Printer,降级打印机
+Channel,通道
+Printer,打印机
+Printer Logical Name,打印机逻辑名
+Channel A: Print Agent,通道 A:打印代理
+Print Agent,打印代理
+OS Printer Name,系统打印机名
+Paper,纸张
+Bin,纸盒
+Monochrome,黑白打印
+Channel B: IPP (LAN Only),通道 B:IPP(仅局域网)
+Printer URI,打印机 URI
+Auth Mode,认证方式
+Credential,认证凭证
+Media,介质
+Timeout (sec),超时(秒)
+Capability Snapshot,能力快照
+Channel C: Cloud Device,通道 C:云打印设备
+Cloud Device,云打印设备
+Payload Kind,载荷类型
+Job Key,任务键
+Scan Code,扫码值
+Copies Mode,份数方式
+PDF Artifact,PDF 产物
+PDF Data,PDF 数据
+PDF File,PDF 文件路径
+Delivery,投递
+Client UUID,客户端 UUID
+Origin Nonce,来源随机数
+Vendor Job ID,厂商任务 ID
+Ack Code,回执码
+Retry Count,重试次数
+Degraded From Channel,降级来源通道
+Receipt Level,回执等级
+Timeline,时间线
+Scan Time,扫码时间
+Render Started On,渲染开始时间
+Rendered On,渲染完成时间
+Dispatched On,分发时间
+Finalized On,终态时间
+Agent ID,代理 ID
+Agent Version,代理版本
+Last Heartbeat,最近心跳
+Queue Depth,队列深度
+Printers Status,打印机状态
+Device SN,设备序列号
+Device Type,设备类型
+Credentials,凭证
+Workstation,工作站
+Callback Secret,回调密钥
+Device Status,设备状态
+Last Device Status,最近设备状态
+Service Expire Date,服务到期日
+Event Time,事件时间
+Scan Value,扫码值
+Event Type,事件类型
+Message,消息
+Task Status,任务状态
+Source Terminal,来源终端
+Executor Terminal,执行终端
+PDF Path,PDF 路径
+PDF Bytes,PDF 字节数
+Vendor Task ID,厂商任务 ID
+Printer Snapshot,打印机快照
+win_usb,Windows+USB 扫码枪
+pda,PDA 手持终端
+both,两者
+cloud,云端
+lan,局域网
+none,无
+online,在线
+offline,离线
+version_low,版本过低
+Exact,精确
+Prefix,前缀
+Regex,正则
+code_is_docname,码即单据号
+strip_prefix,去除前缀
+code_field,按条码字段反查
+resolve_query,自定义查询
+super_design,精排设计
+native_format,原生打印格式
+merged_pages,页面拼接
+native_device,设备原生份数
+text_markup,文本指令
+LiankenetBox,链科云打印盒
+Xpyun,芯烨
+queued,已受理
+rendering,渲染中
+ready,就绪
+dispatched,已分发
+sent,已发送
+printed_queue_ok,已提交打印队列
+job_state_final,IPP 处理终态
+submitted_to_vendor,已提交厂商
+vendor_confirmed,厂商已确认
+printed_vendor_confirmed,厂商确认已出纸
+unknown,未知
+expired,已过期
+NoRule,无匹配规则
+NoDoc,单据不存在
+DupBlocked,重复扫码拦截
+DraftBlocked,草稿拦截
+RenderFail,渲染失败
+LicenseExpired,许可证过期
+EntitlementDenied,功能未授权
+PrinterOffline,打印机离线
+NetTimeout,网络超时
+NoRoute,无路由
+AgentOffline,打印电脑离线
+Invalid job name,非法的任务名
+Empty PDF payload,PDF 内容为空
+Could not allocate download token,无法分配下载令牌
+Invalid or expired download token,下载令牌无效或已过期
+PDF file not found,PDF 文件未找到
+Scan Print Workstation,扫码打印工作站
+Tap to enable sound and start scanning,点击启用声音并开始扫码
+Start Shift,开始作业
+Ready,就绪
+Scan or enter a code,扫码或输入单号
+Scans print automatically. Point the scanner and pull the trigger.,"扫码后自动打印,对准条码按扫描键即可"
+Sending scan...,扫码发送中...
+Printing...,打印中...
+Duplicate scan within the window; the earlier job is shown,"窗口期内重复扫码,已返回先前任务"
+Print failed,打印失败
+"Result unknown, please check the printer",结果未知，请检查打印机
+Job expired,任务已过期
+"Connection lost, retrying...",连接中断，正在重试...
+Network silent printing is disabled on this site,本站点未启用网络静默打印
+No print station is bound to your account,当前账号未绑定打印站点
+"This site cannot use network silent printing (paid feature, non-STD activation key required)",本站点无法使用网络静默打印(收费功能，需非STD激活码)
+No activation key configured on this site,本站点未配置激活码
+The activation key is invalid,激活码无效
+STD auto-issued keys cannot use this paid feature,STD自动发放激活码不能使用此收费功能
+Trial keys cannot use network silent printing,试用激活码不能使用网络静默打印
+The activation key has expired,激活码已过期
+Agent ID {0} is bound to another station,代理ID {0} 已绑定其他站点
+Unknown job,任务不存在
+Job belongs to another station,任务属于其他站点
+Exit code must be an integer,退出码必须是整数
+Text Template,文本模板
+Auto Reset Vendor Error Limit,自动复位厂商错误锁
+ScanPrint,扫码打印
+Print Job,打印作业
+PDF SHA256,PDF SHA256
+License Hash,许可证哈希
+Channel A: Paper,通道 A:纸张
+Print Format,打印格式
+Contact Info,联系信息
+Dispatching,分发中
+Probe Capability,探测能力
+Queuing capability probe...,正在排队探测能力...
+Capability probe queued,已排队探测能力
+"Print task completed (IPP final state)",打印任务已完成(IPP 终态)
+"Print computer offline (no heartbeat for {0}s)",打印电脑离线({0}秒未心跳)
+Capability Snapshot is not valid JSON,能力快照不是合法 JSON
+"Printer does not advertise application/pdf support and cannot be enabled",打印机未声明支持 application/pdf，无法启用
+Run Probe Capability before enabling: a channel B printer needs a capability snapshot,启用前请先探测能力:通道 B 打印机需要能力快照
+Not permitted,无权限
+Printer {0} does not exist,打印机 {0} 不存在
+Winspool state snapshot reported by the agent heartbeat,代理心跳上报的 Winspool 状态快照
+Workstation name for Liankenet devices,联科设备的工作站名称
+Xpyun text ticket template; placeholders __scan_code__ __docname__ __date__,芯烨文本小票模板;占位符 __scan_code__ __docname__ __date__ 会在提交时替换
+"Primary key: sha256 of scan code, station and dedup window bucket",主键:扫码值、站点与去重窗口桶的 sha256
+Super Print Design or native Print Format name,超级打印设计或原生打印格式名称
+Inline base64 PDF below the inline threshold,低于内联阈值的 base64 PDF(内联存储)
+Private file path for PDFs above the inline threshold,超过内联阈值的 PDF 存放的私有文件路径
+Replay idempotency key from the scanning client; leave unset for agent scans,扫码客户端的重放幂等键;代理扫码时留空
+Vendor idempotency nonce for Channel C submissions,通道 C 提交的厂商幂等随机数
+Owning station; required for Channel A printers,所属站点;通道 A 打印机必填
+Printer name as listed by the agent on the Windows host,代理在 Windows 主机上列出的打印机名
+Paper name as reported by agent doctor,代理 doctor 上报的纸张名
+Get-Printer-Attributes snapshot; enabling requires application/pdf support,Get-Printer-Attributes 快照;启用要求支持 application/pdf
+Descending; higher priority matched first,降序;优先级高的先匹配
+Station filter; empty = any station,站点过滤;留空=任意站点
+DocType filter; empty = any doctype,DocType 过滤;留空=任意 DocType
+Paper filter; empty = any paper,纸张过滤;留空=任意纸张
+Must belong to the selected channel,必须属于所选通道
+Explicit degradation channel; empty = no fallback,显式降级通道;留空=无回退
+Must belong to the fallback channel,必须属于回退通道
+Scan rule or route rule involved in the event,事件涉及的扫码规则或路由规则
+Ascending; the first matching rule wins,升序;第一条命中的规则生效
+"Exact value / prefix / Python regex for re.fullmatch (max 200 chars)",精确值/前缀/Python 正则(re.fullmatch，最长 200 字符)
+Required scan code length; 0 = any,要求的扫码值长度;0=不限
+Require an all-digit scan code,要求扫码值全为数字
+Apply to one station only; empty = all stations,仅应用于单个站点;留空=全部站点
+Test value checked against this rule on save,保存时用该测试值验证本规则
+"Prefix removed from the code to get the docname",从扫码值中去掉的前缀，用于得到单据名
+Indexed field on the target DocType that stores the scan code,目标 DocType 上存储扫码值的已索引字段
+"safe_exec snippet; receives scan_code and terminal, returns docname(s)",safe_exec 片段;接收 scan_code 与 terminal，返回单据名
+Auto-match a design by DocType/paper when Print Design is empty,打印设计为空时按 DocType/纸张自动匹配设计
+JSON params; __scan_code__ and __terminal__ placeholders are replaced at scan time,JSON 参数;__scan_code__ 与 __terminal__ 占位符在扫码时替换
+0 = use the Zprint Setting dedup window,0=使用扫码打印设置里的去重窗口
+Permit the same code again once the dedup window has passed,去重窗口过后允许再次扫同一码
+Reject draft documents,拒绝草稿单据
+"Comma-separated field names shown on the success banner",逗号分隔的字段名，显示在成功横幅上
+Channel C: clear the Liankenet errLimitNum failure lock automatically,通道 C:自动清除联科 errLimitNum 故障锁
+Unique identifier of the scan terminal,扫码终端的唯一标识
+cloud = public server access; lan = local network server,cloud=公网访问服务器;lan=局域网服务器
+Trailing key the scanner appends to the code (PC browser page),扫码枪附加在码尾的按键(PC 浏览器页面)
+Used when no Route Rule matches; empty = deny printing,无路由规则命中时使用;留空=拒绝打印
+Dedicated login for PDA stations; one user per station,PDA 站点专用登录;每站点一个用户
+Request key for agent/PDA HMAC authentication,代理/PDA HMAC 认证的请求密钥
+Invalid timestamp,时间戳不合法
+Timestamp outside the allowed window,时间戳超出允许窗口
+Unknown station credentials,站点凭证不存在
+Ambiguous station credentials,站点凭证不唯一
+Station is disabled,站点已停用
+Station has no API secret configured,站点未配置 API 密钥
+Signature verification failed,签名校验失败
+Authentication failed,认证失败
+Code Field is required for this Docname Mode,此单据名模式需要填写编码字段
+Code Field must be a plain column name,编码字段必须是纯列名
+Resolve Query is required for this Docname Mode,此单据名模式需要填写解析查询
+Server Scripts are disabled on this site; enable them to use Resolve Query rules,本站点未启用服务器脚本;请启用后才能使用解析查询规则
+Unsupported Docname Mode: {0},不支持的单据名模式:{0}
+No print design matched for {0} {1},没有匹配 {0} {1} 的打印设计
+Params JSON is not valid JSON,参数 JSON 不合法
+Station does not match the authenticated credentials,站点与认证凭证不匹配
+Scan code is required,扫码值必填
+Scan code is too long,扫码值过长
+extra_json is too large,extra_json 过大
+extra_json is not valid JSON,extra_json 不是合法 JSON
+extra_json must be a JSON object,extra_json 必须是 JSON 对象
+Scan print is disabled on this site,本站点未启用扫码打印
+Station has no bound user for permission checks,站点未绑定用于权限校验的用户
+job_ids_json is not valid JSON,job_ids_json 不是合法 JSON
+job_ids_json must be a JSON array,job_ids_json 必须是 JSON 数组

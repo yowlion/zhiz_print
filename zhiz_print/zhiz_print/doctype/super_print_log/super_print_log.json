@@ -21,7 +21,25 @@
   "filters_used",
   "section_break_preview",
   "print_preview_html",
-  "preview_render"
+  "preview_render",
+  "section_break_scan_print",
+  "channel",
+  "job_name",
+  "station",
+  "column_break_scan_print",
+  "copies_mode",
+  "receipt_level",
+  "task_status",
+  "source_terminal",
+  "executor_terminal",
+  "section_break_pdf_artifact",
+  "pdf_path",
+  "pdf_sha256",
+  "pdf_bytes",
+  "column_break_pdf_artifact",
+  "vendor_task_id",
+  "degraded_from_channel",
+  "printer_snapshot"
  ],
  "fields": [
   {
@@ -39,24 +57,24 @@
    "in_list_view": 1,
    "label": "DocType",
    "options": "DocType",
-   "reqd": 1,
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "reference_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Document Name",
-   "reqd": 1,
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
+   "depends_on": "eval:doc.log_type === 'Report Print'",
    "fieldname": "report_name",
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Report Name",
-   "options": "Report",
-   "depends_on": "eval:doc.log_type === 'Report Print'"
+   "options": "Report"
   },
   {
    "fieldname": "column_break_ref",
@@ -67,8 +85,8 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Print Design",
-   "reqd": 1,
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "print_time",
@@ -82,7 +100,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Operation Type",
-   "options": "\nPrint\nExport PDF\nExport Excel",
+   "options": "\nPrint\nExport PDF\nExport Excel\nScanPrint",
    "read_only": 1
   },
   {
@@ -136,6 +154,113 @@
    "fieldname": "preview_render",
    "fieldtype": "HTML",
    "label": "Preview"
+  },
+  {
+   "fieldname": "section_break_scan_print",
+   "fieldtype": "Section Break",
+   "label": "Scan Print"
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Data",
+   "label": "Channel",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_name",
+   "fieldtype": "Link",
+   "label": "Print Job",
+   "options": "Zprint Print Job",
+   "read_only": 1
+  },
+  {
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "label": "Station",
+   "options": "Zprint Station",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_scan_print",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "copies_mode",
+   "fieldtype": "Data",
+   "label": "Copies Mode",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receipt_level",
+   "fieldtype": "Data",
+   "label": "Receipt Level",
+   "read_only": 1
+  },
+  {
+   "fieldname": "task_status",
+   "fieldtype": "Data",
+   "label": "Task Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_terminal",
+   "fieldtype": "Data",
+   "label": "Source Terminal",
+   "read_only": 1
+  },
+  {
+   "fieldname": "executor_terminal",
+   "fieldtype": "Data",
+   "label": "Executor Terminal",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_pdf_artifact",
+   "fieldtype": "Section Break",
+   "label": "PDF Artifact"
+  },
+  {
+   "fieldname": "pdf_path",
+   "fieldtype": "Data",
+   "label": "PDF Path",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pdf_sha256",
+   "fieldtype": "Data",
+   "label": "PDF SHA256",
+   "length": 64,
+   "read_only": 1
+  },
+  {
+   "fieldname": "pdf_bytes",
+   "fieldtype": "Int",
+   "label": "PDF Bytes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pdf_artifact",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vendor_task_id",
+   "fieldtype": "Data",
+   "label": "Vendor Task ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "degraded_from_channel",
+   "fieldtype": "Data",
+   "label": "Degraded From Channel",
+   "read_only": 1
+  },
+  {
+   "fieldname": "printer_snapshot",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Printer Snapshot",
+   "read_only": 1
   }
  ],
  "hide_toolbar": 1,

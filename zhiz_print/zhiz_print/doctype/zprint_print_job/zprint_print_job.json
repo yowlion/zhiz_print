@@ -1,0 +1,286 @@
+{
+ "actions": [],
+ "autoname": "field:job_key",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "job_key",
+  "scan_code",
+  "station",
+  "ref_doctype",
+  "ref_docname",
+  "column_break_job_1",
+  "design_name",
+  "channel",
+  "copies",
+  "copies_mode",
+  "status",
+  "section_break_pdf",
+  "pdf_data",
+  "pdf_file",
+  "column_break_pdf",
+  "pdf_sha256",
+  "section_break_delivery",
+  "client_uuid",
+  "origin_nonce",
+  "column_break_delivery",
+  "vendor_job_id",
+  "ack_code",
+  "retry_count",
+  "degraded_from_channel",
+  "receipt_level",
+  "print_user",
+  "section_break_timeline",
+  "scan_time",
+  "render_started_on",
+  "column_break_timeline",
+  "rendered_on",
+  "dispatched_on",
+  "finalized_on"
+ ],
+ "fields": [
+  {
+   "description": "Primary key: sha256 of scan code, station and dedup window bucket",
+   "fieldname": "job_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Job Key",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "scan_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Scan Code",
+   "reqd": 1
+  },
+  {
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Station",
+   "options": "Zprint Station"
+  },
+  {
+   "fieldname": "ref_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "DocType",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "ref_docname",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Document Name",
+   "options": "ref_doctype"
+  },
+  {
+   "fieldname": "column_break_job_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Super Print Design or native Print Format name",
+   "fieldname": "design_name",
+   "fieldtype": "Data",
+   "label": "Design Name"
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Channel",
+   "options": "\nA\nB\nC"
+  },
+  {
+   "default": "1",
+   "fieldname": "copies",
+   "fieldtype": "Int",
+   "label": "Copies"
+  },
+  {
+   "default": "merged_pages",
+   "fieldname": "copies_mode",
+   "fieldtype": "Select",
+   "label": "Copies Mode",
+   "options": "merged_pages\nnative_device"
+  },
+  {
+   "default": "queued",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "queued\nrendering\ndispatching\nready\ndispatched\nsent\nprinted_queue_ok\njob_state_final\nsubmitted_to_vendor\nvendor_confirmed\nprinted_vendor_confirmed\nfailed\nunknown\nexpired"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_pdf",
+   "fieldtype": "Section Break",
+   "label": "PDF Artifact"
+  },
+  {
+   "description": "Inline base64 PDF below the inline threshold",
+   "fieldname": "pdf_data",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "PDF Data"
+  },
+  {
+   "description": "Private file path for PDFs above the inline threshold",
+   "fieldname": "pdf_file",
+   "fieldtype": "Data",
+   "label": "PDF File",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pdf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pdf_sha256",
+   "fieldtype": "Data",
+   "label": "PDF SHA256",
+   "length": 64,
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_delivery",
+   "fieldtype": "Section Break",
+   "label": "Delivery"
+  },
+  {
+   "description": "Replay idempotency key from the scanning client; leave unset for agent scans",
+   "fieldname": "client_uuid",
+   "fieldtype": "Data",
+   "label": "Client UUID",
+   "unique": 1
+  },
+  {
+   "description": "Vendor idempotency nonce for Channel C submissions",
+   "fieldname": "origin_nonce",
+   "fieldtype": "Data",
+   "label": "Origin Nonce",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_delivery",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vendor_job_id",
+   "fieldtype": "Data",
+   "label": "Vendor Job ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ack_code",
+   "fieldtype": "Data",
+   "label": "Ack Code",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Retry Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "degraded_from_channel",
+   "fieldtype": "Select",
+   "label": "Degraded From Channel",
+   "options": "\nA\nB\nC",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receipt_level",
+   "fieldtype": "Data",
+   "label": "Receipt Level",
+   "read_only": 1
+  },
+  {
+   "fieldname": "print_user",
+   "fieldtype": "Link",
+   "label": "Print User",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_timeline",
+   "fieldtype": "Section Break",
+   "label": "Timeline"
+  },
+  {
+   "fieldname": "scan_time",
+   "fieldtype": "Datetime",
+   "label": "Scan Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "render_started_on",
+   "fieldtype": "Datetime",
+   "label": "Render Started On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_timeline",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rendered_on",
+   "fieldtype": "Datetime",
+   "label": "Rendered On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dispatched_on",
+   "fieldtype": "Datetime",
+   "label": "Dispatched On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finalized_on",
+   "fieldtype": "Datetime",
+   "label": "Finalized On",
+   "read_only": 1
+  }
+ ],
+ "hide_toolbar": 1,
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Print Job",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "scan_time",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "scan_code",
+ "track_changes": 0
+}

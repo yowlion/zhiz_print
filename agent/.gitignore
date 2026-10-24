@@ -1,0 +1,5 @@
+# Build artifacts - the deliverable is produced by the packaging step.
+agent.exe
+agent
+agent.test
+dist/

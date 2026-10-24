@@ -56,6 +56,71 @@ def _check_draft_no_print(design_name, doc=None):
         )
 
 
+def get_render_timeout():
+    """Seconds allowed for one Chromium render subprocess.
+
+    Replaces the previous hard-coded timeout=60. Reads
+    Zprint Setting.scan_render_budget_s (cint, default 30) so cloud/LAN
+    topologies can tune the render budget (scan-print plan 6-3/7-4).
+    """
+    return cint(frappe.db.get_single_value("Zprint Setting", "scan_render_budget_s")) or 30
+
+
+def _get_chromium_command():
+    """Resolve the Chromium executable for headless PDF rendering.
+
+    Zprint Setting.chromium_path wins when set and resolvable (absolute path
+    via os.path.exists, or bare command name via shutil.which). Otherwise fall
+    back to the legacy probe order (snap Chromium first, then PATH names).
+    Returns None when nothing is found.
+    """
+    import os
+    import shutil
+    import subprocess
+
+    configured = (frappe.db.get_single_value("Zprint Setting", "chromium_path") or "").strip()
+    if configured:
+        try:
+            if os.path.exists(configured) or shutil.which(configured):
+                return configured
+        except Exception:
+            pass
+
+    for cmd in ['/snap/bin/chromium', 'chromium-browser', 'chromium', 'google-chrome', 'google-chrome-stable']:
+        try:
+            result = subprocess.run(['which', cmd], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except Exception:
+            continue
+    return None
+
+
+def _chromium_tmp_dir():
+    """Base dir for per-request Chromium temp files.
+
+    Uses the site private area (not /tmp) because snap Chromium builds cannot
+    access /tmp. Callers create uniquely named files under it via mkstemp.
+    """
+    import os
+    tmpdir = os.path.abspath(frappe.get_site_path('private', 'tmp', 'chromium'))
+    os.makedirs(tmpdir, exist_ok=True)
+    return tmpdir
+
+
+def _pdf_debug_dir(create=True):
+    """Debug artifact dir under the site private files area.
+
+    Formerly public/files/pdf_debug, which nginx served unauthenticated
+    (scan-print plan 7-2). Shared with api/maintenance.py cleanup.
+    """
+    import os
+    debug_dir = os.path.abspath(frappe.get_site_path('private', 'files', 'pdf_debug'))
+    if create:
+        os.makedirs(debug_dir, exist_ok=True)
+    return debug_dir
+
+
 PX_PER_MM = 4
 
 
@@ -646,10 +711,11 @@ def _generate_print_pdf_weasyprint(doctype, docname, design_name, params=None, p
     # PDF-specific: convert relative image URLs to file:// paths
     html = _resolve_image_urls_for_pdf(html)
 
-    # DEBUG: save final HTML
+    # DEBUG: save final HTML under site private files (the old
+    # public/files/pdf_debug location was served unauthenticated by nginx,
+    # scan-print plan 7-2)
     import os
-    debug_dir = os.path.join(frappe.get_site_path(), 'public', 'files', 'pdf_debug')
-    os.makedirs(debug_dir, exist_ok=True)
+    debug_dir = _pdf_debug_dir()
     with open(os.path.join(debug_dir, '03_weasyprint_final.html'), 'w', encoding='utf-8') as f:
         f.write(html)
 
@@ -820,33 +886,23 @@ def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, pag
     # PDF-specific: convert relative image URLs to file:// paths
     html = _resolve_image_urls_for_pdf(html)
 
-    # Find available Chromium executable
-    chromium_cmd = None
-    for cmd in ['/snap/bin/chromium', 'chromium-browser', 'chromium', 'google-chrome', 'google-chrome-stable']:
-        try:
-            result = subprocess.run(['which', cmd], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0 and result.stdout.strip():
-                chromium_cmd = result.stdout.strip()
-                break
-        except Exception:
-            continue
-
+    chromium_cmd = _get_chromium_command()
     if not chromium_cmd:
         frappe.throw(_("Chromium is not installed. Please run: apt-get install -y chromium-browser"))
 
-    # Use site files dir (snap Chromium cannot write to /tmp)
-    tmpdir = os.path.abspath(os.path.join(frappe.get_site_path(), 'public', 'files', 'pdf_debug'))
-    os.makedirs(tmpdir, exist_ok=True)
-    html_path = os.path.join(tmpdir, 'chrome_input.html')
-    pdf_path = os.path.join(tmpdir, 'chrome_output.pdf')
-
-    with open(html_path, 'w', encoding='utf-8') as f:
-        f.write(html)
+    # Per-request unique temp files (scan-print plan 7-1): the old fixed names
+    # let concurrent renders overwrite/delete each other's input HTML / output
+    # PDF (wrong printout). mkstemp under site private tmp (snap Chromium
+    # cannot access /tmp); both files are removed in finally.
+    tmpdir = _chromium_tmp_dir()
+    html_fd, html_path = tempfile.mkstemp(prefix='chrome_input_', suffix='.html', dir=tmpdir)
+    os.close(html_fd)
+    pdf_fd, pdf_path = tempfile.mkstemp(prefix='chrome_output_', suffix='.pdf', dir=tmpdir)
+    os.close(pdf_fd)
 
     try:
-        # Clean up old PDF
-        if os.path.exists(pdf_path):
-            os.remove(pdf_path)
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html)
 
         # Build Chromium command
         chrome_args = [
@@ -865,10 +921,11 @@ def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, pag
                 'marginTop': 0, 'marginBottom': 0, 'marginLeft': 0, 'marginRight': 0,
             }))
         chrome_args.append('file://' + html_path)
-        result = subprocess.run(chrome_args, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(chrome_args, capture_output=True, text=True, timeout=get_render_timeout())
 
-        if not os.path.exists(pdf_path):
-            # 可观测性:returncode/stderr 进日志与异常,不再无声失败
+        # mkstemp pre-creates the pdf file, so "not created" == empty file
+        if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) == 0:
+            # Observability: returncode/stderr into log and exception, no silent failure
             _stderr_tail = (result.stderr or '')[-500:] if result else ''
             frappe.log_error(
                 "chromium_cmd={0} returncode={1}\nstderr_tail={2}\ncmd={3}".format(
@@ -888,6 +945,12 @@ def _generate_print_pdf_chromium(doctype, docname, design_name, params=None, pag
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), 'Chromium PDF generation failed')
         frappe.throw(_("PDF generation failed: {0}").format(str(e)))
+    finally:
+        for _tmp in (html_path, pdf_path):
+            try:
+                os.remove(_tmp)
+            except OSError:
+                pass
 
 
 @frappe.whitelist()

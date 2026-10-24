@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "autoname": "field:agent_id",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "agent_id",
+  "station",
+  "status",
+  "column_break_agent",
+  "agent_version",
+  "last_heartbeat",
+  "queue_depth",
+  "printers_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "agent_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Agent ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Station",
+   "options": "Zprint Station"
+  },
+  {
+   "default": "offline",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "online\noffline\nversion_low"
+  },
+  {
+   "fieldname": "column_break_agent",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "agent_version",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Agent Version"
+  },
+  {
+   "fieldname": "last_heartbeat",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Last Heartbeat"
+  },
+  {
+   "default": "0",
+   "fieldname": "queue_depth",
+   "fieldtype": "Int",
+   "label": "Queue Depth"
+  },
+  {
+   "description": "Winspool state snapshot reported by the agent heartbeat",
+   "fieldname": "printers_status",
+   "fieldtype": "Code",
+   "label": "Printers Status",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Agent",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "agent_id",
+ "track_changes": 0
+}

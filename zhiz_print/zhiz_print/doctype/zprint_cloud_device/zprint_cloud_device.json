@@ -1,0 +1,140 @@
+{
+ "actions": [],
+ "autoname": "field:device_sn",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "device_sn",
+  "device_type",
+  "enabled",
+  "section_break_credentials",
+  "api_key",
+  "credential",
+  "column_break_credentials",
+  "workstation",
+  "callback_secret",
+  "section_break_device_status",
+  "last_device_status",
+  "column_break_device_status",
+  "service_expire_date",
+  "section_break_text_template",
+  "text_template"
+ ],
+ "fields": [
+  {
+   "fieldname": "device_sn",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Device SN",
+   "reqd": 1
+  },
+  {
+   "fieldname": "device_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Device Type",
+   "options": "LiankenetBox\nXpyun",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "section_break_credentials",
+   "fieldtype": "Section Break",
+   "label": "Credentials"
+  },
+  {
+   "fieldname": "api_key",
+   "fieldtype": "Data",
+   "label": "API Key"
+  },
+  {
+   "fieldname": "credential",
+   "fieldtype": "Password",
+   "label": "Credential"
+  },
+  {
+   "fieldname": "column_break_credentials",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Workstation name for Liankenet devices",
+   "fieldname": "workstation",
+   "fieldtype": "Data",
+   "label": "Workstation"
+  },
+  {
+   "fieldname": "callback_secret",
+   "fieldtype": "Password",
+   "label": "Callback Secret"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_device_status",
+   "fieldtype": "Section Break",
+   "label": "Device Status"
+  },
+  {
+   "fieldname": "last_device_status",
+   "fieldtype": "Code",
+   "label": "Last Device Status",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_device_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "service_expire_date",
+   "fieldtype": "Date",
+   "label": "Service Expire Date"
+  },
+  {
+   "fieldname": "section_break_text_template",
+   "fieldtype": "Section Break",
+   "label": "Text Template"
+  },
+  {
+   "depends_on": "eval:doc.device_type=='Xpyun'",
+   "description": "Xpyun text ticket template; placeholders __scan_code__ __docname__ __date__",
+   "fieldname": "text_template",
+   "fieldtype": "Long Text",
+   "label": "Text Template"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Cloud Device",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "device_sn",
+ "track_changes": 1
+}

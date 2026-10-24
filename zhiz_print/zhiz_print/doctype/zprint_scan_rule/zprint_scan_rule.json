@@ -1,0 +1,289 @@
+{
+ "actions": [],
+ "autoname": "field:rule_name",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule_name",
+  "enabled",
+  "priority",
+  "section_break_match",
+  "match_mode",
+  "match_pattern",
+  "column_break_match",
+  "case_sensitive",
+  "match_length",
+  "digit_only",
+  "station_filter",
+  "sample_scan_value",
+  "section_break_resolve",
+  "target_doctype",
+  "docname_mode",
+  "column_break_resolve",
+  "strip_prefix",
+  "code_field",
+  "resolve_query",
+  "section_break_template",
+  "template_track",
+  "design_name",
+  "use_auto_match",
+  "column_break_template",
+  "native_print_format",
+  "params_json",
+  "section_break_print_options",
+  "copies",
+  "dedup_seconds",
+  "column_break_print_options",
+  "allow_reprint",
+  "block_draft",
+  "success_hint_fields"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Rule Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "100",
+   "description": "Ascending; the first matching rule wins",
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Priority"
+  },
+  {
+   "fieldname": "section_break_match",
+   "fieldtype": "Section Break",
+   "label": "Match Rules"
+  },
+  {
+   "default": "Exact",
+   "fieldname": "match_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Match Mode",
+   "options": "Exact\nPrefix\nRegex"
+  },
+  {
+   "description": "Exact value / prefix / Python regex for re.fullmatch (max 200 chars)",
+   "fieldname": "match_pattern",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Match Pattern",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_match",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "case_sensitive",
+   "fieldtype": "Check",
+   "label": "Case Sensitive"
+  },
+  {
+   "default": "0",
+   "description": "Required scan code length; 0 = any",
+   "fieldname": "match_length",
+   "fieldtype": "Int",
+   "label": "Match Length"
+  },
+  {
+   "default": "0",
+   "description": "Require an all-digit scan code",
+   "fieldname": "digit_only",
+   "fieldtype": "Check",
+   "label": "Digit Only"
+  },
+  {
+   "description": "Apply to one station only; empty = all stations",
+   "fieldname": "station_filter",
+   "fieldtype": "Link",
+   "label": "Station Filter",
+   "options": "Zprint Station"
+  },
+  {
+   "description": "Test value checked against this rule on save",
+   "fieldname": "sample_scan_value",
+   "fieldtype": "Data",
+   "label": "Sample Scan Value"
+  },
+  {
+   "fieldname": "section_break_resolve",
+   "fieldtype": "Section Break",
+   "label": "Document Resolution"
+  },
+  {
+   "fieldname": "target_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Target DocType",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "default": "code_is_docname",
+   "fieldname": "docname_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Docname Mode",
+   "options": "code_is_docname\nstrip_prefix\ncode_field\nresolve_query"
+  },
+  {
+   "fieldname": "column_break_resolve",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.docname_mode == 'strip_prefix'",
+   "description": "Prefix removed from the code to get the docname",
+   "fieldname": "strip_prefix",
+   "fieldtype": "Data",
+   "label": "Strip Prefix"
+  },
+  {
+   "depends_on": "eval:doc.docname_mode == 'code_field'",
+   "description": "Indexed field on the target DocType that stores the scan code",
+   "fieldname": "code_field",
+   "fieldtype": "Data",
+   "label": "Code Field"
+  },
+  {
+   "depends_on": "eval:doc.docname_mode == 'resolve_query'",
+   "description": "safe_exec snippet; receives scan_code and terminal, returns docname(s)",
+   "fieldname": "resolve_query",
+   "fieldtype": "Code",
+   "label": "Resolve Query",
+   "options": "Python"
+  },
+  {
+   "fieldname": "section_break_template",
+   "fieldtype": "Section Break",
+   "label": "Template Binding"
+  },
+  {
+   "default": "super_design",
+   "fieldname": "template_track",
+   "fieldtype": "Select",
+   "label": "Template Track",
+   "options": "super_design\nnative_format"
+  },
+  {
+   "depends_on": "eval:doc.template_track == 'super_design'",
+   "fieldname": "design_name",
+   "fieldtype": "Link",
+   "label": "Print Design",
+   "options": "Super Print Design"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.template_track == 'super_design'",
+   "description": "Auto-match a design by DocType/paper when Print Design is empty",
+   "fieldname": "use_auto_match",
+   "fieldtype": "Check",
+   "label": "Use Auto Match"
+  },
+  {
+   "fieldname": "column_break_template",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.template_track == 'native_format'",
+   "fieldname": "native_print_format",
+   "fieldtype": "Link",
+   "label": "Print Format",
+   "options": "Print Format"
+  },
+  {
+   "description": "JSON params; __scan_code__ and __terminal__ placeholders are replaced at scan time",
+   "fieldname": "params_json",
+   "fieldtype": "Code",
+   "label": "Params JSON",
+   "options": "JSON"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_print_options",
+   "fieldtype": "Section Break",
+   "label": "Print Options"
+  },
+  {
+   "default": "1",
+   "fieldname": "copies",
+   "fieldtype": "Int",
+   "label": "Copies"
+  },
+  {
+   "default": "0",
+   "description": "0 = use the Zprint Setting dedup window",
+   "fieldname": "dedup_seconds",
+   "fieldtype": "Int",
+   "label": "Dedup Window (sec)"
+  },
+  {
+   "fieldname": "column_break_print_options",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Permit the same code again once the dedup window has passed",
+   "fieldname": "allow_reprint",
+   "fieldtype": "Check",
+   "label": "Allow Reprint"
+  },
+  {
+   "default": "1",
+   "description": "Reject draft documents",
+   "fieldname": "block_draft",
+   "fieldtype": "Check",
+   "label": "Block Drafts"
+  },
+  {
+   "description": "Comma-separated field names shown on the success banner",
+   "fieldname": "success_hint_fields",
+   "fieldtype": "Small Text",
+   "label": "Success Hint Fields"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Scan Rule",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "rule_name",
+ "track_changes": 1
+}

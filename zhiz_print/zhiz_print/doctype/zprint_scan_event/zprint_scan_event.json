@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "autoname": "format:SCANEV-{YYYY}-{#####}",
+ "creation": "2026-10-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "event_time",
+  "station",
+  "scan_value",
+  "column_break_scan_event",
+  "event_type",
+  "rule",
+  "message"
+ ],
+ "fields": [
+  {
+   "default": "Now",
+   "fieldname": "event_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Event Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Station",
+   "options": "Zprint Station"
+  },
+  {
+   "fieldname": "scan_value",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Scan Value"
+  },
+  {
+   "fieldname": "column_break_scan_event",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event Type",
+   "options": "NoRule\nNoDoc\nDupBlocked\nDraftBlocked\nRenderFail\nLicenseExpired\nEntitlementDenied\nPrinterOffline\nNetTimeout\nNoRoute\nAgentOffline",
+   "reqd": 1
+  },
+  {
+   "description": "Scan rule or route rule involved in the event",
+   "fieldname": "rule",
+   "fieldtype": "Data",
+   "label": "Rule Name"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message"
+  }
+ ],
+ "hide_toolbar": 1,
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Zhiz Print",
+ "name": "Zprint Scan Event",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "event_time",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "scan_value",
+ "track_changes": 0
+}

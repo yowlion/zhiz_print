@@ -20,6 +20,8 @@ LICENSE_CACHE_TTL = 86400
 LICENSE_REMOTE_VALIDATE_INTERVAL = 14400
 LICENSE_LAST_REMOTE_KEY = "zhiz_print:last_remote_validate"
 MAX_OFFLINE_DAYS = 7
+SCAN_ENTITLEMENT_CACHE_KEY = "zhiz_print:scan_entitlement"
+SCAN_ENTITLEMENT_CACHE_TTL = 3600
 _LOCAL_SIGN_SECRET = hashlib.sha256((API_SECRET + ":local_license_sign:v1").encode()).hexdigest()
 
 
@@ -557,6 +559,8 @@ def activate_license(license_key):
     frappe.db.commit()
 
     frappe.cache().delete_value(LICENSE_CACHE_KEY)
+    # A new key changes the silent-print verdict; drop the 1h entitlement cache
+    frappe.cache().delete_value(SCAN_ENTITLEMENT_CACHE_KEY)
 
     return {
         "success": True,
@@ -831,3 +835,93 @@ def _recover_license_by_machine():
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
     frappe.cache().delete_value(LICENSE_CACHE_KEY)
+
+
+def _cache_entitlement(result):
+    """Cache a silent-print entitlement verdict with an anti-tamper signature.
+
+    Same envelope as _cache_result: {"data": ..., "signature": sign_data(data)};
+    a forged Redis entry without the HMAC fails verify_signature and is
+    recomputed from the license records.
+    """
+    cached = {
+        "data": result,
+        "signature": sign_data(result),
+    }
+    frappe.cache().set_value(
+        SCAN_ENTITLEMENT_CACHE_KEY, cached, expires_in_sec=SCAN_ENTITLEMENT_CACHE_TTL
+    )
+
+
+def has_silent_print_entitlement():
+    """Paid-feature gate for network silent printing (scan-print multi-route).
+
+    Network silent printing is a PAID feature (plan decision 2026-10-24): the
+    activation code every installation receives for free must NOT unlock it.
+    Entitlement requires ALL of:
+
+    1. check_license_valid() == True (reuses the 24h-cached license verdict,
+       including its remote-validate throttling).
+    2. The latest Active license_key does NOT start with "STD-". The "STD-"
+       prefix is the machine-issued free code: zhiz_licser
+       api/license_api.py request_trial() always generates keys of the form
+       "STD-{xxxxx}-{xxxxxxxx}-{xxxxxxxx}" (plan=Standard). Paid keys come
+       from the purchase flow and carry no such prefix.
+    3. plan != "Trial".
+
+    Returns (entitled: bool, reason_code: str). reason_code is one of:
+    OK / NO_LICENSE / LICENSE_INVALID / STD_AUTO_LICENSE / TRIAL_LICENSE /
+    EXPIRED.
+
+    The verdict is cached under the separate Redis key
+    zhiz_print:scan_entitlement (TTL 3600) with the sign_data anti-tamper
+    envelope; activate_license() deletes this key on success so a newly
+    activated paid key takes effect immediately.
+    """
+    cached = frappe.cache().get_value(SCAN_ENTITLEMENT_CACHE_KEY)
+    if cached:
+        if verify_signature(cached.get("data", {}), cached.get("signature", "")):
+            data = cached["data"]
+            return (bool(data.get("entitled", False)), data.get("reason_code", ""))
+
+    valid, info = check_license_valid()
+    if not valid:
+        status = (info or {}).get("status") or ""
+        if status == "Expired":
+            reason_code = "EXPIRED"
+        elif status == "No License":
+            reason_code = "NO_LICENSE"
+        else:
+            # Tampered / Locked / other hard-fail states
+            reason_code = "LICENSE_INVALID"
+        result = {"entitled": False, "reason_code": reason_code}
+        _cache_entitlement(result)
+        return (False, reason_code)
+
+    licenses = frappe.get_all(
+        "Zprint License",
+        filters={"status": "Active"},
+        fields=["license_key", "plan"],
+        order_by="activated_at desc",
+        limit=1,
+    )
+    if not licenses:
+        # Defensive: valid=True from cache but no Active row visible yet
+        result = {"entitled": False, "reason_code": "NO_LICENSE"}
+        _cache_entitlement(result)
+        return (False, "NO_LICENSE")
+
+    license_key = licenses[0].get("license_key") or ""
+    plan = licenses[0].get("plan") or ""
+
+    if license_key.startswith("STD-"):
+        reason_code = "STD_AUTO_LICENSE"
+    elif plan == "Trial":
+        reason_code = "TRIAL_LICENSE"
+    else:
+        reason_code = "OK"
+
+    entitled = reason_code == "OK"
+    result = {"entitled": entitled, "reason_code": reason_code}
+    _cache_entitlement(result)
+    return (entitled, reason_code)

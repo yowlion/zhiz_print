@@ -25,6 +25,27 @@
   "allow_export_excel",
   "section_break_native",
   "enable_native_print_formats",
+  "section_break_scan_print",
+  "scan_print_enabled",
+  "channel_a_enabled",
+  "channel_b_enabled",
+  "channel_c_enabled",
+  "long_poll_enabled",
+  "scan_semaphore_mode",
+  "column_break_scan_1",
+  "poll_interval_sec",
+  "dedup_window_sec",
+  "max_retry",
+  "job_retain_days",
+  "min_agent_version",
+  "column_break_scan_2",
+  "pdf_inline_threshold_bytes",
+  "scan_render_budget_s",
+  "scan_max_concurrent",
+  "template_asset_budget_bytes",
+  "chromium_path",
+  "vendor_confirm_timeout_sec",
+  "auto_reset_vendor_err_limit",
   "section_break_license",
   "license_info",
   "license_key_input",
@@ -159,6 +180,140 @@
    "label": "Enable Supported Native Print Formats"
   },
   {
+   "fieldname": "section_break_scan_print",
+   "fieldtype": "Section Break",
+   "label": "Scan Print"
+  },
+  {
+   "default": "0",
+   "description": "Master switch for scan-to-print (silent printing). Paid feature: only paid (non-STD) activation keys are allowed",
+   "fieldname": "scan_print_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Scan Print"
+  },
+  {
+   "default": "1",
+   "description": "Channel A: print agent (ZhizPrintAgent) on a shop-floor Windows PC",
+   "fieldname": "channel_a_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Channel A"
+  },
+  {
+   "default": "0",
+   "description": "Channel B: direct IPP to LAN printers. Keep off for cloud deployments",
+   "fieldname": "channel_b_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Channel B"
+  },
+  {
+   "default": "0",
+   "description": "Channel C: cloud printer/box (Liankenet, Xpyun)",
+   "fieldname": "channel_c_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Channel C"
+  },
+  {
+   "default": "0",
+   "description": "Long polling on scan endpoints. Keep off by default (gunicorn sync workers are scarce)",
+   "fieldname": "long_poll_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Long Polling"
+  },
+  {
+   "default": "Cloud",
+   "description": "Semaphore sizing basis for concurrent scan renders: Cloud=2 slots, LAN=4 slots",
+   "fieldname": "scan_semaphore_mode",
+   "fieldtype": "Select",
+   "label": "Scan Semaphore Mode",
+   "options": "Cloud\nLAN"
+  },
+  {
+   "fieldname": "column_break_scan_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "3",
+   "fieldname": "poll_interval_sec",
+   "fieldtype": "Int",
+   "label": "Poll Interval (sec)"
+  },
+  {
+   "default": "60",
+   "description": "Same scan code + station within this window merges into one print job",
+   "fieldname": "dedup_window_sec",
+   "fieldtype": "Int",
+   "label": "Dedup Window (sec)"
+  },
+  {
+   "default": "2",
+   "fieldname": "max_retry",
+   "fieldtype": "Int",
+   "label": "Max Retry"
+  },
+  {
+   "default": "30",
+   "fieldname": "job_retain_days",
+   "fieldtype": "Int",
+   "label": "Job Retain Days"
+  },
+  {
+   "description": "Lowest accepted print agent version; older agents are flagged in the agent dashboard",
+   "fieldname": "min_agent_version",
+   "fieldtype": "Data",
+   "label": "Min Agent Version"
+  },
+  {
+   "fieldname": "column_break_scan_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "2097152",
+   "description": "PDF up to this size is stored inline in the job row, larger goes to private files",
+   "fieldname": "pdf_inline_threshold_bytes",
+   "fieldtype": "Int",
+   "label": "PDF Inline Threshold (bytes)"
+  },
+  {
+   "default": "30",
+   "description": "Seconds allowed for one PDF render (Chromium subprocess timeout)",
+   "fieldname": "scan_render_budget_s",
+   "fieldtype": "Int",
+   "label": "Scan Render Budget (sec)"
+  },
+  {
+   "default": "4",
+   "fieldname": "scan_max_concurrent",
+   "fieldtype": "Int",
+   "label": "Scan Max Concurrent"
+  },
+  {
+   "default": "3145728",
+   "description": "Hard cap on template asset size (images etc.) for scan rendering",
+   "fieldname": "template_asset_budget_bytes",
+   "fieldtype": "Int",
+   "label": "Template Asset Budget (bytes)"
+  },
+  {
+   "description": "Absolute path or command name of the Chromium executable, overrides auto-detection when valid",
+   "fieldname": "chromium_path",
+   "fieldtype": "Data",
+   "label": "Chromium Path"
+  },
+  {
+   "default": "600",
+   "description": "Seconds before an unconfirmed Channel C vendor job turns unknown",
+   "fieldname": "vendor_confirm_timeout_sec",
+   "fieldtype": "Int",
+   "label": "Vendor Confirm Timeout (sec)"
+  },
+  {
+   "default": "0",
+   "description": "Channel C: clear the Liankenet errLimitNum failure lock automatically",
+   "fieldname": "auto_reset_vendor_err_limit",
+   "fieldtype": "Check",
+   "label": "Auto Reset Vendor Error Limit"
+  },
+  {
    "fieldname": "section_break_license",
    "fieldtype": "Section Break",
    "label": "Subscription"
@@ -184,7 +339,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-04-13 00:00:00.000000",
+ "modified": "2026-10-24 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Zhiz Print",
  "name": "Zprint Setting",
