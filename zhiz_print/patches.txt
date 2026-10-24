@@ -2,3 +2,4 @@ zhiz_print.zhiz_print.patches.install_batch_print_page
 zhiz_print.zhiz_print.patches.unify_cell_types
 zhiz_print.zhiz_print.patches.add_scan_module_def
 zhiz_print.zhiz_print.patches.add_dummy_module
+zhiz_print.zhiz_print.patches.fix_dummy_module_app_name
