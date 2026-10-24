@@ -9,7 +9,7 @@ frappe.ui.form.on('Zprint Printer', {
         if (frm.doc.channel === 'B') {
             frm.add_custom_button(__('Probe Capability'), function() {
                 frappe.call({
-                    method: 'zhiz_print.zhiz_print.doctype.zprint_printer.zprint_printer.probe_capability',
+                    method: 'zhiz_print.zhiz_print_scan.doctype.zprint_printer.zprint_printer.probe_capability',
                     args: { printer: frm.doc.name },
                     freeze: true,
                     freeze_message: __('Queuing capability probe...'),

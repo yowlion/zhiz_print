@@ -60,7 +60,7 @@ def probe_capability(printer):
     if not frappe.has_permission("Zprint Printer", "write", doc=probe_printer):
         frappe.throw(_("Not permitted"), frappe.PermissionError)
     frappe.enqueue(
-        "zhiz_print.zhiz_print.doctype.zprint_printer.zprint_printer._run_capability_probe",
+        "zhiz_print.zhiz_print_scan.doctype.zprint_printer.zprint_printer._run_capability_probe",
         queue="short",
         timeout=120,
         enqueue_after_commit=True,

@@ -1,2 +1,3 @@
 zhiz_print.zhiz_print.patches.install_batch_print_page
 zhiz_print.zhiz_print.patches.unify_cell_types
+zhiz_print.zhiz_print.patches.add_scan_module_def

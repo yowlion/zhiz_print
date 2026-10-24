@@ -23,7 +23,7 @@ from frappe.utils import cint
 from frappe.utils.safe_exec import ServerScriptNotEnabled
 
 from zhiz_print.api.license import has_silent_print_entitlement
-from zhiz_print.zhiz_print.doctype.zprint_scan_rule.zprint_scan_rule import ZprintScanRule
+from zhiz_print.zhiz_print_scan.doctype.zprint_scan_rule.zprint_scan_rule import ZprintScanRule
 
 HMAC_TIMESTAMP_WINDOW = 300
 MAX_SCAN_CODE_LENGTH = 500
