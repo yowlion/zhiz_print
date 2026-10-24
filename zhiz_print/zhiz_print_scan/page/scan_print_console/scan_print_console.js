@@ -1,7 +1,7 @@
 // Scan Print Console
 // Desk entry for the scan-print kiosk: switches, link/QR and inline preview.
 
-frappe.pages["scan-print-console"].on_page_load = function (wrapper) {
+const spConsoleSetup = function (wrapper) {
     frappe.ui.make_app_page({ parent: wrapper });
 
     const page = wrapper.page;
@@ -39,7 +39,7 @@ frappe.pages["scan-print-console"].on_page_load = function (wrapper) {
         (ok ? __(okTxt) : __(badTxt)) + "</span>";
 
     frappe.call({
-        method: "zhiz_print.zhiz_print.page.scan_print_console.scan_print_console.console_bootstrap",
+        method: "zhiz_print.zhiz_print_scan.page.scan_print_console.scan_print_console.console_bootstrap",
         args: { url: kiosk_url },
         callback: (r) => {
             const m = r.message || {};
@@ -68,3 +68,11 @@ frappe.pages["scan-print-console"].on_page_load = function (wrapper) {
         },
     });
 };
+
+// Register under both key forms: the route string keeps underscores
+// (container.add_page keys frappe.pages by route str), while some
+// flows reference the slugged form.
+frappe.pages["scan_print_console"] = frappe.pages["scan_print_console"] || {};
+frappe.pages["scan-print-console"] = frappe.pages["scan-print-console"] || {};
+frappe.pages["scan_print_console"].on_page_load = spConsoleSetup;
+frappe.pages["scan-print-console"].on_page_load = spConsoleSetup;
