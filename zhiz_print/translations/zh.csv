@@ -774,3 +774,13 @@ Scan print is disabled on this site,本站点未启用扫码打印
 Station has no bound user for permission checks,站点未绑定用于权限校验的用户
 job_ids_json is not valid JSON,job_ids_json 不是合法 JSON
 job_ids_json must be a JSON array,job_ids_json 必须是 JSON 数组
+Scan Print Console,扫码打印台
+Open Scan Page,打开扫码页
+Open on scanner device,在扫码设备上打开
+Kiosk Preview,扫码页预览
+Scan Feature,扫码功能
+Silent Print Entitlement,静默打印授权
+Granted,已授权
+Not granted,未授权
+Scan this QR with the scanner device browser,用扫码枪设备浏览器扫此二维码
+URL too long,URL 过长

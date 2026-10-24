@@ -1,0 +1,18 @@
+{
+ "content": null,
+ "creation": "2026-10-24 22:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified_by": "Administrator",
+ "module": "Zhiz Print Scan",
+ "name": "scan_print_console",
+ "owner": "Administrator",
+ "page_name": "Scan Print Console",
+ "title": "扫码打印台",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0
+}
