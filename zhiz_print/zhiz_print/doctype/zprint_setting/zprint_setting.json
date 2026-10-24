@@ -180,6 +180,7 @@
    "label": "Enable Supported Native Print Formats"
   },
   {
+   "collapsible": 1,
    "fieldname": "section_break_scan_print",
    "fieldtype": "Section Break",
    "label": "Scan Print"
