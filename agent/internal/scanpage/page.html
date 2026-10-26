@@ -239,7 +239,7 @@
     function submitCode(code) {
         if (!started) { return; }
         if (!allowed) { sound("warn"); return; }
-        if (!erpOnline) { setBanner("warn", MSG.noerp); sound("warn"); return; }
+        if (!erpOnline) { setBanner("warn", MSG.noerp); sound("warn"); boot(); return; }
         setBanner("work", MSG.sending);
         trackJob("pending-" + String(Date.now()) + "-" + Math.floor(Math.random() * 1e6), code);
         var pendingId = current;
@@ -276,7 +276,10 @@
     }
     function pollOnce() {
         var ids = order.filter(function (id) { return id.indexOf("pending-") !== 0; });
-        if (!ids.length) { return; }
+        if (!ids.length) {
+            if (!erpOnline) { boot(); } /* offline self-heal: re-probe boot instead of idling */
+            return;
+        }
         api("/status", { job_ids: ids })
             .then(function (resp) {
                 erpOnline = true;

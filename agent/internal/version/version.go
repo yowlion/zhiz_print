@@ -4,4 +4,4 @@
 package version
 
 // Version of ZhizPrintAgent (v1 scope per plan 2; self-upgrade lands v1.1).
-const Version = "1.0.0"
+const Version = "1.0.1"
