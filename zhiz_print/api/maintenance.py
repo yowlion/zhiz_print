@@ -133,7 +133,7 @@ def expire_stale_jobs():
             "Zprint Print Job",
             filters={"status": "ready",
                      "dispatched_on": ["<", _ago(AGENT_STALE_SEC)]},
-            fields=["name", "station", "scan_code", "rule"],
+            fields=["name", "station", "scan_code"],
             limit=50,
         )
         for row in stale_ready:
@@ -143,8 +143,9 @@ def expire_stale_jobs():
                  "finalized_on": now},
                 update_modified=True)
             update_log_receipt(row.name, "failed", task_status="stale")
+            # Print Job 没有 rule 列(那是 Scan Event 的字段)，这里不带回
             _scan_event("AgentOffline", station=row.station,
-                        scan_value=row.scan_code, rule=row.rule,
+                        scan_value=row.scan_code,
                         message="Ready job {0} was never claimed by an "
                                 "agent".format(row.name))
             frappe.log_error(
