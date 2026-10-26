@@ -462,7 +462,9 @@ class SuperPrintDesign(frappe.model.document.Document):
             result = frappe.safe_eval(expr, {}, local_vars)
             return str(result) if result is not None else ''
         except Exception:
-            frappe.log_error(frappe.get_traceback(), 'Logic code eval failed: %s' % expr[:100])
+            # 同 _eval_expression_cell:title 短前缀,traceback 进 message 体
+            frappe.log_error('Logic code eval failed',
+                             'Expression: %s\n\n%s' % (expr, frappe.get_traceback()))
             return ''
 
     @staticmethod
@@ -1209,9 +1211,12 @@ class SuperPrintDesign(frappe.model.document.Document):
             # 求值必失败(NameError)——直接返回替换后的文本,剥掉冗余 '=' 前缀。
             # 例: ={doc.name} → doc.name 替换 → 'MFG-WO-...' → 显示单号(而非原文)。
             # 真正的表达式语法错误同样落入此兜底:显示替换后的可读文本优于显示带=原文。
+            # v15 log_error(title, message): 首参是 title(Error Log 标题硬上限
+            # 140,超限时写日志本身即抛「将被截断」错,真 traceback 全丢)。
+            # 标题只放固定短前缀,完整表达式+traceback 进 message 体。
             frappe.log_error(
-                frappe.get_traceback(),
-                'Super Print Design: expression eval failed: %s' % (raw[:120]))
+                'Super Print Design: expression eval failed',
+                'Expression: %s\n\n%s' % (raw, frappe.get_traceback()))
             return expr if expr else raw
 
     def _eval_rowsum(self, target_row, target_col, data_items, cell_map, doc, query_results, params):
