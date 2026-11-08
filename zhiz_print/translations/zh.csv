@@ -283,7 +283,7 @@ Unmerge Inherit,继承打散
 "Content stays in first cell, others become empty",左侧打散：取消合并后内容保留在第一个单元格，其余单元格为空
 Content is copied to every freed cell,继承打散：取消合并后内容复制到每个释放的单元格
 Unmerged with content inherited,已继承打散
-Unmerged, content kept in first cell,已左侧打散
+"Unmerged, content kept in first cell",已左侧打散
 Format Painter,格式刷
 Select a cell first,请先选择一个单元格
 Format Painter activated,格式刷已激活
@@ -411,10 +411,10 @@ Filters Used,使用的筛选
 超级打印,超级打印
 Filters Applied,已应用筛选
 Create Report Design,新建报表设计
-No report designs found. Create one to start printing this report.,未找到报表设计,新建后即可打印该报表。
+No report designs found. Create one to start printing this report.,"未找到报表设计,新建后即可打印该报表。"
 Refresh Report Data,刷新报表数据
 Too many rows,行数过多
-Rows exceed limit. Consider exporting to Excel instead.,行数超出上限,建议改用 Excel 导出。
+Rows exceed limit. Consider exporting to Excel instead.,"行数超出上限,建议改用 Excel 导出。"
 Report Data,报表数据
 Failed to load report columns,加载报表列失败
 Generating PDF...,正在生成 PDF...
@@ -431,14 +431,14 @@ Text Size (px),文本字号(px)
 数据源,数据源
 No data source available,暂无可用数据源
 已写入,已写入
-无选中单元格,已复制,无选中单元格,已复制
+"无选中单元格,已复制","无选中单元格,已复制"
 Insert function,插入函数
 e.g.,例如
 No match,无匹配
 Number,数字
 Number Format,格式化方式
 原样显示 (不格式化),原样显示 (不格式化)
-千分位·小数原样 (1,234,567.8945),千分位·小数原样 (1,234,567.8945)
+"千分位·小数原样 (1,234,567.8945)","千分位·小数原样 (1,234,567.8945)"
 Electronic Seal,电子章
 Seal Name,章名
 Seal Image,章图片
@@ -456,7 +456,7 @@ Page No,页码
 Position Mode,位置方式
 Pick Anchor Cell,拾取单元格
 paper,纸张固定
-Offset X (px, seal center from anchor cell top-left),偏移X(章中心相对参考格左上)
+"Offset X (px, seal center from anchor cell top-left)",偏移X(章中心相对参考格左上)
 Offset Y (px),偏移Y(px)
 Fixed Rows,固定行数
 Data-Driven Row only: fixed physical row count,仅数据驱动行有效：固定展开的物理行数（不足补空白行，超出截断）
@@ -464,7 +464,7 @@ Zebra Rows,奇偶行颜色
 Enable Zebra Rows,启用奇偶行颜色
 Odd Row Color,奇数行背景色
 Even Row Color,偶数行背景色
-Expanded data rows alternate odd/even background colors (1st, 3rd... = odd),展开的数据行按奇偶交替显示背景色（第1、3、5…条为奇数行）
+"Expanded data rows alternate odd/even background colors (1st, 3rd... = odd)",展开的数据行按奇偶交替显示背景色（第1、3、5…条为奇数行）
 Print Template Platform,打印模板平台
 Zhiz Print - Advanced Print Designer,打印模板平台
 Scan Print,扫码打印
