@@ -767,6 +767,13 @@ class SuperPrintDesign(frappe.model.document.Document):
                         # 显式标记(区别于 {doc.child.field}/{rep.items.x} 自动识别):
                         # 空数据时引擎渲染空白占位行,见 _build_expanded_rows_v2
                         data_driven_rows[row_num]['explicit'] = True
+                        # 文本推导查询名:显式行单元格 {dsNN.field} 前缀(排除
+                        # doc/param/rep/filter)。模板未设 item.query_name 时行仍按
+                        # 文本绑定取数 —— 查询有数据→普通行渲染(首条值替换,与普通行
+                        # 语义一致),无数据→空白占位行(判定见 _build_expanded_rows_v2)
+                        data_driven_rows[row_num]['text_query_names'] = set(
+                            m.group(1) for m in re.finditer(r'\{(\w+)\.(\w+)\}', cv)
+                            if m.group(1) not in ('doc', 'param', 'rep', 'filter'))
                     for (table_name, _) in child_patterns:
                         data_driven_rows[row_num]['child_tables'].add(
                             table_name)
@@ -945,9 +952,19 @@ class SuperPrintDesign(frappe.model.document.Document):
                     # 渲染一行空白(保留边框/行高/静态文字,_blank 渲染路径
                     # 清 {..} 占位符与 = 表达式);自动识别的子表/报表行维持
                     # 原样(占位符原文保留便于排查缺数)
-                    for gr in group:
-                        result.append({'template_row': gr, 'data_index': 0,
-                                       'data_item': None, 'blank': True})
+                    # 文本绑定兜底:模板未设 item.query_name 时,行数据源按单元格
+                    # {dsNN.field} 文本推导(text_query_names)——引用的查询有数据
+                    # 则仍按普通行渲染(首条值替换,与未绑定时行为一致),只在确无
+                    # 数据时才出空白占位行,避免文本绑定行被空白分支误吞数据
+                    text_qns = data_driven_rows[row].get('text_query_names') or set()
+                    if text_qns and any(query_results.get(tqn, {}).get('data')
+                                        for tqn in text_qns):
+                        for gr in group:
+                            result.append(gr)
+                    else:
+                        for gr in group:
+                            result.append({'template_row': gr, 'data_index': 0,
+                                           'data_item': None, 'blank': True})
                 else:
                     for gr in group:
                         result.append(gr)
