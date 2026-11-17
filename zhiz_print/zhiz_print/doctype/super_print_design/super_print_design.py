@@ -762,7 +762,11 @@ class SuperPrintDesign(frappe.model.document.Document):
                         data_driven_rows[row_num] = {
                             'child_tables': set(), 'query_names': set(),
                             'sorts': row_sorts, 'data_mode': row_data_mode,
-                            'fixed_rows': row_fixed_rows}
+                            'fixed_rows': row_fixed_rows, 'explicit': False}
+                    if rt == 'Data-Driven Row':
+                        # 显式标记(区别于 {doc.child.field}/{rep.items.x} 自动识别):
+                        # 空数据时引擎渲染空白占位行,见 _build_expanded_rows_v2
+                        data_driven_rows[row_num]['explicit'] = True
                     for (table_name, _) in child_patterns:
                         data_driven_rows[row_num]['child_tables'].add(
                             table_name)
@@ -936,6 +940,14 @@ class SuperPrintDesign(frappe.model.document.Document):
                             'data_index': data_idx,
                             'data_item': data_item
                         })
+                elif data_driven_rows[row].get('explicit'):
+                    # 空数据占位:显式 Data-Driven Row 行查询/子表均无数据时
+                    # 渲染一行空白(保留边框/行高/静态文字,_blank 渲染路径
+                    # 清 {..} 占位符与 = 表达式);自动识别的子表/报表行维持
+                    # 原样(占位符原文保留便于排查缺数)
+                    for gr in group:
+                        result.append({'template_row': gr, 'data_index': 0,
+                                       'data_item': None, 'blank': True})
                 else:
                     for gr in group:
                         result.append(gr)
